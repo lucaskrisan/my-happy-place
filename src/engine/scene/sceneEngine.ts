@@ -7,7 +7,8 @@ import {
   InteractionAction,
   InteractionDefinition
 } from './sceneTypes';
-import { resolveInteraction, processInteractionAction } from './interactionResolver';
+import { resolveInteraction, processInteractionAction, resolveChoiceAction } from './interactionResolver';
+import { ChoiceResult } from '@/types/choice';
 
 export type SceneEngineCallback = (state: SceneRuntimeState, log?: string) => void;
 
@@ -34,6 +35,8 @@ export class SceneEngine {
       activeNotificationId: null,
       videoPausedAt: null,
       lastAction: null,
+      lastChoiceResult: null,
+      transitionTargetId: null,
     };
     
     this.notify('scene_loaded: ' + definition.id);
@@ -69,7 +72,7 @@ export class SceneEngine {
     // Check if event type exists in registry is handled by TimelineEngine.process
     // We just handle the business logic here.
     
-    if (event.type === 'incoming_call') {
+    if (event.type === 'incoming_call' || event.type === 'choice') {
       const interactionId = event.payload?.['interactionId'];
       if (interactionId) {
         this.openInteraction(interactionId);
@@ -106,11 +109,35 @@ export class SceneEngine {
     }
   }
 
+  public handleChoiceComplete(result: ChoiceResult) {
+    if (this.runtime.state === 'transitioning') return;
+
+    this.runtime.lastChoiceResult = result;
+    this.notify(`choice_completed: ${result.choiceId}`);
+    
+    if (result.action) {
+      const interactionAction = resolveChoiceAction(result.action);
+      this.handleInteractionAction(interactionAction, this.runtime.activeInteraction?.id || '');
+    } else {
+      // Choice without action: resume
+      if (this.runtime.activeInteraction) {
+        this.completeInteraction(this.runtime.activeInteraction.id);
+      }
+    }
+  }
+
   public handleInteractionAction(action: InteractionAction, sourceId: string) {
+    if (this.runtime.state === 'transitioning' && action.type !== 'go_to_scene') return;
+
     this.runtime.lastAction = action;
     this.notify(`interaction_action: ${action.type}`);
 
     const result = processInteractionAction(action, this.definition.interactions);
+
+    if (result.intent === 'navigate' && result.targetId) {
+      this.requestTransition(result.targetId);
+      return; // Transition handles its own cleanup and status updates
+    }
 
     if (result.intent === 'open' && result.interaction) {
       this.openInteraction(result.targetId!);
@@ -119,10 +146,29 @@ export class SceneEngine {
     }
     
     // Source (like notification) is always completed after action resolution
-    this.timelineEngine.completeEvent(sourceId);
-    if (this.runtime.activeNotificationId === sourceId) {
-      this.runtime.activeNotificationId = null;
+    if (sourceId) {
+      this.timelineEngine.completeEvent(sourceId);
+      if (this.runtime.activeNotificationId === sourceId) {
+        this.runtime.activeNotificationId = null;
+      }
     }
+  }
+
+  private requestTransition(sceneId: string) {
+    if (this.runtime.state === 'transitioning') return;
+    
+    this.runtime.state = 'transitioning';
+    this.runtime.transitionTargetId = sceneId;
+    this.notify(`scene_transition_requested: ${sceneId}`);
+
+    // Cleanup current scene immediately
+    this.cleanup();
+  }
+
+  private cleanup() {
+    this.notify('scene_cleanup: ' + this.runtime.sceneId);
+    // In a real environment, we'd stop all active media here.
+    // The UI layer (SceneLab) will respond to the 'transitioning' state.
   }
 
   public handleNotificationDismiss(notificationId: string, reason: 'swiped' | 'auto_dismissed') {

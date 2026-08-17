@@ -10,6 +10,7 @@ const registry: Record<string, EventHandler> = {
   'play_sfx': { isBlocking: false },
   'whatsapp_open': { isBlocking: true },
   'notification': { isBlocking: false },
+  'choice': { isBlocking: true },
 };
 
 

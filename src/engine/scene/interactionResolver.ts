@@ -45,3 +45,16 @@ export function processInteractionAction(
       return { intent: 'none' };
   }
 }
+
+import { ChoiceDefinition, ChoiceResult, ChoiceAction } from '@/types/choice';
+
+export function resolveChoiceAction(
+  action: ChoiceAction
+): InteractionAction {
+  switch (action.type) {
+    case 'complete': return { type: 'complete_scene' };
+    case 'go_to_scene': return { type: 'go_to_scene', sceneId: action.sceneId };
+    case 'open_interaction': return { type: 'open_interaction', interactionId: action.interactionId };
+    default: return { type: 'complete_scene' };
+  }
+}

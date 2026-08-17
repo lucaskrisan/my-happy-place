@@ -5,6 +5,7 @@ import { VideoStage } from "@/components/dev/VideoStage";
 import { IncomingCallOverlay } from "@/components/dev/IncomingCallOverlay";
 import { MessagingOverlay } from "@/components/dev/MessagingOverlay";
 import { NotificationOverlay } from "@/components/dev/NotificationOverlay";
+import { ChoiceOverlay } from "@/components/dev/ChoiceOverlay";
 import { 
   Play, 
   Pause, 
@@ -14,12 +15,16 @@ import {
   Clock, 
   Settings,
   ArrowRight,
-  Database
+  Database,
+  FileVideo,
+  LogOut,
+  ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { SceneEngine } from "@/engine/scene/sceneEngine";
 import { SceneDefinition, SceneRuntimeState, InteractionAction } from "@/engine/scene/sceneTypes";
+import { ChoiceDefinition, ChoiceResult } from "@/types/choice";
 
 export const Route = createFileRoute("/dev/scene")({
   component: SceneLab,
@@ -65,6 +70,13 @@ const SCENE_01: SceneDefinition = {
           interactionId: "mother-chat"
         }
       }
+    },
+    {
+      id: 'reaction-choice-event',
+      type: 'choice',
+      at: 18,
+      blocking: true,
+      payload: { interactionId: 'reaction-choice' }
     }
   ],
   interactions: {
@@ -117,10 +129,68 @@ const SCENE_01: SceneDefinition = {
           }
         ]
       }
+    "reaction-choice": {
+      id: "reaction-choice",
+      type: "choice",
+      payload: {
+        definition: {
+          id: "reaction-01",
+          title: "O que ela faz quando percebe que ele ficou em silêncio?",
+          subtitle: "Escolha a reação que parece mais automática.",
+          mode: "instant",
+          required: true,
+          options: [
+            {
+              id: "insist",
+              label: "Insiste até ele responder",
+              action: { type: "go_to_scene", sceneId: "scene-insist" }
+            },
+            {
+              id: "withdraw",
+              label: "Se cala também",
+              action: { type: "go_to_scene", sceneId: "scene-withdraw" }
+            },
+            {
+              id: "please",
+              label: "Tenta agradar",
+              action: { type: "go_to_scene", sceneId: "scene-please" }
+            },
+            {
+              id: "defend",
+              label: "Se defende antes de qualquer acusação",
+              action: { type: "go_to_scene", sceneId: "scene-defend" }
+            }
+          ]
+        }
+      }
     }
   },
   completion: { type: 'video_ended' },
   nextSceneId: "scene-02"
+};
+
+const SCENE_INSIST: SceneDefinition = {
+  id: "scene-insist",
+  title: "Rota — Insistir",
+  events: []
+};
+
+const SCENE_WITHDRAW: SceneDefinition = {
+  id: "scene-withdraw",
+  title: "Rota — Se Calar",
+  events: []
+};
+
+const SCENE_PLEASE: SceneDefinition = {
+  id: "scene-please",
+  title: "Rota — Agradar",
+  events: []
+};
+
+const SCENE_DEFEND: SceneDefinition = {
+  id: "scene-defend",
+  title: "Rota — Se Defender",
+  events: []
 };
 
 const SCENE_02: SceneDefinition = {
@@ -138,7 +208,11 @@ const SCENE_02: SceneDefinition = {
 
 const SCENES: Record<string, SceneDefinition> = {
   "scene-01": SCENE_01,
-  "scene-02": SCENE_02
+  "scene-02": SCENE_02,
+  "scene-insist": SCENE_INSIST,
+  "scene-withdraw": SCENE_WITHDRAW,
+  "scene-please": SCENE_PLEASE,
+  "scene-defend": SCENE_DEFEND,
 };
 
 function SceneLab() {
@@ -186,7 +260,26 @@ function SceneLab() {
 
   // Sync state effects
   useEffect(() => {
-    if (!runtimeState || !videoRef.current) return;
+    if (!runtimeState) return;
+    
+    // Handle Navigation
+    if (runtimeState.state === 'transitioning' && runtimeState.transitionTargetId) {
+      const targetId = runtimeState.transitionTargetId;
+      if (SCENES[targetId]) {
+        // Successful branch
+        setTimeout(() => {
+          setActiveSceneId(targetId);
+          addLog(`scene_loaded: ${targetId}`);
+        }, 300);
+      } else {
+        // Scene not found
+        addLog(`scene_not_found: ${targetId}`);
+        engineRef.current?.reset(); // Just for safety in lab
+      }
+      return;
+    }
+
+    if (!videoRef.current) return;
     
     if (runtimeState.state === 'blocked' && !videoRef.current.paused) {
       videoRef.current.pause();
@@ -198,7 +291,7 @@ function SceneLab() {
         addLog(`video_resumed_by_scene_engine`);
       }, 400);
     }
-  }, [runtimeState?.state]);
+  }, [runtimeState?.state, runtimeState?.transitionTargetId]);
 
   // UI Handlers
   const handleStart = () => {
@@ -277,6 +370,12 @@ function SceneLab() {
     };
   }, [runtimeState?.activeNotificationId, activeSceneId, sfxUrls]);
 
+  // Choice Resolver
+  const choicePayload = useMemo(() => {
+    if (activeInteraction?.type !== 'choice') return null;
+    return activeInteraction.payload.definition as ChoiceDefinition;
+  }, [activeInteraction]);
+
   // File Handlers
   const handleFile = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -323,13 +422,34 @@ function SceneLab() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Main Visualizer */}
           <div className="lg:col-span-8 space-y-6">
-            <div className="relative aspect-video bg-black rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl">
-              <VideoStage 
-                ref={videoRef}
-                src={videoUrl}
-                onTimeUpdate={handleTimeUpdate}
-                onEnded={handleVideoEnded}
-              />
+            <div className="relative aspect-video bg-black rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl flex items-center justify-center">
+              {SCENES[activeSceneId]?.video?.src || videoUrl ? (
+                <VideoStage 
+                  ref={videoRef}
+                  src={SCENES[activeSceneId]?.video?.src || videoUrl}
+                  onTimeUpdate={handleTimeUpdate}
+                  onEnded={handleVideoEnded}
+                />
+              ) : (
+                <div className="text-center space-y-4">
+                  <div className="inline-flex p-4 bg-zinc-800/50 rounded-full border border-zinc-700 animate-pulse">
+                    <Activity className="w-12 h-12 text-zinc-600" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-black uppercase tracking-widest text-zinc-500">Scene Placeholder</div>
+                    <div className="text-2xl font-black text-white">{SCENES[activeSceneId]?.title}</div>
+                  </div>
+                  {activeSceneId !== 'scene-01' && (
+                    <button 
+                      onClick={() => setActiveSceneId('scene-01')}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-zinc-800 rounded-xl text-sm font-bold hover:bg-zinc-700 transition-all border border-zinc-700"
+                    >
+                      <RefreshCcw className="w-4 h-4" />
+                      Restart Experience
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Blocking Overlays */}
               {activeInteraction?.type === 'incoming_call' && callPayload && (
@@ -352,6 +472,18 @@ function SceneLab() {
                     open={true}
                     {...messagingPayload}
                     onComplete={() => engineRef.current?.completeInteraction(activeInteraction.id)}
+                  />
+                </div>
+              )}
+
+              {activeInteraction?.type === 'choice' && choicePayload && (
+                <div className="absolute inset-0 z-50">
+                  <ChoiceOverlay 
+                    open={true}
+                    definition={choicePayload}
+                    onComplete={(result) => engineRef.current?.handleChoiceComplete(result)}
+                    onClose={() => engineRef.current?.completeInteraction(activeInteraction.id)}
+                    closeBehavior="prevent"
                   />
                 </div>
               )}
@@ -421,6 +553,23 @@ function SceneLab() {
 
           {/* Debug Sidebar */}
           <div className="lg:col-span-4 space-y-6">
+            {/* Branch Indicator */}
+            {activeSceneId !== 'scene-01' && (
+              <div className="bg-purple-900/30 border border-purple-500/30 rounded-2xl p-4 flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-purple-400 tracking-widest mb-1">Cena Atual</div>
+                  <div className="text-white font-bold">{SCENES[activeSceneId]?.title}</div>
+                </div>
+                <button 
+                  onClick={() => setActiveSceneId('scene-01')}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 rounded-lg text-xs font-bold hover:bg-purple-500 transition-all"
+                >
+                  <LogOut className="w-3 h-3" />
+                  Voltar para scene-01
+                </button>
+              </div>
+            )}
+
             {/* Scene Info */}
             <div className="bg-zinc-900 rounded-2xl border border-zinc-800 overflow-hidden">
               <div className="bg-zinc-800/50 px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
@@ -456,6 +605,14 @@ function SceneLab() {
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-zinc-500 font-medium">Notification</span>
                   <span className="font-mono text-amber-400">{runtimeState?.activeNotificationId || 'none'}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-zinc-500 font-medium">Selected Option</span>
+                  <span className="font-mono text-zinc-300">{runtimeState?.lastChoiceResult?.optionId || '-'}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-zinc-500 font-medium">Transition</span>
+                  <span className="font-mono text-purple-400">{runtimeState?.transitionTargetId || 'none'}</span>
                 </div>
                 
                 {runtimeState?.state === 'completed' && SCENES[activeSceneId]?.nextSceneId && (
