@@ -94,7 +94,7 @@ const SCENE_01: SceneDefinition = {
     {
       id: 'reaction-choice-event',
       type: 'choice',
-      at: 2,
+      at: 18,
       blocking: true,
       payload: { interactionId: 'reaction-choice' }
     }
