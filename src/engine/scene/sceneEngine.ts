@@ -7,7 +7,8 @@ import {
   InteractionAction,
   InteractionDefinition
 } from './sceneTypes';
-import { resolveInteraction, processInteractionAction } from './interactionResolver';
+import { resolveInteraction, processInteractionAction, resolveChoiceAction } from './interactionResolver';
+import { ChoiceResult } from '@/types/choice';
 
 export type SceneEngineCallback = (state: SceneRuntimeState, log?: string) => void;
 
