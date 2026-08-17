@@ -11,6 +11,7 @@ const registry: Record<string, EventHandler> = {
   'whatsapp_open': { isBlocking: true },
   'notification': { isBlocking: false },
   'choice': { isBlocking: true },
+  'quiz': { isBlocking: true },
 };
 
 
