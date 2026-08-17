@@ -54,9 +54,14 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
 
   useEffect(() => {
     if (open && state === 'hidden') {
-      setState('entering');
+      // Reset runtime on new session
+      setCurrentQuestionIndex(0);
+      setAnswers({});
       setStartTime(Date.now());
+      isProcessing.current = false;
       isCompleted.current = false;
+      
+      setState('entering');
     } else if (!open && state !== 'hidden') {
       setState('exiting');
     }
@@ -152,11 +157,15 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
 
   const handleBack = useCallback(() => {
     if (!allowPrevious || currentQuestionIndex === 0 || state !== 'active' || isProcessing.current) return;
+    
+    isProcessing.current = true;
     setState('transitioning');
+    
     setTimeout(() => {
       setCurrentQuestionIndex(prev => prev - 1);
       onQuestionChange?.(currentQuestionIndex - 1);
       setState('active');
+      isProcessing.current = false;
     }, 400);
   }, [allowPrevious, currentQuestionIndex, state, onQuestionChange]);
 
