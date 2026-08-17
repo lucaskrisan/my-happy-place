@@ -161,10 +161,7 @@ export const ChoiceOverlay: React.FC<ChoiceOverlayProps> = ({
         if (state === 'confirming') {
           handleConfirm();
         } else if (selectedOptionId) {
-          const option = definition.options.find(o => o.id === selectedOptionId);
-          if (option && definition.mode !== 'confirm') {
-             // Already triggered in handleOptionClick for instant mode
-          }
+          // Already handled in handleOptionClick for instant mode
         }
       } else if (e.key === 'Escape' && closeBehavior === 'allow') {
         onClose?.();
