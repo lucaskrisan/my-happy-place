@@ -31,10 +31,11 @@ export type QuizDefinition = {
 export type QuizAnswer = {
   questionId: string;
   optionId: string;
-  value?: string;
+  value?: string | null;
   score?: number;
   tags?: string[];
 };
+
 
 export type QuizResult = {
   quizId: string;
