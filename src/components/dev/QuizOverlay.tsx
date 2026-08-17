@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Check, ChevronLeft, ChevronRight, X, RotateCcw } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { 
   QuizDefinition, 
   QuizQuestion, 
@@ -42,16 +42,17 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
   const [state, setState] = useState<QuizState>('hidden');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, QuizAnswer>>({});
-  const [startTime] = useState<number>(Date.now());
+  const [startTime, setStartTime] = useState<number>(Date.now());
   
-  const currentQuestion = definition.questions[currentQuestionIndex];
+  const currentQuestion: QuizQuestion | undefined = definition.questions[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === definition.questions.length - 1;
-  const currentAnswer = answers[currentQuestion.id];
+  const currentAnswer = currentQuestion ? answers[currentQuestion.id] : undefined;
 
   // Sync state with open prop
   useEffect(() => {
     if (open && state === 'hidden') {
       setState('entering');
+      setStartTime(Date.now());
     } else if (!open && state !== 'hidden') {
       setState('exiting');
     }
@@ -75,6 +76,8 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
       }, 500);
       return () => clearTimeout(timer);
     }
+    
+    return undefined;
   }, [state, definition.id]);
 
   const calculateResult = (): QuizResult => {
@@ -99,17 +102,12 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
   };
 
   const handleOptionClick = (option: QuizOption) => {
-    if (state !== 'active') return;
-    
-    // Protection against double tap / changing answer if not allowed
-    // Note: If allowPrevious is ON, we only allow changing by going BACK, not by clicking again on same screen if already confirmed
-    // But for better UX, we can allow clicking other options before confirming if feedbackMode is after_each
-    // The prompt says "travar seleção imediatamente" after answer is accepted.
+    if (state !== 'active' || !currentQuestion) return;
     
     const answer: QuizAnswer = {
       questionId: currentQuestion.id,
       optionId: option.id,
-      value: option.value,
+      value: option.value ?? null,
       score: option.score || 0,
       tags: option.tags || []
     };
@@ -132,12 +130,13 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
       setState('feedback');
       onInteraction?.({ type: 'feedback_viewed', quizId: definition.id, questionId: currentQuestion.id });
     } else {
-      // Transition to next or complete
       moveToNext();
     }
   };
 
   const moveToNext = () => {
+    if (!currentQuestion) return;
+    
     onInteraction?.({ type: 'question_completed', quizId: definition.id, questionId: currentQuestion.id });
     
     if (isLastQuestion) {
@@ -151,7 +150,10 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
         setCurrentQuestionIndex(prev => prev + 1);
         onQuestionChange?.(currentQuestionIndex + 1);
         setState('active');
-        onInteraction?.({ type: 'question_viewed', quizId: definition.id, questionId: definition.questions[currentQuestionIndex + 1].id });
+        const nextQ = definition.questions[currentQuestionIndex + 1];
+        if (nextQ) {
+          onInteraction?.({ type: 'question_viewed', quizId: definition.id, questionId: nextQ.id });
+        }
       }, 400);
     }
   };
@@ -167,21 +169,12 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
     }, 400);
   };
 
-  const reset = () => {
-    setCurrentQuestionIndex(0);
-    setAnswers({});
-    setState('hidden');
-  };
-
   // Keyboard navigation
   useEffect(() => {
-    if (state !== 'active') return;
+    if (state !== 'active' || !currentQuestion) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        // Keyboard focus logic would go here, simplified for now
-      } else if (e.key >= '1' && e.key <= '9') {
+      if (e.key >= '1' && e.key <= '9') {
         const index = parseInt(e.key) - 1;
         if (currentQuestion.options[index]) {
           handleOptionClick(currentQuestion.options[index]);
@@ -279,7 +272,7 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
                       Suas respostas foram registradas com sucesso.
                     </p>
                   </motion.div>
-                ) : (
+                ) : currentQuestion ? (
                   <motion.div
                     key={currentQuestion.id}
                     initial={{ opacity: 0, x: prefersReducedMotion ? 0 : 20 }}
@@ -349,7 +342,7 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
                       <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="fixed bottom-0 left-0 right-0 p-6 bg-zinc-900 border-t border-zinc-800 z-10 safe-area-bottom"
+                        className="fixed bottom-0 left-0 right-0 p-6 bg-zinc-900 border-t border-zinc-800 z-10 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]"
                       >
                         <div className="max-w-xl mx-auto w-full">
                           <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">Feedback</h4>
@@ -367,7 +360,7 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
                       </motion.div>
                     )}
                   </motion.div>
-                )}
+                ) : null}
               </AnimatePresence>
 
             </div>
