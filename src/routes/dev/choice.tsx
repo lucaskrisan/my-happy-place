@@ -98,9 +98,8 @@ function ChoiceExperienceLab() {
 
   return (
     <DevModuleLayout
-      number="09"
       title="Choice Experience"
-      description="Laboratório de escolhas narrativas ramificadas."
+      subtitle="Laboratório de escolhas narrativas ramificadas."
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
