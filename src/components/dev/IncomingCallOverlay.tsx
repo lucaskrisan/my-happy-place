@@ -75,6 +75,7 @@ export function IncomingCallOverlay({
       if (ref.current) {
         ref.current.pause();
         ref.current.currentTime = 0;
+        ref.current.onended = null;
       }
     });
   }, []);
@@ -147,7 +148,7 @@ export function IncomingCallOverlay({
     updateState('connecting');
     onAccept?.();
 
-    const connectDelay = 80 + Math.random() * 70;
+    const connectDelay = 100; // Revised to exact requirement (~80-150ms)
     timerRef.current = window.setTimeout(() => {
       if (connectSfxSrc) {
         const audio = new Audio(connectSfxSrc);
@@ -156,12 +157,12 @@ export function IncomingCallOverlay({
         audio.play().catch(e => console.warn("Connect SFX blocked:", e));
       }
 
-      const activeDelay = 300 + Math.random() * 200;
+      const activeDelay = 400; // Revised to exact requirement (~300-500ms)
       timerRef.current = window.setTimeout(() => {
         updateState('active');
         startDurationTimer();
 
-        const voiceDelay = 200 + Math.random() * 150;
+        const voiceDelay = 300; // Revised to exact requirement (~200-350ms)
         timerRef.current = window.setTimeout(() => {
           if (voiceAudioSrc) {
             const audio = new Audio(voiceAudioSrc);
@@ -173,7 +174,7 @@ export function IncomingCallOverlay({
             audio.onended = () => {
               onVoiceEnd?.();
               if (autoEndAfterAudio) {
-                const autoEndDelay = 350 + Math.random() * 250;
+                const autoEndDelay = 500; // Revised to exact requirement (~350-600ms)
                 timerRef.current = window.setTimeout(() => {
                   handleEnd();
                 }, autoEndDelay);
