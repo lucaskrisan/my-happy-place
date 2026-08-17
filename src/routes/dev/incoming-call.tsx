@@ -77,7 +77,7 @@ function IncomingCallPage() {
       end: setEndSfx
     }[type];
 
-    const oldVal = { ringtone, connect, voice, end: endSfx }[type];
+    const oldVal = { ringtone, connect: connectSfx, voice: voiceAudio, end: endSfx }[type];
     if (oldVal?.url) URL.revokeObjectURL(oldVal.url);
 
     const url = URL.createObjectURL(file);
