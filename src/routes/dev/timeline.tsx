@@ -600,9 +600,14 @@ function TimelineLab() {
                   <input type="file" accept="audio/*" onChange={handleSfxFile} className="w-full text-xs bg-black/20 border border-zinc-800 p-2 rounded-lg" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">mother-chat / voice_once</label>
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Notification SFX</label>
+                  <input type="file" accept="audio/*" onChange={handleNotificationSfxFile} className="w-full text-xs bg-black/20 border border-zinc-800 p-2 rounded-lg" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Chat Voice Once</label>
                   <input type="file" accept="audio/*" onChange={handleChatAudioFile} className="w-full text-xs bg-black/20 border border-zinc-800 p-2 rounded-lg" />
                 </div>
+
               </div>
 
               <div className="pt-4 border-t border-zinc-800">
