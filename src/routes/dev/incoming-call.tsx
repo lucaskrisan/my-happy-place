@@ -1,6 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DevModuleLayout } from "@/components/dev-tools";
+import { DevPlaceholderPage } from "@/components/dev-tools";
 
 export const Route = createFileRoute("/dev/incoming-call")({
-  component: () => <DevModuleLayout title="Incoming Call" description="Simulação de ligação recebida estilo smartphone." />,
+  component: () => (
+    <DevPlaceholderPage 
+      number="04" 
+      title="Incoming Call" 
+      description="Simulação de ligação recebida estilo smartphone." 
+    />
+  ),
 });

@@ -1,6 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DevModuleLayout } from "@/components/dev-tools";
+import { DevPlaceholderPage } from "@/components/dev-tools";
 
 export const Route = createFileRoute("/dev/whatsapp")({
-  component: () => <DevModuleLayout title="WhatsApp" description="Interface simulada de conversa por mensagens." />,
+  component: () => (
+    <DevPlaceholderPage 
+      number="05" 
+      title="WhatsApp" 
+      description="Interface simulada de conversa por mensagens." 
+    />
+  ),
 });
