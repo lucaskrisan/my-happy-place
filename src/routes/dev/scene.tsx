@@ -54,6 +54,13 @@ function FileVideo(props: any) {
 
 // --- MOCK DATA ---
 
+const SCENE_URGENCY: SceneDefinition = { id: "scene-urgency", title: "Rota — Urgência", events: [] };
+const SCENE_WITHDRAWAL: SceneDefinition = { id: "scene-withdrawal", title: "Rota — Retraimento", events: [] };
+const SCENE_APPEASEMENT: SceneDefinition = { id: "scene-appeasement", title: "Rota — Agradar", events: [] };
+const SCENE_DEFENSE: SceneDefinition = { id: "scene-defense", title: "Rota — Defesa", events: [] };
+const SCENE_NEUTRAL: SceneDefinition = { id: "scene-neutral", title: "Rota — Neutra/Fallback", events: [] };
+
+
 const SCENE_01: SceneDefinition = {
   id: "scene-01",
   title: "Teste de Cena 01",
@@ -214,11 +221,55 @@ const SCENE_01: SceneDefinition = {
           ]
         }
       }
+    },
+    "final-quiz": {
+      id: "final-quiz",
+      type: "quiz",
+      payload: {
+        definition: {
+          id: "final-quiz-01",
+          title: "Avaliação de Cena",
+          closeBehavior: "prevent",
+          questions: [
+            {
+              id: "q1",
+              text: "Qual sua reação imediata?",
+              options: [
+                { id: "o1", text: "Ficar ansiosa", score: 2, tags: ["urgency"] },
+                { id: "o2", text: "Tentar explicar", score: 1, tags: ["defense"] }
+              ]
+            },
+            {
+              id: "q2",
+              text: "O que faria depois?",
+              options: [
+                { id: "o3", text: "Cobrar resposta", score: 2, tags: ["urgency"] },
+                { id: "o4", text: "Pedir desculpas", score: 1, tags: ["appeasement"] }
+              ]
+            }
+          ]
+        }
+      }
     }
   },
+  resultRules: [
+    {
+      id: "pattern-result-route",
+      quizId: "final-quiz",
+      strategy: "dominant_tag",
+      routes: {
+        urgency: "scene-urgency",
+        withdrawal: "scene-withdrawal",
+        appeasement: "scene-appeasement",
+        defense: "scene-defense"
+      },
+      fallbackSceneId: "scene-neutral"
+    }
+  ],
   completion: { type: 'video_ended' },
   nextSceneId: "scene-02"
 };
+
 
 const SCENE_INSIST: SceneDefinition = {
   id: "scene-insist",
@@ -264,7 +315,13 @@ const SCENES: Record<string, SceneDefinition> = {
   "scene-withdraw": SCENE_WITHDRAW,
   "scene-please": SCENE_PLEASE,
   "scene-defend": SCENE_DEFEND,
+  "scene-urgency": SCENE_URGENCY,
+  "scene-withdrawal": SCENE_WITHDRAWAL,
+  "scene-appeasement": SCENE_APPEASEMENT,
+  "scene-defense": SCENE_DEFENSE,
+  "scene-neutral": SCENE_NEUTRAL,
 };
+
 
 function SceneLab() {
   const [activeSceneId, setActiveSceneId] = useState<string>("scene-01");
@@ -588,6 +645,35 @@ function SceneLab() {
             {/* Media Configuration */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-zinc-900/50 p-6 rounded-2xl border border-zinc-800/50">
               <div className="col-span-2 space-y-2">
+                <div className="text-xs font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                  <Database className="w-3 h-3" />
+                  Quiz Rule Debug
+                </div>
+                <div className="p-3 bg-zinc-950 rounded-lg border border-zinc-800 text-[10px] font-mono space-y-2">
+                  {Object.entries(runtimeState?.quizResults || {}).map(([id, result]) => {
+                    const rule = SCENES[activeSceneId]?.resultRules?.find(r => r.quizId === id);
+                    const counts = result.tagCounts || {};
+                    const tags = Object.entries(counts);
+                    return (
+                      <div key={id} className="border-b border-zinc-900 pb-2 last:border-0 last:pb-0">
+                        <div className="text-blue-400">Quiz: {id}</div>
+                        <div className="grid grid-cols-2 gap-1 mt-1">
+                          <div>Tag Counts:</div>
+                          <div>{tags.map(([t, c]) => `${t}: ${c}`).join(', ') || 'none'}</div>
+                          <div>Strategy:</div>
+                          <div>{rule?.strategy || 'none'}</div>
+                          <div>Fallback:</div>
+                          <div>{rule?.fallbackSceneId || 'none'}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {!Object.keys(runtimeState?.quizResults || {}).length && (
+                    <div className="text-zinc-600 italic">No quiz results yet.</div>
+                  )}
+                </div>
+              </div>
+
                 <label className="text-xs font-bold text-zinc-500 uppercase flex items-center gap-2">
                   <FileVideoIcon className="w-3 h-3" /> Scene Video
                 </label>

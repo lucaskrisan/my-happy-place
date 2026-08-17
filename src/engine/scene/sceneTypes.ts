@@ -1,4 +1,6 @@
 import { TimelineEvent } from '../timeline/timelineTypes';
+import { QuizResultRule } from './quizResultResolver';
+
 
 export type SceneState = 'idle' | 'loading' | 'ready' | 'playing' | 'blocked' | 'transitioning' | 'completing' | 'completed' | 'error';
 
@@ -31,7 +33,9 @@ export type SceneDefinition = {
   events: TimelineEvent[];
   interactions?: Record<string, InteractionDefinition>;
   completion?: SceneCompletionRule;
+  resultRules?: QuizResultRule[];
   nextSceneId?: string | null;
+
 };
 
 export type SceneRuntimeState = {
