@@ -212,27 +212,6 @@ const SCENE_01: SceneDefinition = {
           questions: [
             {
               id: "q1",
-              text: "Você prestou atenção?",
-              options: [
-                { id: "o1", text: "Sim", score: 2, tags: ["attentive"] },
-                { id: "o2", text: "Não", score: 0, tags: ["distracted"] }
-              ]
-            }
-          ]
-        }
-      }
-    },
-    "final-quiz": {
-      id: "final-quiz",
-      type: "quiz",
-      payload: {
-        definition: {
-          id: "final-quiz-01",
-          title: "Avaliação de Cena",
-          closeBehavior: "prevent",
-          questions: [
-            {
-              id: "q1",
               text: "Qual sua reação imediata?",
               options: [
                 { id: "o1", text: "Ficar ansiosa", score: 2, tags: ["urgency"] },
@@ -673,7 +652,7 @@ function SceneLab() {
                   )}
                 </div>
               </div>
-
+              <div className="space-y-2">
                 <label className="text-xs font-bold text-zinc-500 uppercase flex items-center gap-2">
                   <FileVideoIcon className="w-3 h-3" /> Scene Video
                 </label>
