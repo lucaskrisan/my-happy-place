@@ -12,10 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DevRouteImport } from './routes/dev'
 import { Route as DevTempRouteImport } from './routes/dev-temp'
+import { Route as DevChoiceRouteImport } from './routes/dev/choice'
 import { Route as DevIncomingCallRouteImport } from './routes/dev/incoming-call'
+import { Route as DevNotesRouteImport } from './routes/dev/notes'
+import { Route as DevNotificationRouteImport } from './routes/dev/notification'
+import { Route as DevQuizRouteImport } from './routes/dev/quiz'
 import { Route as DevSceneRouteImport } from './routes/dev/scene'
 import { Route as DevTimelineRouteImport } from './routes/dev/timeline'
 import { Route as DevVideoStageRouteImport } from './routes/dev/video-stage'
+import { Route as DevVoiceOnceRouteImport } from './routes/dev/voice-once'
 import { Route as DevWhatsappRouteImport } from './routes/dev/whatsapp'
 
 const IndexRoute = IndexRouteImport.update({
@@ -33,9 +38,29 @@ const DevTempRoute = DevTempRouteImport.update({
   path: '/dev-temp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevChoiceRoute = DevChoiceRouteImport.update({
+  id: '/choice',
+  path: '/choice',
+  getParentRoute: () => DevRoute,
+} as any)
 const DevIncomingCallRoute = DevIncomingCallRouteImport.update({
   id: '/incoming-call',
   path: '/incoming-call',
+  getParentRoute: () => DevRoute,
+} as any)
+const DevNotesRoute = DevNotesRouteImport.update({
+  id: '/notes',
+  path: '/notes',
+  getParentRoute: () => DevRoute,
+} as any)
+const DevNotificationRoute = DevNotificationRouteImport.update({
+  id: '/notification',
+  path: '/notification',
+  getParentRoute: () => DevRoute,
+} as any)
+const DevQuizRoute = DevQuizRouteImport.update({
+  id: '/quiz',
+  path: '/quiz',
   getParentRoute: () => DevRoute,
 } as any)
 const DevSceneRoute = DevSceneRouteImport.update({
@@ -53,6 +78,11 @@ const DevVideoStageRoute = DevVideoStageRouteImport.update({
   path: '/video-stage',
   getParentRoute: () => DevRoute,
 } as any)
+const DevVoiceOnceRoute = DevVoiceOnceRouteImport.update({
+  id: '/voice-once',
+  path: '/voice-once',
+  getParentRoute: () => DevRoute,
+} as any)
 const DevWhatsappRoute = DevWhatsappRouteImport.update({
   id: '/whatsapp',
   path: '/whatsapp',
@@ -63,20 +93,30 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dev': typeof DevRouteWithChildren
   '/dev-temp': typeof DevTempRoute
+  '/dev/choice': typeof DevChoiceRoute
   '/dev/incoming-call': typeof DevIncomingCallRoute
+  '/dev/notes': typeof DevNotesRoute
+  '/dev/notification': typeof DevNotificationRoute
+  '/dev/quiz': typeof DevQuizRoute
   '/dev/scene': typeof DevSceneRoute
   '/dev/timeline': typeof DevTimelineRoute
   '/dev/video-stage': typeof DevVideoStageRoute
+  '/dev/voice-once': typeof DevVoiceOnceRoute
   '/dev/whatsapp': typeof DevWhatsappRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dev': typeof DevRouteWithChildren
   '/dev-temp': typeof DevTempRoute
+  '/dev/choice': typeof DevChoiceRoute
   '/dev/incoming-call': typeof DevIncomingCallRoute
+  '/dev/notes': typeof DevNotesRoute
+  '/dev/notification': typeof DevNotificationRoute
+  '/dev/quiz': typeof DevQuizRoute
   '/dev/scene': typeof DevSceneRoute
   '/dev/timeline': typeof DevTimelineRoute
   '/dev/video-stage': typeof DevVideoStageRoute
+  '/dev/voice-once': typeof DevVoiceOnceRoute
   '/dev/whatsapp': typeof DevWhatsappRoute
 }
 export interface FileRoutesById {
@@ -84,10 +124,15 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dev': typeof DevRouteWithChildren
   '/dev-temp': typeof DevTempRoute
+  '/dev/choice': typeof DevChoiceRoute
   '/dev/incoming-call': typeof DevIncomingCallRoute
+  '/dev/notes': typeof DevNotesRoute
+  '/dev/notification': typeof DevNotificationRoute
+  '/dev/quiz': typeof DevQuizRoute
   '/dev/scene': typeof DevSceneRoute
   '/dev/timeline': typeof DevTimelineRoute
   '/dev/video-stage': typeof DevVideoStageRoute
+  '/dev/voice-once': typeof DevVoiceOnceRoute
   '/dev/whatsapp': typeof DevWhatsappRoute
 }
 export interface FileRouteTypes {
@@ -96,30 +141,45 @@ export interface FileRouteTypes {
     | '/'
     | '/dev'
     | '/dev-temp'
+    | '/dev/choice'
     | '/dev/incoming-call'
+    | '/dev/notes'
+    | '/dev/notification'
+    | '/dev/quiz'
     | '/dev/scene'
     | '/dev/timeline'
     | '/dev/video-stage'
+    | '/dev/voice-once'
     | '/dev/whatsapp'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/dev'
     | '/dev-temp'
+    | '/dev/choice'
     | '/dev/incoming-call'
+    | '/dev/notes'
+    | '/dev/notification'
+    | '/dev/quiz'
     | '/dev/scene'
     | '/dev/timeline'
     | '/dev/video-stage'
+    | '/dev/voice-once'
     | '/dev/whatsapp'
   id:
     | '__root__'
     | '/'
     | '/dev'
     | '/dev-temp'
+    | '/dev/choice'
     | '/dev/incoming-call'
+    | '/dev/notes'
+    | '/dev/notification'
+    | '/dev/quiz'
     | '/dev/scene'
     | '/dev/timeline'
     | '/dev/video-stage'
+    | '/dev/voice-once'
     | '/dev/whatsapp'
   fileRoutesById: FileRoutesById
 }
@@ -152,11 +212,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevTempRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dev/choice': {
+      id: '/dev/choice'
+      path: '/choice'
+      fullPath: '/dev/choice'
+      preLoaderRoute: typeof DevChoiceRouteImport
+      parentRoute: typeof DevRoute
+    }
     '/dev/incoming-call': {
       id: '/dev/incoming-call'
       path: '/incoming-call'
       fullPath: '/dev/incoming-call'
       preLoaderRoute: typeof DevIncomingCallRouteImport
+      parentRoute: typeof DevRoute
+    }
+    '/dev/notes': {
+      id: '/dev/notes'
+      path: '/notes'
+      fullPath: '/dev/notes'
+      preLoaderRoute: typeof DevNotesRouteImport
+      parentRoute: typeof DevRoute
+    }
+    '/dev/notification': {
+      id: '/dev/notification'
+      path: '/notification'
+      fullPath: '/dev/notification'
+      preLoaderRoute: typeof DevNotificationRouteImport
+      parentRoute: typeof DevRoute
+    }
+    '/dev/quiz': {
+      id: '/dev/quiz'
+      path: '/quiz'
+      fullPath: '/dev/quiz'
+      preLoaderRoute: typeof DevQuizRouteImport
       parentRoute: typeof DevRoute
     }
     '/dev/scene': {
@@ -180,6 +268,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevVideoStageRouteImport
       parentRoute: typeof DevRoute
     }
+    '/dev/voice-once': {
+      id: '/dev/voice-once'
+      path: '/voice-once'
+      fullPath: '/dev/voice-once'
+      preLoaderRoute: typeof DevVoiceOnceRouteImport
+      parentRoute: typeof DevRoute
+    }
     '/dev/whatsapp': {
       id: '/dev/whatsapp'
       path: '/whatsapp'
@@ -191,18 +286,28 @@ declare module '@tanstack/react-router' {
 }
 
 interface DevRouteChildren {
+  DevChoiceRoute: typeof DevChoiceRoute
   DevIncomingCallRoute: typeof DevIncomingCallRoute
+  DevNotesRoute: typeof DevNotesRoute
+  DevNotificationRoute: typeof DevNotificationRoute
+  DevQuizRoute: typeof DevQuizRoute
   DevSceneRoute: typeof DevSceneRoute
   DevTimelineRoute: typeof DevTimelineRoute
   DevVideoStageRoute: typeof DevVideoStageRoute
+  DevVoiceOnceRoute: typeof DevVoiceOnceRoute
   DevWhatsappRoute: typeof DevWhatsappRoute
 }
 
 const DevRouteChildren: DevRouteChildren = {
+  DevChoiceRoute: DevChoiceRoute,
   DevIncomingCallRoute: DevIncomingCallRoute,
+  DevNotesRoute: DevNotesRoute,
+  DevNotificationRoute: DevNotificationRoute,
+  DevQuizRoute: DevQuizRoute,
   DevSceneRoute: DevSceneRoute,
   DevTimelineRoute: DevTimelineRoute,
   DevVideoStageRoute: DevVideoStageRoute,
+  DevVoiceOnceRoute: DevVoiceOnceRoute,
   DevWhatsappRoute: DevWhatsappRoute,
 }
 
