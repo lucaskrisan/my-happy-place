@@ -10,7 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as DevRouteImport } from './routes/dev'
+import { Route as DevIndexRouteImport } from './routes/dev/index'
 import { Route as Dev14DaysRouteImport } from './routes/dev/14-days'
 import { Route as DevAudioRouteImport } from './routes/dev/audio'
 import { Route as DevChoiceRouteImport } from './routes/dev/choice'
@@ -38,120 +38,119 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DevRoute = DevRouteImport.update({
-  id: '/dev',
-  path: '/dev',
+const DevIndexRoute = DevIndexRouteImport.update({
+  id: '/dev/',
+  path: '/dev/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Dev14DaysRoute = Dev14DaysRouteImport.update({
-  id: '/14-days',
-  path: '/14-days',
-  getParentRoute: () => DevRoute,
+  id: '/dev/14-days',
+  path: '/dev/14-days',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevAudioRoute = DevAudioRouteImport.update({
-  id: '/audio',
-  path: '/audio',
-  getParentRoute: () => DevRoute,
+  id: '/dev/audio',
+  path: '/dev/audio',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevChoiceRoute = DevChoiceRouteImport.update({
-  id: '/choice',
-  path: '/choice',
-  getParentRoute: () => DevRoute,
+  id: '/dev/choice',
+  path: '/dev/choice',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevDebugRoute = DevDebugRouteImport.update({
-  id: '/debug',
-  path: '/debug',
-  getParentRoute: () => DevRoute,
+  id: '/dev/debug',
+  path: '/dev/debug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevDoorSceneRoute = DevDoorSceneRouteImport.update({
-  id: '/door-scene',
-  path: '/door-scene',
-  getParentRoute: () => DevRoute,
+  id: '/dev/door-scene',
+  path: '/dev/door-scene',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevHusbandTalkRoute = DevHusbandTalkRouteImport.update({
-  id: '/husband-talk',
-  path: '/husband-talk',
-  getParentRoute: () => DevRoute,
+  id: '/dev/husband-talk',
+  path: '/dev/husband-talk',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevIncomingCallRoute = DevIncomingCallRouteImport.update({
-  id: '/incoming-call',
-  path: '/incoming-call',
-  getParentRoute: () => DevRoute,
+  id: '/dev/incoming-call',
+  path: '/dev/incoming-call',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevMilkSceneRoute = DevMilkSceneRouteImport.update({
-  id: '/milk-scene',
-  path: '/milk-scene',
-  getParentRoute: () => DevRoute,
+  id: '/dev/milk-scene',
+  path: '/dev/milk-scene',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevMotherCallRoute = DevMotherCallRouteImport.update({
-  id: '/mother-call',
-  path: '/mother-call',
-  getParentRoute: () => DevRoute,
+  id: '/dev/mother-call',
+  path: '/dev/mother-call',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevNotesRoute = DevNotesRouteImport.update({
-  id: '/notes',
-  path: '/notes',
-  getParentRoute: () => DevRoute,
+  id: '/dev/notes',
+  path: '/dev/notes',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevNotificationRoute = DevNotificationRouteImport.update({
-  id: '/notification',
-  path: '/notification',
-  getParentRoute: () => DevRoute,
+  id: '/dev/notification',
+  path: '/dev/notification',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevPreloaderRoute = DevPreloaderRouteImport.update({
-  id: '/preloader',
-  path: '/preloader',
-  getParentRoute: () => DevRoute,
+  id: '/dev/preloader',
+  path: '/dev/preloader',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevQuizRoute = DevQuizRouteImport.update({
-  id: '/quiz',
-  path: '/quiz',
-  getParentRoute: () => DevRoute,
+  id: '/dev/quiz',
+  path: '/dev/quiz',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevRecordRoute = DevRecordRouteImport.update({
-  id: '/record',
-  path: '/record',
-  getParentRoute: () => DevRoute,
+  id: '/dev/record',
+  path: '/dev/record',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevSceneRoute = DevSceneRouteImport.update({
-  id: '/scene',
-  path: '/scene',
-  getParentRoute: () => DevRoute,
+  id: '/dev/scene',
+  path: '/dev/scene',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevSecretWhatsappRoute = DevSecretWhatsappRouteImport.update({
-  id: '/secret-whatsapp',
-  path: '/secret-whatsapp',
-  getParentRoute: () => DevRoute,
+  id: '/dev/secret-whatsapp',
+  path: '/dev/secret-whatsapp',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevTimelineRoute = DevTimelineRouteImport.update({
-  id: '/timeline',
-  path: '/timeline',
-  getParentRoute: () => DevRoute,
+  id: '/dev/timeline',
+  path: '/dev/timeline',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevTransitionsRoute = DevTransitionsRouteImport.update({
-  id: '/transitions',
-  path: '/transitions',
-  getParentRoute: () => DevRoute,
+  id: '/dev/transitions',
+  path: '/dev/transitions',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevVideoStageRoute = DevVideoStageRouteImport.update({
-  id: '/video-stage',
-  path: '/video-stage',
-  getParentRoute: () => DevRoute,
+  id: '/dev/video-stage',
+  path: '/dev/video-stage',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevVoiceOnceRoute = DevVoiceOnceRouteImport.update({
-  id: '/voice-once',
-  path: '/voice-once',
-  getParentRoute: () => DevRoute,
+  id: '/dev/voice-once',
+  path: '/dev/voice-once',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevWhatsappRoute = DevWhatsappRouteImport.update({
-  id: '/whatsapp',
-  path: '/whatsapp',
-  getParentRoute: () => DevRoute,
+  id: '/dev/whatsapp',
+  path: '/dev/whatsapp',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/dev': typeof DevRouteWithChildren
   '/dev/14-days': typeof Dev14DaysRoute
   '/dev/audio': typeof DevAudioRoute
   '/dev/choice': typeof DevChoiceRoute
@@ -173,10 +172,10 @@ export interface FileRoutesByFullPath {
   '/dev/video-stage': typeof DevVideoStageRoute
   '/dev/voice-once': typeof DevVoiceOnceRoute
   '/dev/whatsapp': typeof DevWhatsappRoute
+  '/dev/': typeof DevIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/dev': typeof DevRouteWithChildren
   '/dev/14-days': typeof Dev14DaysRoute
   '/dev/audio': typeof DevAudioRoute
   '/dev/choice': typeof DevChoiceRoute
@@ -198,11 +197,11 @@ export interface FileRoutesByTo {
   '/dev/video-stage': typeof DevVideoStageRoute
   '/dev/voice-once': typeof DevVoiceOnceRoute
   '/dev/whatsapp': typeof DevWhatsappRoute
+  '/dev': typeof DevIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/dev': typeof DevRouteWithChildren
   '/dev/14-days': typeof Dev14DaysRoute
   '/dev/audio': typeof DevAudioRoute
   '/dev/choice': typeof DevChoiceRoute
@@ -224,12 +223,12 @@ export interface FileRoutesById {
   '/dev/video-stage': typeof DevVideoStageRoute
   '/dev/voice-once': typeof DevVoiceOnceRoute
   '/dev/whatsapp': typeof DevWhatsappRoute
+  '/dev/': typeof DevIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/dev'
     | '/dev/14-days'
     | '/dev/audio'
     | '/dev/choice'
@@ -251,10 +250,10 @@ export interface FileRouteTypes {
     | '/dev/video-stage'
     | '/dev/voice-once'
     | '/dev/whatsapp'
+    | '/dev/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/dev'
     | '/dev/14-days'
     | '/dev/audio'
     | '/dev/choice'
@@ -276,10 +275,10 @@ export interface FileRouteTypes {
     | '/dev/video-stage'
     | '/dev/voice-once'
     | '/dev/whatsapp'
+    | '/dev'
   id:
     | '__root__'
     | '/'
-    | '/dev'
     | '/dev/14-days'
     | '/dev/audio'
     | '/dev/choice'
@@ -301,180 +300,11 @@ export interface FileRouteTypes {
     | '/dev/video-stage'
     | '/dev/voice-once'
     | '/dev/whatsapp'
+    | '/dev/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DevRoute: typeof DevRouteWithChildren
-}
-
-declare module '@tanstack/react-router' {
-  interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dev': {
-      id: '/dev'
-      path: '/dev'
-      fullPath: '/dev'
-      preLoaderRoute: typeof DevRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dev/14-days': {
-      id: '/dev/14-days'
-      path: '/14-days'
-      fullPath: '/dev/14-days'
-      preLoaderRoute: typeof Dev14DaysRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/audio': {
-      id: '/dev/audio'
-      path: '/audio'
-      fullPath: '/dev/audio'
-      preLoaderRoute: typeof DevAudioRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/choice': {
-      id: '/dev/choice'
-      path: '/choice'
-      fullPath: '/dev/choice'
-      preLoaderRoute: typeof DevChoiceRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/debug': {
-      id: '/dev/debug'
-      path: '/debug'
-      fullPath: '/dev/debug'
-      preLoaderRoute: typeof DevDebugRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/door-scene': {
-      id: '/dev/door-scene'
-      path: '/door-scene'
-      fullPath: '/dev/door-scene'
-      preLoaderRoute: typeof DevDoorSceneRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/husband-talk': {
-      id: '/dev/husband-talk'
-      path: '/husband-talk'
-      fullPath: '/dev/husband-talk'
-      preLoaderRoute: typeof DevHusbandTalkRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/incoming-call': {
-      id: '/dev/incoming-call'
-      path: '/incoming-call'
-      fullPath: '/dev/incoming-call'
-      preLoaderRoute: typeof DevIncomingCallRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/milk-scene': {
-      id: '/dev/milk-scene'
-      path: '/milk-scene'
-      fullPath: '/dev/milk-scene'
-      preLoaderRoute: typeof DevMilkSceneRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/mother-call': {
-      id: '/dev/mother-call'
-      path: '/mother-call'
-      fullPath: '/dev/mother-call'
-      preLoaderRoute: typeof DevMotherCallRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/notes': {
-      id: '/dev/notes'
-      path: '/notes'
-      fullPath: '/dev/notes'
-      preLoaderRoute: typeof DevNotesRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/notification': {
-      id: '/dev/notification'
-      path: '/notification'
-      fullPath: '/dev/notification'
-      preLoaderRoute: typeof DevNotificationRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/preloader': {
-      id: '/dev/preloader'
-      path: '/preloader'
-      fullPath: '/dev/preloader'
-      preLoaderRoute: typeof DevPreloaderRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/quiz': {
-      id: '/dev/quiz'
-      path: '/quiz'
-      fullPath: '/dev/quiz'
-      preLoaderRoute: typeof DevQuizRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/record': {
-      id: '/dev/record'
-      path: '/record'
-      fullPath: '/dev/record'
-      preLoaderRoute: typeof DevRecordRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/scene': {
-      id: '/dev/scene'
-      path: '/scene'
-      fullPath: '/dev/scene'
-      preLoaderRoute: typeof DevSceneRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/secret-whatsapp': {
-      id: '/dev/secret-whatsapp'
-      path: '/secret-whatsapp'
-      fullPath: '/dev/secret-whatsapp'
-      preLoaderRoute: typeof DevSecretWhatsappRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/timeline': {
-      id: '/dev/timeline'
-      path: '/timeline'
-      fullPath: '/dev/timeline'
-      preLoaderRoute: typeof DevTimelineRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/transitions': {
-      id: '/dev/transitions'
-      path: '/transitions'
-      fullPath: '/dev/transitions'
-      preLoaderRoute: typeof DevTransitionsRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/video-stage': {
-      id: '/dev/video-stage'
-      path: '/video-stage'
-      fullPath: '/dev/video-stage'
-      preLoaderRoute: typeof DevVideoStageRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/voice-once': {
-      id: '/dev/voice-once'
-      path: '/voice-once'
-      fullPath: '/dev/voice-once'
-      preLoaderRoute: typeof DevVoiceOnceRouteImport
-      parentRoute: typeof DevRoute
-    }
-    '/dev/whatsapp': {
-      id: '/dev/whatsapp'
-      path: '/whatsapp'
-      fullPath: '/dev/whatsapp'
-      preLoaderRoute: typeof DevWhatsappRouteImport
-      parentRoute: typeof DevRoute
-    }
-  }
-}
-
-interface DevRouteChildren {
   Dev14DaysRoute: typeof Dev14DaysRoute
   DevAudioRoute: typeof DevAudioRoute
   DevChoiceRoute: typeof DevChoiceRoute
@@ -496,9 +326,177 @@ interface DevRouteChildren {
   DevVideoStageRoute: typeof DevVideoStageRoute
   DevVoiceOnceRoute: typeof DevVoiceOnceRoute
   DevWhatsappRoute: typeof DevWhatsappRoute
+  DevIndexRoute: typeof DevIndexRoute
 }
 
-const DevRouteChildren: DevRouteChildren = {
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/': {
+      id: '/dev/'
+      path: '/dev'
+      fullPath: '/dev/'
+      preLoaderRoute: typeof DevIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/14-days': {
+      id: '/dev/14-days'
+      path: '/dev/14-days'
+      fullPath: '/dev/14-days'
+      preLoaderRoute: typeof Dev14DaysRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/audio': {
+      id: '/dev/audio'
+      path: '/dev/audio'
+      fullPath: '/dev/audio'
+      preLoaderRoute: typeof DevAudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/choice': {
+      id: '/dev/choice'
+      path: '/dev/choice'
+      fullPath: '/dev/choice'
+      preLoaderRoute: typeof DevChoiceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/debug': {
+      id: '/dev/debug'
+      path: '/dev/debug'
+      fullPath: '/dev/debug'
+      preLoaderRoute: typeof DevDebugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/door-scene': {
+      id: '/dev/door-scene'
+      path: '/dev/door-scene'
+      fullPath: '/dev/door-scene'
+      preLoaderRoute: typeof DevDoorSceneRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/husband-talk': {
+      id: '/dev/husband-talk'
+      path: '/dev/husband-talk'
+      fullPath: '/dev/husband-talk'
+      preLoaderRoute: typeof DevHusbandTalkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/incoming-call': {
+      id: '/dev/incoming-call'
+      path: '/dev/incoming-call'
+      fullPath: '/dev/incoming-call'
+      preLoaderRoute: typeof DevIncomingCallRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/milk-scene': {
+      id: '/dev/milk-scene'
+      path: '/dev/milk-scene'
+      fullPath: '/dev/milk-scene'
+      preLoaderRoute: typeof DevMilkSceneRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/mother-call': {
+      id: '/dev/mother-call'
+      path: '/dev/mother-call'
+      fullPath: '/dev/mother-call'
+      preLoaderRoute: typeof DevMotherCallRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/notes': {
+      id: '/dev/notes'
+      path: '/dev/notes'
+      fullPath: '/dev/notes'
+      preLoaderRoute: typeof DevNotesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/notification': {
+      id: '/dev/notification'
+      path: '/dev/notification'
+      fullPath: '/dev/notification'
+      preLoaderRoute: typeof DevNotificationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/preloader': {
+      id: '/dev/preloader'
+      path: '/dev/preloader'
+      fullPath: '/dev/preloader'
+      preLoaderRoute: typeof DevPreloaderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/quiz': {
+      id: '/dev/quiz'
+      path: '/dev/quiz'
+      fullPath: '/dev/quiz'
+      preLoaderRoute: typeof DevQuizRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/record': {
+      id: '/dev/record'
+      path: '/dev/record'
+      fullPath: '/dev/record'
+      preLoaderRoute: typeof DevRecordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/scene': {
+      id: '/dev/scene'
+      path: '/dev/scene'
+      fullPath: '/dev/scene'
+      preLoaderRoute: typeof DevSceneRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/secret-whatsapp': {
+      id: '/dev/secret-whatsapp'
+      path: '/dev/secret-whatsapp'
+      fullPath: '/dev/secret-whatsapp'
+      preLoaderRoute: typeof DevSecretWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/timeline': {
+      id: '/dev/timeline'
+      path: '/dev/timeline'
+      fullPath: '/dev/timeline'
+      preLoaderRoute: typeof DevTimelineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/transitions': {
+      id: '/dev/transitions'
+      path: '/dev/transitions'
+      fullPath: '/dev/transitions'
+      preLoaderRoute: typeof DevTransitionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/video-stage': {
+      id: '/dev/video-stage'
+      path: '/dev/video-stage'
+      fullPath: '/dev/video-stage'
+      preLoaderRoute: typeof DevVideoStageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/voice-once': {
+      id: '/dev/voice-once'
+      path: '/dev/voice-once'
+      fullPath: '/dev/voice-once'
+      preLoaderRoute: typeof DevVoiceOnceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/whatsapp': {
+      id: '/dev/whatsapp'
+      path: '/dev/whatsapp'
+      fullPath: '/dev/whatsapp'
+      preLoaderRoute: typeof DevWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+  }
+}
+
+const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   Dev14DaysRoute: Dev14DaysRoute,
   DevAudioRoute: DevAudioRoute,
   DevChoiceRoute: DevChoiceRoute,
@@ -520,13 +518,7 @@ const DevRouteChildren: DevRouteChildren = {
   DevVideoStageRoute: DevVideoStageRoute,
   DevVoiceOnceRoute: DevVoiceOnceRoute,
   DevWhatsappRoute: DevWhatsappRoute,
-}
-
-const DevRouteWithChildren = DevRoute._addFileChildren(DevRouteChildren)
-
-const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  DevRoute: DevRouteWithChildren,
+  DevIndexRoute: DevIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
