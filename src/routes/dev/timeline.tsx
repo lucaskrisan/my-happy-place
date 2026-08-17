@@ -22,7 +22,8 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  MessageSquare
+  MessageSquare,
+  Bell
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
