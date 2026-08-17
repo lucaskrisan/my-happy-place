@@ -9,12 +9,27 @@ interface IncomingCallOverlayProps {
   callerName: string;
   callerSubtitle?: string;
   callerAvatar?: string;
+  
+  // Audio sources
   ringtoneSrc?: string;
+  connectSfxSrc?: string;
   voiceAudioSrc?: string;
+  endSfxSrc?: string;
+  
+  // Volumes (0-1)
+  ringtoneVolume?: number;
+  voiceVolume?: number;
+  sfxVolume?: number;
+  
+  autoEndAfterAudio?: boolean;
+  
+  // Callbacks
   onAccept?: () => void;
   onDecline?: () => void;
   onEnd?: () => void;
-  autoEndAfterAudio?: boolean;
+  onStateChange?: (state: CallState) => void;
+  onVoiceStart?: () => void;
+  onVoiceEnd?: () => void;
 }
 
 export function IncomingCallOverlay({
@@ -23,33 +38,49 @@ export function IncomingCallOverlay({
   callerSubtitle = "Ligação recebida",
   callerAvatar,
   ringtoneSrc,
+  connectSfxSrc,
   voiceAudioSrc,
+  endSfxSrc,
+  ringtoneVolume = 0.7,
+  voiceVolume = 1.0,
+  sfxVolume = 0.75,
   onAccept,
   onDecline,
   onEnd,
+  onStateChange,
+  onVoiceStart,
+  onVoiceEnd,
   autoEndAfterAudio = true,
 }: IncomingCallOverlayProps) {
   const [callState, setCallState] = useState<CallState>('idle');
   const [duration, setDuration] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   
+  // Refs for audio elements
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
+  const connectSfxRef = useRef<HTMLAudioElement | null>(null);
   const voiceAudioRef = useRef<HTMLAudioElement | null>(null);
+  const endSfxRef = useRef<HTMLAudioElement | null>(null);
+  
   const timerRef = useRef<number | null>(null);
   const durationTimerRef = useRef<number | null>(null);
 
+  const updateState = useCallback((newState: CallState) => {
+    setCallState(newState);
+    onStateChange?.(newState);
+  }, [onStateChange]);
+
+  const stopAllAudio = useCallback(() => {
+    [ringtoneRef, connectSfxRef, voiceAudioRef, endSfxRef].forEach(ref => {
+      if (ref.current) {
+        ref.current.pause();
+        ref.current.currentTime = 0;
+      }
+    });
+  }, []);
+
   const cleanup = useCallback(() => {
-    console.log("Cleaning up IncomingCallOverlay...");
-    if (ringtoneRef.current) {
-      ringtoneRef.current.pause();
-      ringtoneRef.current.currentTime = 0;
-      ringtoneRef.current = null;
-    }
-    if (voiceAudioRef.current) {
-      voiceAudioRef.current.pause();
-      voiceAudioRef.current.currentTime = 0;
-      voiceAudioRef.current = null;
-    }
+    stopAllAudio();
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
@@ -61,31 +92,25 @@ export function IncomingCallOverlay({
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(0);
     }
-  }, []);
+  }, [stopAllAudio]);
 
   const startIncomingSequence = useCallback(() => {
     setIsVisible(true);
-    setCallState('idle'); // Start from fresh state
+    updateState('incoming');
     
-    // 0ms: overlay appears (handled by isVisible)
-    
-    // 300ms: vibration and state change
-    timerRef.current = window.setTimeout(() => {
-      setCallState('incoming');
-      if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        navigator.vibrate([500, 500]); 
-      }
-    }, 300);
+    // Ringtone start
+    if (ringtoneSrc) {
+      const audio = new Audio(ringtoneSrc);
+      audio.loop = true;
+      audio.volume = ringtoneVolume;
+      ringtoneRef.current = audio;
+      audio.play().catch(e => console.warn("Ringtone playback blocked:", e));
+    }
 
-    // 400ms: ringtone
-    timerRef.current = window.setTimeout(() => {
-      if (ringtoneSrc) {
-        ringtoneRef.current = new Audio(ringtoneSrc);
-        ringtoneRef.current.loop = true;
-        ringtoneRef.current.play().catch(e => console.warn("Ringtone playback blocked:", e));
-      }
-    }, 400);
-  }, [ringtoneSrc]);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate([500, 500]); 
+    }
+  }, [ringtoneSrc, ringtoneVolume, updateState]);
 
   // Sync internal state with open prop
   useEffect(() => {
@@ -93,8 +118,8 @@ export function IncomingCallOverlay({
       startIncomingSequence();
     } else {
       cleanup();
-      setCallState('idle');
       setIsVisible(false);
+      setCallState('idle'); 
     }
   }, [open, startIncomingSequence, cleanup]);
 
@@ -119,54 +144,78 @@ export function IncomingCallOverlay({
       navigator.vibrate(0);
     }
     
-    setCallState('connecting');
+    updateState('connecting');
     onAccept?.();
 
-    // 600ms: transition to active
+    const connectDelay = 80 + Math.random() * 70;
     timerRef.current = window.setTimeout(() => {
-      setCallState('active');
-      startDurationTimer();
-      
-      // 250ms delay before voice audio
+      if (connectSfxSrc) {
+        const audio = new Audio(connectSfxSrc);
+        audio.volume = sfxVolume;
+        connectSfxRef.current = audio;
+        audio.play().catch(e => console.warn("Connect SFX blocked:", e));
+      }
+
+      const activeDelay = 300 + Math.random() * 200;
       timerRef.current = window.setTimeout(() => {
-        if (voiceAudioSrc) {
-          voiceAudioRef.current = new Audio(voiceAudioSrc);
-          voiceAudioRef.current.play().catch(e => console.warn("Voice audio playback blocked:", e));
-          
-          voiceAudioRef.current.onended = () => {
-            if (autoEndAfterAudio) {
-              timerRef.current = window.setTimeout(() => {
-                handleEnd();
-              }, 400);
-            }
-          };
-        } else {
-          console.log("Nenhum voiceAudioSrc configurado");
-        }
-      }, 250);
-    }, 600);
+        updateState('active');
+        startDurationTimer();
+
+        const voiceDelay = 200 + Math.random() * 150;
+        timerRef.current = window.setTimeout(() => {
+          if (voiceAudioSrc) {
+            const audio = new Audio(voiceAudioSrc);
+            audio.volume = voiceVolume;
+            voiceAudioRef.current = audio;
+            onVoiceStart?.();
+            audio.play().catch(e => console.warn("Voice audio blocked:", e));
+            
+            audio.onended = () => {
+              onVoiceEnd?.();
+              if (autoEndAfterAudio) {
+                const autoEndDelay = 350 + Math.random() * 250;
+                timerRef.current = window.setTimeout(() => {
+                  handleEnd();
+                }, autoEndDelay);
+              }
+            };
+          }
+        }, voiceDelay);
+      }, activeDelay);
+    }, connectDelay);
   };
 
   const handleDecline = () => {
     cleanup();
-    setCallState('declined');
+    updateState('declined');
     onDecline?.();
     
     timerRef.current = window.setTimeout(() => {
       setIsVisible(false);
-      setCallState('idle');
+      updateState('idle');
     }, 500);
   };
 
   const handleEnd = () => {
-    cleanup();
-    setCallState('ended');
+    if (voiceAudioRef.current) {
+      voiceAudioRef.current.pause();
+    }
+    if (durationTimerRef.current) clearInterval(durationTimerRef.current);
+
+    if (endSfxSrc) {
+      const audio = new Audio(endSfxSrc);
+      audio.volume = sfxVolume;
+      endSfxRef.current = audio;
+      audio.play().catch(e => console.warn("End SFX blocked:", e));
+    }
+
+    updateState('ended');
     onEnd?.();
     
     timerRef.current = window.setTimeout(() => {
       setIsVisible(false);
-      setCallState('idle');
-    }, 700);
+      updateState('idle');
+    }, 1200); 
   };
 
   const formatDuration = (seconds: number) => {
@@ -182,17 +231,14 @@ export function IncomingCallOverlay({
       "fixed inset-0 z-[9999] flex flex-col items-center justify-between bg-black/40 backdrop-blur-xl transition-all duration-500 font-sans text-white pb-[env(safe-area-inset-bottom,2rem)] pt-[env(safe-area-inset-top,2rem)] overflow-hidden",
       callState === 'idle' ? "opacity-0" : "opacity-100"
     )}>
-      {/* Background Vibration Effect */}
       {callState === 'incoming' && (
         <div className="absolute inset-0 pointer-events-none animate-subtle-shake opacity-20" />
       )}
 
-      {/* Header Info */}
       <div className={cn(
         "flex flex-col items-center mt-12 transition-all duration-700",
         callState === 'idle' ? "translate-y-4 opacity-0" : "translate-y-0 opacity-100"
       )}>
-        {/* Avatar */}
         <div className={cn(
           "w-32 h-32 rounded-full mb-6 overflow-hidden border-2 border-white/10 shadow-2xl relative",
           callState === 'incoming' && "animate-pulse-subtle"
@@ -220,7 +266,6 @@ export function IncomingCallOverlay({
         </p>
       </div>
 
-      {/* Middle Controls (Active Only) */}
       {callState === 'active' && (
         <div className="grid grid-cols-3 gap-8 w-full max-w-xs px-4 animate-fade-in">
           {[
@@ -238,7 +283,6 @@ export function IncomingCallOverlay({
         </div>
       )}
 
-      {/* Actions */}
       <div className="w-full px-12 mb-12 flex justify-between items-center max-w-md">
         {callState === 'incoming' ? (
           <>
