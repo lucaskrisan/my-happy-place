@@ -357,6 +357,56 @@ function TimelineLab() {
     addLog("experience_reset");
   };
 
+  const resolveInteractionAction = (action: InteractionAction, sourceId: string) => {
+    if (actionExecuted) return;
+    
+    if (action.type === 'open_messaging') {
+      setActionExecuted(true);
+      setTriggeredBy(sourceId);
+      
+      if (videoRef.current) {
+        const timeAtTap = videoRef.current.currentTime;
+        setVideoPausedAt(timeAtTap);
+        videoRef.current.pause();
+        addLog(`video_current_time: ${timeAtTap.toFixed(3)}`);
+        addLog(`video_paused_for_interaction`);
+      }
+      
+      setActiveOverlay('messaging');
+      addLog(`interaction_action: open_messaging`);
+      addLog(`messaging_opened`);
+    }
+  };
+
+  const handleNotificationInteraction = (e: NotificationInteractionEvent) => {
+    addLog(e.type);
+    
+    if (e.type === 'notification_auto_dismissed' || e.type === 'notification_swiped') {
+      setActiveNotificationId(null);
+      if (activeNotificationId) {
+        engine.completeEvent(activeNotificationId);
+        addLog(`event_completed: ${activeNotificationId}`);
+      }
+    }
+    
+    if (e.type === 'notification_tapped') {
+      if (activeNotificationId) {
+        const event = events.find(ev => ev.id === activeNotificationId);
+        const tapAction = event?.payload?.['tapAction'] as InteractionAction | undefined;
+        
+        engine.completeEvent(activeNotificationId);
+        addLog(`event_completed: ${activeNotificationId}`);
+        
+        if (tapAction) {
+          resolveInteractionAction(tapAction, activeNotificationId);
+        }
+        
+        setActiveNotificationId(null);
+      }
+    }
+  };
+
+
   const activeNotificationPayload = useMemo(() => {
     if (!activeNotificationId) return null;
     const event = events.find(e => e.id === activeNotificationId);
