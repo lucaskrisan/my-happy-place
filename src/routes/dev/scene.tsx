@@ -230,12 +230,12 @@ function SceneLab() {
     if (activeInteraction?.type !== 'incoming_call') return null;
     const p = activeInteraction.payload;
     return {
-      callerName: p['callerName'] as string,
-      callerSubtitle: p['callerSubtitle'] as string,
-      ringtoneSrc: sfxUrls['ringtone'],
-      connectSfxSrc: sfxUrls['connect'],
-      voiceAudioSrc: sfxUrls['voice'],
-      endSfxSrc: sfxUrls['end']
+      callerName: (p['callerName'] as string) || "Desconhecido",
+      callerSubtitle: (p['callerSubtitle'] as string) || "Ligação",
+      ringtoneSrc: sfxUrls['ringtone'] || undefined,
+      connectSfxSrc: sfxUrls['connect'] || undefined,
+      voiceAudioSrc: sfxUrls['voice'] || undefined,
+      endSfxSrc: sfxUrls['end'] || undefined
     };
   }, [activeInteraction, sfxUrls]);
 
@@ -267,13 +267,13 @@ function SceneLab() {
     if (!event || !event.payload) return null;
     
     return {
-      appName: event.payload['appName'],
-      senderName: event.payload['senderName'],
-      message: event.payload['message'],
+      appName: (event.payload['appName'] as string) || "Mensagens",
+      senderName: (event.payload['senderName'] as string) || "Alguém",
+      message: (event.payload['message'] as string) || "...",
       timestamp: "agora",
       autoDismiss: true,
       autoDismissMs: 5000,
-      soundSrc: sfxUrls['notification']
+      soundSrc: sfxUrls['notification'] || undefined
     };
   }, [runtimeState?.activeNotificationId, activeSceneId, sfxUrls]);
 

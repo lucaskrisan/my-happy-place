@@ -16,7 +16,7 @@ export interface NotificationOverlayProps {
   message?: string;
   avatar?: string;
   timestamp?: string;
-  soundSrc?: string;
+  soundSrc?: string | undefined;
   autoDismiss?: boolean;
   autoDismissMs?: number;
   onOpen?: () => void;

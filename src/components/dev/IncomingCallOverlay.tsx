@@ -11,10 +11,10 @@ interface IncomingCallOverlayProps {
   callerAvatar?: string;
   
   // Audio sources
-  ringtoneSrc?: string;
-  connectSfxSrc?: string;
-  voiceAudioSrc?: string;
-  endSfxSrc?: string;
+  ringtoneSrc?: string | undefined;
+  connectSfxSrc?: string | undefined;
+  voiceAudioSrc?: string | undefined;
+  endSfxSrc?: string | undefined;
   
   // Volumes (0-1)
   ringtoneVolume?: number;
