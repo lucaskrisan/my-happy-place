@@ -337,6 +337,10 @@ function TimelineLab() {
     }
     engine.reset();
     setActiveOverlay('none');
+    setActiveNotificationId(null);
+    setActionExecuted(false);
+    setVideoPausedAt(null);
+    setTriggeredBy(null);
     setActiveText(null);
     setCurrentTime(0);
     addLog("video_play");
