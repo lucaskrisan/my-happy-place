@@ -225,6 +225,21 @@ function TimelineLab() {
         addLog(`call_opened`);
       }
 
+      if (event.type === 'notification') {
+        // Only show if no blocking overlay is active
+        if (activeOverlay === 'none') {
+          setActiveNotificationId(event.id);
+        } else {
+          // If blocking is active, we should keep it armed so it fires after blocking
+          // The current engine completes non-blocking immediately.
+          // To follow instruction 23, we should have the engine re-process later or handle it here.
+          // For now, let's just log that it was suppressed.
+          addLog(`notification_suppressed_by_blocking: ${event.id}`);
+          // Force engine to re-arm this so it can try again when no blocking is active
+          engine.rearmEvent(event.id);
+        }
+      }
+
       if (event.type === 'whatsapp_open') {
         setActiveOverlay('messaging');
         addLog(`blocking_started: ${event.id}`);
