@@ -25,7 +25,7 @@ const modules = [
   { path: "/dev/debug", title: "Debug State", description: "Área futura para visualizar estado da experiência." },
 ];
 
-export const Route = createFileRoute("/dev/")({}); // Dummy to avoid error, actual routes below will be individual files
+export const Route = createFileRoute("/dev-temp")({}); // Dummy to avoid error, actual routes below will be individual files
 
 // Batch creating all routes as files. Since I can't create 21 files at once in one go, I will create the main ones first or just loop the creation if I had shell access for it.
 // Actually I should just create these routes one by one or grouping them in batches.
