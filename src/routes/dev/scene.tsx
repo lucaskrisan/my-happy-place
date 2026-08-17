@@ -556,16 +556,6 @@ function SceneLab() {
                   />
                 </div>
               )}
-                <div className="absolute inset-0 z-50">
-                  <ChoiceOverlay 
-                    open={true}
-                    definition={choicePayload}
-                    onComplete={(result) => engineRef.current?.handleChoiceComplete(result)}
-                    onClose={() => engineRef.current?.completeInteraction(activeInteraction.id)}
-                    closeBehavior="prevent"
-                  />
-                </div>
-              )}
 
               {/* Non-Blocking Overlays */}
               {runtimeState?.activeNotificationId && notificationPayload && (
