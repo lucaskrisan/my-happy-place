@@ -16,7 +16,7 @@ import {
   Settings,
   ArrowRight,
   Database,
-  FileVideo,
+  FileVideo as FileVideoIcon,
   LogOut,
   ChevronRight
 } from "lucide-react";
