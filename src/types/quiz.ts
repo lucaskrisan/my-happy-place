@@ -26,6 +26,7 @@ export type QuizDefinition = {
   showProgress?: boolean;
   feedbackMode?: 'none' | 'after_each';
   completionLabel?: string;
+  closeBehavior?: 'allow' | 'prevent' | 'skip';
 };
 
 export type QuizAnswer = {
