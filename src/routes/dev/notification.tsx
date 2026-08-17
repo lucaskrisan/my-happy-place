@@ -60,7 +60,7 @@ function NotificationLab() {
     swipeOffset: 0
   });
 
-  const addLog = useCallback((event: string) => {
+  const addLog = React.useCallback((event: string) => {
     const newLog = {
       id: Math.random().toString(36).substring(7),
       timestamp: new Date().toLocaleTimeString('pt-BR', { hour12: false }),
@@ -68,6 +68,7 @@ function NotificationLab() {
     };
     setLogs(prev => [newLog, ...prev].slice(0, 50));
   }, []);
+
 
   // Media Handlers
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
