@@ -187,6 +187,15 @@ function TimelineLab() {
     }
   };
 
+  const handleNotificationSfxFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (notificationSfxFile.url) URL.revokeObjectURL(notificationSfxFile.url);
+      setNotificationSfxFile({ url: URL.createObjectURL(file), name: file.name });
+      addLog(`notification_sfx_loaded: ${file.name}`);
+    }
+  };
+
   const handleChatAudioFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -195,6 +204,7 @@ function TimelineLab() {
       addLog(`chat_audio_loaded: ${file.name}`);
     }
   };
+
 
 
   const processEvents = useCallback((time: number) => {
