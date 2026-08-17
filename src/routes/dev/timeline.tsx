@@ -718,13 +718,36 @@ function TimelineLab() {
                     <span className="text-zinc-600">Overlay:</span>
                     <span className="text-zinc-300">{activeOverlay}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-600">Messaging state:</span>
-                    <span className="text-zinc-300">
-                      {events.find(e => e.id === 'mother-chat')?.status || 'armed'}
+                  <div className="flex justify-between border-t border-zinc-800/50 mt-1 pt-1">
+                    <span className="text-zinc-600">Notification:</span>
+                    <span className={cn(activeNotificationId ? "text-orange-400" : "text-zinc-500")}>
+                      {activeNotificationId ? 'active' : 'idle'}
                     </span>
                   </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-600">Notification event:</span>
+                    <span className="text-zinc-300">{activeNotificationId || 'none'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-600">Action executed:</span>
+                    <span className={cn(actionExecuted ? "text-green-400" : "text-zinc-500")}>
+                      {actionExecuted.toString()}
+                    </span>
+                  </div>
+                  {videoPausedAt !== null && (
+                    <div className="flex justify-between">
+                      <span className="text-zinc-600">Video paused at:</span>
+                      <span className="text-blue-400">{videoPausedAt.toFixed(3)}s</span>
+                    </div>
+                  )}
+                  {triggeredBy && (
+                    <div className="flex justify-between">
+                      <span className="text-zinc-600">Triggered by:</span>
+                      <span className="text-orange-400">{triggeredBy}</span>
+                    </div>
+                  )}
                 </div>
+
               </div>
 
               <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2 shrink-0">
