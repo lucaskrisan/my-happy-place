@@ -24,8 +24,8 @@ export type ChoiceDefinition = {
 export type ChoiceResult = {
   choiceId: string;
   optionId: string;
-  value?: string;
-  action?: ChoiceAction;
+  value?: string | undefined;
+  action?: ChoiceAction | undefined;
 };
 
 export type ChoiceState =
