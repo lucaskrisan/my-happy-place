@@ -377,11 +377,30 @@ function TimelineLab() {
       };
     }
 
-    // Fallback to legacy behavior if needed (though we disabled the automatic trigger)
+    // Fallback to legacy behavior if needed
     const event = events.find(e => e.type === 'whatsapp_open');
     if (!event || !event.payload) return null;
-    ...
-  }
+    
+    const payload = event.payload as { 
+      contactName: string; 
+      contactSubtitle: string; 
+      messages: ChatMessage[] 
+    };
+
+    const messages = payload.messages.map(m => {
+      if (m.type === 'voice_once') {
+        return { ...m, audioSrc: chatAudioFile.url || m.audioSrc };
+      }
+      return m;
+    });
+
+    return {
+      contactName: payload.contactName,
+      contactSubtitle: payload.contactSubtitle,
+      messages
+    };
+  }, [triggeredBy, events, chatAudioFile.url]);
+
 
 
 
