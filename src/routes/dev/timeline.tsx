@@ -304,8 +304,14 @@ function TimelineLab() {
     const event = events.find(e => e.type === 'whatsapp_open');
     if (!event || !event.payload) return null;
     
+    const payload = event.payload as { 
+      contactName: string; 
+      contactSubtitle: string; 
+      messages: ChatMessage[] 
+    };
+
     // Inject local audio if available
-    const messages = (event.payload.messages as ChatMessage[]).map(m => {
+    const messages = payload.messages.map(m => {
       if (m.type === 'voice_once') {
         return { ...m, audioSrc: chatAudioFile.url || m.audioSrc };
       }
@@ -313,10 +319,12 @@ function TimelineLab() {
     });
 
     return {
-      ...event.payload,
+      contactName: payload.contactName,
+      contactSubtitle: payload.contactSubtitle,
       messages
     };
   }, [events, chatAudioFile.url]);
+
 
 
   const updateEventTime = (id: string, newTime: number) => {
