@@ -53,6 +53,7 @@ export function resolveQuizResultRule(
     }
 
     const winner = dominantTags[0];
+    if (!winner) return null;
     const targetSceneId = rule.routes[winner];
 
     if (targetSceneId) {
