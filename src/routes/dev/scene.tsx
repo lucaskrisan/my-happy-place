@@ -521,7 +521,7 @@ function SceneLab() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-zinc-900/50 p-6 rounded-2xl border border-zinc-800/50">
               <div className="col-span-2 space-y-2">
                 <label className="text-xs font-bold text-zinc-500 uppercase flex items-center gap-2">
-                  <FileVideo className="w-3 h-3" /> Scene Video
+                  <FileVideoIcon className="w-3 h-3" /> Scene Video
                 </label>
                 <input type="file" accept="video/*" onChange={handleFile('video')} className="w-full text-xs bg-zinc-950 border border-zinc-800 rounded p-2" />
               </div>
