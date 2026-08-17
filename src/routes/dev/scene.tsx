@@ -30,6 +30,26 @@ export const Route = createFileRoute("/dev/scene")({
   component: SceneLab,
 });
 
+function FileVideo(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M15 10l5-5v14l-5-5" />
+      <rect width="14" height="14" x="2" y="5" rx="2" ry="2" />
+    </svg>
+  );
+}
+
 // --- MOCK DATA ---
 
 const SCENE_01: SceneDefinition = {
@@ -664,22 +684,3 @@ function SceneLab() {
   );
 }
 
-function FileVideo(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M15 10l5-5v14l-5-5" />
-      <rect width="14" height="14" x="2" y="5" rx="2" ry="2" />
-    </svg>
-  );
-}
