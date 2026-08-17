@@ -347,30 +347,41 @@ function TimelineLab() {
     addLog("experience_reset");
   };
 
+  const activeNotificationPayload = useMemo(() => {
+    if (!activeNotificationId) return null;
+    const event = events.find(e => e.id === activeNotificationId);
+    if (!event || !event.payload) return null;
+    return {
+      ...event.payload,
+      soundSrc: notificationSfxFile.url || event.payload.soundSrc
+    };
+  }, [activeNotificationId, events, notificationSfxFile.url]);
+
   const chatPayload = useMemo(() => {
+    // If we have a triggered interaction, use that config
+    if (triggeredBy && INTERACTION_LIBRARY[triggeredBy]) {
+      const config = INTERACTION_LIBRARY[triggeredBy];
+      const payload = config.payload;
+      
+      const messages = payload.messages.map((m: any) => {
+        if (m.type === 'voice_once') {
+          return { ...m, audioSrc: chatAudioFile.url || m.audioSrc };
+        }
+        return m;
+      });
+
+      return {
+        contactName: payload.contactName,
+        contactSubtitle: payload.contactSubtitle,
+        messages
+      };
+    }
+
+    // Fallback to legacy behavior if needed (though we disabled the automatic trigger)
     const event = events.find(e => e.type === 'whatsapp_open');
     if (!event || !event.payload) return null;
-    
-    const payload = event.payload as { 
-      contactName: string; 
-      contactSubtitle: string; 
-      messages: ChatMessage[] 
-    };
-
-    // Inject local audio if available
-    const messages = payload.messages.map(m => {
-      if (m.type === 'voice_once') {
-        return { ...m, audioSrc: chatAudioFile.url || m.audioSrc };
-      }
-      return m;
-    });
-
-    return {
-      contactName: payload.contactName,
-      contactSubtitle: payload.contactSubtitle,
-      messages
-    };
-  }, [events, chatAudioFile.url]);
+    ...
+  }
 
 
 
