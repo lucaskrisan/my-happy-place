@@ -8,7 +8,9 @@ const registry: Record<string, EventHandler> = {
   'incoming_call': { isBlocking: true },
   'text_reveal': { isBlocking: false },
   'play_sfx': { isBlocking: false },
+  'whatsapp_open': { isBlocking: true },
 };
+
 
 export function getEventHandler(type: string): EventHandler | undefined {
   return registry[type];
