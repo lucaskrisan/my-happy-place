@@ -539,6 +539,20 @@ function TimelineLab() {
                   onInteraction={(e) => addLog(`${e.type}${e.messageId ? `: ${e.messageId}` : ''}`)}
                 />
               )}
+
+              {activeNotificationPayload && (
+                <NotificationOverlay 
+                  open={!!activeNotificationId}
+                  appName={activeNotificationPayload.appName}
+                  senderName={activeNotificationPayload.senderName}
+                  message={activeNotificationPayload.message}
+                  timestamp={activeNotificationPayload.timestamp}
+                  autoDismiss={activeNotificationPayload.autoDismiss}
+                  autoDismissMs={activeNotificationPayload.autoDismissMs}
+                  soundSrc={activeNotificationPayload.soundSrc}
+                  onInteraction={handleNotificationInteraction}
+                />
+              )}
             </div>
 
 
