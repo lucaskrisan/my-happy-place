@@ -76,7 +76,8 @@ export function DevCard({
     <button
       onClick={onClick}
       disabled={disabled}
-      data-testid={arguments['data-testid']}
+      data-testid={testId}
+
 
       className="flex flex-col items-center justify-center p-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 transition-all disabled:opacity-50 active:scale-95 text-center group"
     >
