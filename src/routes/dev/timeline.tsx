@@ -664,7 +664,9 @@ function TimelineLab() {
                         {event.type === 'text_reveal' && <Type className="w-3 h-3 text-blue-400" />}
                         {event.type === 'play_sfx' && <Volume2 className="w-3 h-3 text-purple-400" />}
                         {event.type === 'incoming_call' && <PhoneIncoming className="w-3 h-3 text-green-400" />}
+                        {event.type === 'notification' && <Bell className="w-3 h-3 text-orange-400" />}
                         {event.type === 'whatsapp_open' && <MessageSquare className="w-3 h-3 text-emerald-400" />}
+
                         <span className="text-xs font-bold truncate max-w-[100px]">{event.id}</span>
 
                       </div>
