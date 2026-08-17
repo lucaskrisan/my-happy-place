@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DevRouteImport } from './routes/dev'
-import { Route as DevTempRouteImport } from './routes/dev-temp'
 import { Route as Dev14DaysRouteImport } from './routes/dev/14-days'
 import { Route as DevAudioRouteImport } from './routes/dev/audio'
 import { Route as DevChoiceRouteImport } from './routes/dev/choice'
@@ -42,11 +41,6 @@ const IndexRoute = IndexRouteImport.update({
 const DevRoute = DevRouteImport.update({
   id: '/dev',
   path: '/dev',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DevTempRoute = DevTempRouteImport.update({
-  id: '/dev-temp',
-  path: '/dev-temp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Dev14DaysRoute = Dev14DaysRouteImport.update({
@@ -158,7 +152,6 @@ const DevWhatsappRoute = DevWhatsappRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dev': typeof DevRouteWithChildren
-  '/dev-temp': typeof DevTempRoute
   '/dev/14-days': typeof Dev14DaysRoute
   '/dev/audio': typeof DevAudioRoute
   '/dev/choice': typeof DevChoiceRoute
@@ -184,7 +177,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dev': typeof DevRouteWithChildren
-  '/dev-temp': typeof DevTempRoute
   '/dev/14-days': typeof Dev14DaysRoute
   '/dev/audio': typeof DevAudioRoute
   '/dev/choice': typeof DevChoiceRoute
@@ -211,7 +203,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dev': typeof DevRouteWithChildren
-  '/dev-temp': typeof DevTempRoute
   '/dev/14-days': typeof Dev14DaysRoute
   '/dev/audio': typeof DevAudioRoute
   '/dev/choice': typeof DevChoiceRoute
@@ -239,7 +230,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dev'
-    | '/dev-temp'
     | '/dev/14-days'
     | '/dev/audio'
     | '/dev/choice'
@@ -265,7 +255,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/dev'
-    | '/dev-temp'
     | '/dev/14-days'
     | '/dev/audio'
     | '/dev/choice'
@@ -291,7 +280,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/dev'
-    | '/dev-temp'
     | '/dev/14-days'
     | '/dev/audio'
     | '/dev/choice'
@@ -318,7 +306,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DevRoute: typeof DevRouteWithChildren
-  DevTempRoute: typeof DevTempRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -335,13 +322,6 @@ declare module '@tanstack/react-router' {
       path: '/dev'
       fullPath: '/dev'
       preLoaderRoute: typeof DevRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dev-temp': {
-      id: '/dev-temp'
-      path: '/dev-temp'
-      fullPath: '/dev-temp'
-      preLoaderRoute: typeof DevTempRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dev/14-days': {
@@ -547,7 +527,6 @@ const DevRouteWithChildren = DevRoute._addFileChildren(DevRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DevRoute: DevRouteWithChildren,
-  DevTempRoute: DevTempRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
