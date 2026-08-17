@@ -129,6 +129,7 @@ const SCENE_01: SceneDefinition = {
           }
         ]
       }
+    },
     "reaction-choice": {
       id: "reaction-choice",
       type: "choice",
