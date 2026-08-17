@@ -34,7 +34,7 @@ export function resolveQuizResultRule(
     let dominantTags: string[] = [];
 
     for (const tag of tags) {
-      const count = counts[tag];
+      const count = counts[tag] ?? 0;
       if (count > maxCount) {
         maxCount = count;
         dominantTags = [tag];
