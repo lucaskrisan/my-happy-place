@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DevModuleLayout } from "@/components/dev-tools";
+import { DevPlaceholderPage } from "@/components/dev-tools";
 
 export const Route = createFileRoute("/dev/quiz")({
-  component: () => <DevModuleLayout title="Quiz" description="Perguntas rápidas dentro da narrativa." />,
+  component: () => <DevPlaceholderPage number="10" title="Quiz" description="Perguntas rápidas dentro da narrativa." />,
 });

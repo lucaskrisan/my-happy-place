@@ -1,6 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DevModuleLayout } from "@/components/dev-tools";
+import { DevPlaceholderPage } from "@/components/dev-tools";
 
 export const Route = createFileRoute("/dev/video-stage")({
-  component: () => <DevModuleLayout title="Video Stage" description="Player principal onde futuramente vídeos narrativos serão exibidos." />,
+  component: () => (
+    <DevPlaceholderPage 
+      number="01" 
+      title="Video Stage" 
+      description="Módulo isolado para desenvolvimento e testes do player narrativo." 
+    />
+  ),
 });

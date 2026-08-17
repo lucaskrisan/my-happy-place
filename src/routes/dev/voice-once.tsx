@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DevModuleLayout } from "@/components/dev-tools";
+import { DevPlaceholderPage } from "@/components/dev-tools";
 
 export const Route = createFileRoute("/dev/voice-once")({
-  component: () => <DevModuleLayout title="Voice Message Once" description="Áudio de visualização única." />,
+  component: () => <DevPlaceholderPage number="06" title="Voice Message Once" description="Áudio de visualização única." />,
 });
