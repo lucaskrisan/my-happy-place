@@ -309,7 +309,7 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
                             {currentQuestion.options.find(o => o.id === currentAnswer.optionId)?.feedback || 'Sua resposta foi registrada.'}
                           </p>
                           <button
-                            onClick={() => moveToNext(answers)}
+                            onClick={handleFeedbackContinue}
                             className="w-full py-4 rounded-full bg-white text-zinc-950 font-bold"
                           >
                             Continuar
