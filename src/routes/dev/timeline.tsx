@@ -112,7 +112,7 @@ function TimelineLab() {
       addLog(`event_triggered: ${event.id} (${event.type})`);
       
       if (event.type === 'text_reveal') {
-        setActiveText(event.payload?.text as string);
+        setActiveText(event.payload?.['text'] as string);
         setTimeout(() => setActiveText(null), 2000);
         addLog(`event_completed: ${event.id}`);
       }
