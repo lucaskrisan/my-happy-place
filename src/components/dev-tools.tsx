@@ -48,19 +48,37 @@ export function DevPlaceholderPage({ number, title, description }: DevPlaceholde
   );
 }
 
-// Keep the old layout for compatibility if needed, but update it to use the new back button text
-export function DevModuleLayout({ title, description, children }: { title: string; description: string; children?: React.ReactNode }) {
+export function DevSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-8 flex flex-col items-center justify-center text-center font-sans">
-      <div className="max-w-md w-full">
-        <h1 className="text-3xl font-bold tracking-tight mb-2">{title}</h1>
-        <p className="text-zinc-400 mb-8">{description}</p>
-        
+    <div className="space-y-4">
+      <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-500 px-1">{title}</h2>
+      <div className="bg-zinc-900/30 border border-zinc-800 rounded-2xl p-6">
         {children}
+      </div>
+    </div>
+  );
+}
+
+export function DevModuleLayout({ 
+  title, 
+  subtitle, 
+  children 
+}: { 
+  title: string; 
+  subtitle: string; 
+  children?: React.ReactNode 
+}) {
+  return (
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-8 font-sans">
+      <div className="max-w-4xl mx-auto w-full">
+        <header className="mb-12">
+          <h1 className="text-3xl font-bold tracking-tight mb-2 text-white">{title}</h1>
+          <p className="text-zinc-400 text-lg">{subtitle}</p>
+        </header>
         
-        <div className="mt-8">
-          <DevBackButton />
-        </div>
+        <main>
+          {children}
+        </main>
       </div>
     </div>
   );
