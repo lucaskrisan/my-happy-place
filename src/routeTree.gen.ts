@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as DevRouteImport } from './routes/dev'
 import { Route as DevIndexRouteImport } from './routes/dev/index'
 import { Route as Dev14DaysRouteImport } from './routes/dev/14-days'
 import { Route as DevAudioRouteImport } from './routes/dev/audio'
@@ -39,15 +38,10 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DevRoute = DevRouteImport.update({
-  id: '/dev',
-  path: '/dev',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DevIndexRoute = DevIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => DevRoute,
+  id: '/dev/',
+  path: '/dev/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const Dev14DaysRoute = Dev14DaysRouteImport.update({
   id: '/14-days',
@@ -157,7 +151,6 @@ const DevWhatsappRoute = DevWhatsappRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/dev': typeof DevRouteWithChildren
   '/dev/14-days': typeof Dev14DaysRoute
   '/dev/audio': typeof DevAudioRoute
   '/dev/choice': typeof DevChoiceRoute
@@ -209,7 +202,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/dev': typeof DevRouteWithChildren
   '/dev/14-days': typeof Dev14DaysRoute
   '/dev/audio': typeof DevAudioRoute
   '/dev/choice': typeof DevChoiceRoute
@@ -237,7 +229,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/dev'
     | '/dev/14-days'
     | '/dev/audio'
     | '/dev/choice'
@@ -288,7 +279,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/dev'
     | '/dev/14-days'
     | '/dev/audio'
     | '/dev/choice'
@@ -315,7 +305,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DevRoute: typeof DevRouteWithChildren
+  DevIndexRoute: typeof DevIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -327,19 +317,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dev': {
-      id: '/dev'
-      path: '/dev'
-      fullPath: '/dev'
-      preLoaderRoute: typeof DevRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/dev/': {
       id: '/dev/'
-      path: '/'
+      path: '/dev'
       fullPath: '/dev/'
       preLoaderRoute: typeof DevIndexRouteImport
-      parentRoute: typeof DevRoute
+      parentRoute: typeof rootRouteImport
     }
     '/dev/14-days': {
       id: '/dev/14-days'
@@ -491,61 +474,9 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface DevRouteChildren {
-  Dev14DaysRoute: typeof Dev14DaysRoute
-  DevAudioRoute: typeof DevAudioRoute
-  DevChoiceRoute: typeof DevChoiceRoute
-  DevDebugRoute: typeof DevDebugRoute
-  DevDoorSceneRoute: typeof DevDoorSceneRoute
-  DevHusbandTalkRoute: typeof DevHusbandTalkRoute
-  DevIncomingCallRoute: typeof DevIncomingCallRoute
-  DevMilkSceneRoute: typeof DevMilkSceneRoute
-  DevMotherCallRoute: typeof DevMotherCallRoute
-  DevNotesRoute: typeof DevNotesRoute
-  DevNotificationRoute: typeof DevNotificationRoute
-  DevPreloaderRoute: typeof DevPreloaderRoute
-  DevQuizRoute: typeof DevQuizRoute
-  DevRecordRoute: typeof DevRecordRoute
-  DevSceneRoute: typeof DevSceneRoute
-  DevSecretWhatsappRoute: typeof DevSecretWhatsappRoute
-  DevTimelineRoute: typeof DevTimelineRoute
-  DevTransitionsRoute: typeof DevTransitionsRoute
-  DevVideoStageRoute: typeof DevVideoStageRoute
-  DevVoiceOnceRoute: typeof DevVoiceOnceRoute
-  DevWhatsappRoute: typeof DevWhatsappRoute
-  DevIndexRoute: typeof DevIndexRoute
-}
-
-const DevRouteChildren: DevRouteChildren = {
-  Dev14DaysRoute: Dev14DaysRoute,
-  DevAudioRoute: DevAudioRoute,
-  DevChoiceRoute: DevChoiceRoute,
-  DevDebugRoute: DevDebugRoute,
-  DevDoorSceneRoute: DevDoorSceneRoute,
-  DevHusbandTalkRoute: DevHusbandTalkRoute,
-  DevIncomingCallRoute: DevIncomingCallRoute,
-  DevMilkSceneRoute: DevMilkSceneRoute,
-  DevMotherCallRoute: DevMotherCallRoute,
-  DevNotesRoute: DevNotesRoute,
-  DevNotificationRoute: DevNotificationRoute,
-  DevPreloaderRoute: DevPreloaderRoute,
-  DevQuizRoute: DevQuizRoute,
-  DevRecordRoute: DevRecordRoute,
-  DevSceneRoute: DevSceneRoute,
-  DevSecretWhatsappRoute: DevSecretWhatsappRoute,
-  DevTimelineRoute: DevTimelineRoute,
-  DevTransitionsRoute: DevTransitionsRoute,
-  DevVideoStageRoute: DevVideoStageRoute,
-  DevVoiceOnceRoute: DevVoiceOnceRoute,
-  DevWhatsappRoute: DevWhatsappRoute,
-  DevIndexRoute: DevIndexRoute,
-}
-
-const DevRouteWithChildren = DevRoute._addFileChildren(DevRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DevRoute: DevRouteWithChildren,
+  DevIndexRoute: DevIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
