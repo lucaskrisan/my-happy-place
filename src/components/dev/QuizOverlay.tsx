@@ -105,15 +105,21 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
   }, [definition.id, startTime]);
 
   const moveToNext = useCallback((finalAnswers: Record<string, QuizAnswer>) => {
-    if (!currentQuestion) return;
+    if (!currentQuestion || isProcessing.current) return;
+    
+    isProcessing.current = true;
     onInteraction?.({ type: 'question_completed', quizId: definition.id, questionId: currentQuestion.id });
     
     if (isLastQuestion) {
-      if (isCompleted.current) { isProcessing.current = false; return; }
+      if (isCompleted.current) { 
+        isProcessing.current = false; 
+        return; 
+      }
       isCompleted.current = true;
       setState('completed');
       onComplete?.(calculateResult(finalAnswers));
       onInteraction?.({ type: 'quiz_completed', quizId: definition.id });
+      // Keep isProcessing true until unmount/reset
     } else {
       setState('transitioning');
       setTimeout(() => {
@@ -126,6 +132,11 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
       }, 400);
     }
   }, [currentQuestion, onInteraction, definition.id, isLastQuestion, onComplete, calculateResult, currentQuestionIndex, onQuestionChange, definition.questions]);
+
+  const handleFeedbackContinue = useCallback(() => {
+    if (state !== 'feedback' || isProcessing.current) return;
+    moveToNext(answers);
+  }, [state, moveToNext, answers]);
 
   const handleOptionClick = useCallback((option: QuizOption) => {
     if (state !== 'active' || !currentQuestion || isProcessing.current) return;
@@ -298,7 +309,7 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
                             {currentQuestion.options.find(o => o.id === currentAnswer.optionId)?.feedback || 'Sua resposta foi registrada.'}
                           </p>
                           <button
-                            onClick={() => moveToNext(answers)}
+                            onClick={handleFeedbackContinue}
                             className="w-full py-4 rounded-full bg-white text-zinc-950 font-bold"
                           >
                             Continuar
