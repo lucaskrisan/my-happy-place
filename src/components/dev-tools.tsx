@@ -59,6 +59,31 @@ export function DevSection({ title, children }: { title: string; children: React
   );
 }
 
+export function DevCard({
+  icon,
+  title,
+  onClick,
+  disabled
+}: {
+  icon: React.ReactNode;
+  title: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="flex flex-col items-center justify-center p-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 transition-all disabled:opacity-50 active:scale-95 text-center group"
+    >
+      <div className="mb-2 group-hover:scale-110 transition-transform">{icon}</div>
+      <span className="text-xs font-semibold text-zinc-300 group-hover:text-white transition-colors">
+        {title}
+      </span>
+    </button>
+  );
+}
+
 export function DevModuleLayout({ 
   title, 
   subtitle, 
@@ -70,10 +95,13 @@ export function DevModuleLayout({
 }) {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 p-8 font-sans">
-      <div className="max-w-4xl mx-auto w-full">
-        <header className="mb-12">
-          <h1 className="text-3xl font-bold tracking-tight mb-2 text-white">{title}</h1>
-          <p className="text-zinc-400 text-lg">{subtitle}</p>
+      <div className="max-w-6xl mx-auto w-full">
+        <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-900 pb-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight mb-2 text-white">{title}</h1>
+            <p className="text-zinc-400 text-lg">{subtitle}</p>
+          </div>
+          <DevBackButton />
         </header>
         
         <main>
@@ -83,3 +111,4 @@ export function DevModuleLayout({
     </div>
   );
 }
+
