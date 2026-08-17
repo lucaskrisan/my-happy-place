@@ -10,6 +10,8 @@ import {
 import { resolveInteraction, processInteractionAction, resolveChoiceAction } from './interactionResolver';
 import { ChoiceResult } from '@/types/choice';
 import { QuizResult } from '@/types/quiz';
+import { resolveQuizResultRule } from './quizResultResolver';
+
 
 export type SceneEngineCallback = (state: SceneRuntimeState, log?: string) => void;
 
@@ -133,11 +135,26 @@ export class SceneEngine {
 
     this.runtime.quizResults[quizId] = result;
     this.notify(`quiz_completed: ${quizId}`);
+    this.notify(`quiz_result_stored`);
+    
+    // Evaluate rules
+    const rule = this.definition.resultRules?.find(r => r.quizId === quizId);
+    if (rule) {
+      this.notify(`quiz_rule_evaluated: ${rule.id}`);
+      const action = resolveQuizResultRule(result, rule, (msg) => this.notify(msg));
+      
+      if (action) {
+        this.notify(`action_resolved: ${action.type}`);
+        this.handleInteractionAction(action, quizId);
+        return; // Transition handles its own state (prevents resume)
+      }
+    }
     
     if (this.runtime.activeInteraction?.id === quizId) {
       this.completeInteraction(quizId);
     }
   }
+
 
   public handleInteractionAction(action: InteractionAction, sourceId: string) {
     if (this.runtime.state === 'transitioning' && action.type !== 'go_to_scene') return;
