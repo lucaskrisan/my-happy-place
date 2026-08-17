@@ -2,12 +2,15 @@ import { TimelineEvent } from '../timeline/timelineTypes';
 
 export type SceneState = 'idle' | 'loading' | 'ready' | 'playing' | 'blocked' | 'completing' | 'completed' | 'error';
 
-export type InteractionType = 'incoming_call' | 'messaging';
+export type InteractionType = 'incoming_call' | 'messaging' | 'choice';
 
 export type InteractionDefinition = {
   id: string;
   type: InteractionType;
-  payload: Record<string, any>;
+  payload: {
+    definition?: any;
+    interactionId?: string;
+  };
 };
 
 export type InteractionAction =
