@@ -49,15 +49,15 @@ export class SceneEngine {
     this.notify('scene_started');
   }
 
-  public updateTime(time: number) {
+  public updateTime(time: number, isPlaying: boolean) {
     if (this.runtime.state === 'completed') return;
     
     this.runtime.currentTime = time;
     
     // Process timeline if not blocked
     if (this.runtime.state === 'playing') {
-      const triggeredEvents = this.timelineEngine.process(time);
-      triggeredEvents.forEach(event => this.handleTimelineEvent(event));
+      const { triggered } = this.timelineEngine.process(time, isPlaying);
+      triggered.forEach((event: TimelineEvent) => this.handleTimelineEvent(event));
     }
     
     this.notify();
@@ -70,7 +70,7 @@ export class SceneEngine {
     // We just handle the business logic here.
     
     if (event.type === 'incoming_call') {
-      const interactionId = event.payload?.interactionId;
+      const interactionId = event.payload?.['interactionId'];
       if (interactionId) {
         this.openInteraction(interactionId);
       }
