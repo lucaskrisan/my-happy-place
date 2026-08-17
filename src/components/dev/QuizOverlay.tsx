@@ -48,7 +48,7 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
   const isCompleted = useRef(false);
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  const currentQuestion = definition.questions[currentQuestionIndex];
+  const currentQuestion: QuizQuestion | undefined = definition.questions[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === definition.questions.length - 1;
   const currentAnswer = currentQuestion ? answers[currentQuestion.id] : undefined;
 
@@ -60,7 +60,7 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
     } else if (!open && state !== 'hidden') {
       setState('exiting');
     }
-  }, [open]);
+  }, [open, state]);
 
   useEffect(() => {
     onStateChange?.(state);
@@ -77,7 +77,8 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [state, definition.id]);
+    return undefined;
+  }, [state, definition.id, onOpen, onInteraction, onClose, onStateChange]);
 
   const calculateResult = useCallback((finalAnswers: Record<string, QuizAnswer>): QuizResult => {
     const answerList = Object.values(finalAnswers);
@@ -98,7 +99,30 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
     };
   }, [definition.id, startTime]);
 
-  const handleOptionClick = (option: QuizOption) => {
+  const moveToNext = useCallback((finalAnswers: Record<string, QuizAnswer>) => {
+    if (!currentQuestion) return;
+    onInteraction?.({ type: 'question_completed', quizId: definition.id, questionId: currentQuestion.id });
+    
+    if (isLastQuestion) {
+      if (isCompleted.current) { isProcessing.current = false; return; }
+      isCompleted.current = true;
+      setState('completed');
+      onComplete?.(calculateResult(finalAnswers));
+      onInteraction?.({ type: 'quiz_completed', quizId: definition.id });
+    } else {
+      setState('transitioning');
+      setTimeout(() => {
+        setCurrentQuestionIndex(prev => prev + 1);
+        onQuestionChange?.(currentQuestionIndex + 1);
+        setState('active');
+        isProcessing.current = false;
+        const nextQ = definition.questions[currentQuestionIndex + 1];
+        if (nextQ) onInteraction?.({ type: 'question_viewed', quizId: definition.id, questionId: nextQ.id });
+      }, 400);
+    }
+  }, [currentQuestion, onInteraction, definition.id, isLastQuestion, onComplete, calculateResult, currentQuestionIndex, onQuestionChange, definition.questions]);
+
+  const handleOptionClick = useCallback((option: QuizOption) => {
     if (state !== 'active' || !currentQuestion || isProcessing.current) return;
     
     isProcessing.current = true;
@@ -124,30 +148,17 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
     } else {
       moveToNext(nextAnswers);
     }
-  };
+  }, [state, currentQuestion, answers, onAnswer, onInteraction, definition.id, definition.feedbackMode, moveToNext]);
 
-  const moveToNext = (finalAnswers = answers) => {
-    if (!currentQuestion) return;
-    onInteraction?.({ type: 'question_completed', quizId: definition.id, questionId: currentQuestion.id });
-    
-    if (isLastQuestion) {
-      if (isCompleted.current) { isProcessing.current = false; return; }
-      isCompleted.current = true;
-      setState('completed');
-      onComplete?.(calculateResult(finalAnswers));
-      onInteraction?.({ type: 'quiz_completed', quizId: definition.id });
-    } else {
-      setState('transitioning');
-      setTimeout(() => {
-        setCurrentQuestionIndex(prev => prev + 1);
-        onQuestionChange?.(currentQuestionIndex + 1);
-        setState('active');
-        isProcessing.current = false;
-        const nextQ = definition.questions[currentQuestionIndex + 1];
-        if (nextQ) onInteraction?.({ type: 'question_viewed', quizId: definition.id, questionId: nextQ.id });
-      }, 400);
-    }
-  };
+  const handleBack = useCallback(() => {
+    if (!allowPrevious || currentQuestionIndex === 0 || state !== 'active' || isProcessing.current) return;
+    setState('transitioning');
+    setTimeout(() => {
+      setCurrentQuestionIndex(prev => prev - 1);
+      onQuestionChange?.(currentQuestionIndex - 1);
+      setState('active');
+    }, 400);
+  }, [allowPrevious, currentQuestionIndex, state, onQuestionChange]);
 
   const prefersReducedMotion = useMemo(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches, []);
 
@@ -157,7 +168,8 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
       if (e.key >= '1' && e.key <= '9') {
         const idx = parseInt(e.key) - 1;
-        if (currentQuestion.options[idx]) handleOptionClick(currentQuestion.options[idx]);
+        const opt = currentQuestion.options[idx];
+        if (opt) handleOptionClick(opt);
       } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
         const next = Math.min(currentQuestion.options.length - 1, optionRefs.current.findIndex(r => r === document.activeElement) + 1);
         optionRefs.current[next]?.focus();
@@ -168,13 +180,14 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
         const focused = optionRefs.current.find(r => r === document.activeElement);
         if (focused) {
           const idx = optionRefs.current.indexOf(focused);
-          handleOptionClick(currentQuestion.options[idx]);
+          const opt = currentQuestion.options[idx];
+          if (opt) handleOptionClick(opt);
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [state, currentQuestion, answers]);
+  }, [state, currentQuestion, handleOptionClick]);
 
   return (
     <AnimatePresence>
@@ -187,7 +200,7 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
           className="fixed inset-0 z-50 flex flex-col bg-zinc-950 text-zinc-100 overflow-hidden font-sans"
         >
           {definition.showProgress && state !== 'completed' && (
-            <div className="w-full bg-zinc-900 h-1">
+            <div className="w-full bg-zinc-900 h-1 mt-[env(safe-area-inset-top,0px)]">
               <motion.div 
                 className="bg-zinc-100 h-full"
                 initial={{ width: 0 }}
@@ -197,38 +210,99 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
             </div>
           )}
           <header className="flex items-center justify-between p-4 md:p-6 border-b border-zinc-900">
-            <h1 className="text-sm font-semibold text-zinc-300">{definition.title || 'Quiz'}</h1>
-            {closeBehavior === 'allow' && (
-              <button onClick={onClose} className="p-2 rounded-full bg-zinc-900 text-zinc-400 hover:text-white" aria-label="Fechar"><X className="w-5 h-5" /></button>
-            )}
+            <div className="flex flex-col">
+              {definition.showProgress && state !== 'completed' && (
+                <span className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase mb-0.5">
+                  Pergunta {currentQuestionIndex + 1} de {definition.questions.length}
+                </span>
+              )}
+              <h1 className="text-sm font-semibold text-zinc-300 truncate max-w-[200px] md:max-w-md">
+                {definition.title || 'Quiz'}
+              </h1>
+            </div>
+            <div className="flex items-center gap-2">
+              {allowPrevious && currentQuestionIndex > 0 && state === 'active' && (
+                <button
+                  onClick={handleBack}
+                  className="p-2 rounded-full bg-zinc-900 text-zinc-400 hover:text-white transition-colors"
+                  aria-label="Voltar"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+              )}
+              {closeBehavior === 'allow' && (
+                <button onClick={onClose} className="p-2 rounded-full bg-zinc-900 text-zinc-400 hover:text-white" aria-label="Fechar"><X className="w-5 h-5" /></button>
+              )}
+            </div>
           </header>
-          <main className="flex-1 overflow-y-auto">
-            <div className="max-w-xl mx-auto px-6 py-12">
+          <main className="flex-1 overflow-y-auto relative flex flex-col">
+            <div className="max-w-xl mx-auto w-full px-6 py-12 flex-1 flex flex-col">
               <AnimatePresence mode="wait">
                 {state === 'completed' ? (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center">
+                  <motion.div 
+                    key="completed"
+                    initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 20 }} 
+                    animate={{ opacity: 1, y: 0 }} 
+                    className="text-center my-auto"
+                  >
+                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-zinc-900 mb-8">
+                      <Check className="w-10 h-10 text-white" />
+                    </div>
                     <h2 className="text-3xl font-bold mb-4">{definition.completionLabel || 'Concluído'}</h2>
                   </motion.div>
                 ) : currentQuestion ? (
-                  <motion.div key={currentQuestion.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                    <h2 className="text-2xl font-bold">{currentQuestion.title}</h2>
-                    <div className="space-y-3">
+                  <motion.div 
+                    key={currentQuestion.id} 
+                    initial={{ opacity: 0, x: prefersReducedMotion ? 0 : 20 }} 
+                    animate={{ opacity: 1, x: 0 }} 
+                    exit={{ opacity: 0, x: prefersReducedMotion ? 0 : -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex-1 flex flex-col"
+                  >
+                    <div className="mb-10">
+                      <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 leading-tight tracking-tight">{currentQuestion.title}</h2>
+                    </div>
+                    <div className="space-y-3 mb-12">
                       {currentQuestion.options.map((option, idx) => (
                         <button
                           key={option.id}
-                          ref={el => optionRefs.current[idx] = el}
+                          ref={el => { if (optionRefs.current) optionRefs.current[idx] = el; }}
                           onClick={() => handleOptionClick(option)}
-                          className={cn("w-full p-5 rounded-2xl bg-zinc-900 border border-white/5 hover:border-white/20 transition-all", answers[currentQuestion.id]?.optionId === option.id && "bg-zinc-100 text-zinc-950")}
+                          className={cn(
+                            "w-full text-left p-5 rounded-2xl border transition-all duration-200 group relative",
+                            "bg-zinc-900/50 border-white/5 hover:border-white/10",
+                            currentAnswer?.optionId === option.id && "bg-zinc-100 border-white ring-2 ring-white/20 text-zinc-950"
+                          )}
                         >
-                          {option.label}
+                          <span className="block font-semibold text-lg">{option.label}</span>
                         </button>
                       ))}
                     </div>
+                    {state === 'feedback' && currentAnswer && (
+                      <motion.div
+                        initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="fixed bottom-0 left-0 right-0 p-6 bg-zinc-900 border-t border-zinc-800 z-10 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]"
+                      >
+                        <div className="max-w-xl mx-auto w-full">
+                          <p className="text-zinc-200 mb-6">
+                            {currentQuestion.options.find(o => o.id === currentAnswer.optionId)?.feedback || 'Sua resposta foi registrada.'}
+                          </p>
+                          <button
+                            onClick={() => moveToNext(answers)}
+                            className="w-full py-4 rounded-full bg-white text-zinc-950 font-bold"
+                          >
+                            Continuar
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
                   </motion.div>
                 ) : null}
               </AnimatePresence>
             </div>
           </main>
+          <div className="h-[env(safe-area-inset-bottom,20px)] bg-zinc-950" />
         </motion.div>
       )}
     </AnimatePresence>
