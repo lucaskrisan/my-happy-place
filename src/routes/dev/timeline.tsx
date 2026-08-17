@@ -3,6 +3,9 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { DevBackButton } from "@/components/dev-tools";
 import { VideoStage } from "@/components/dev/VideoStage";
 import { IncomingCallOverlay, CallState } from "@/components/dev/IncomingCallOverlay";
+import { MessagingOverlay } from "@/components/dev/MessagingOverlay";
+import { ChatMessage } from "@/types/messaging";
+
 import { TimelineEngine } from "@/engine/timeline/timelineEngine";
 import { TimelineEvent } from "@/engine/timeline/timelineTypes";
 import { 
