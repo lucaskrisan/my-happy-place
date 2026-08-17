@@ -56,16 +56,66 @@ const INITIAL_EVENTS: TimelineEvent[] = [
       callerName: 'Mamãe', 
       callerSubtitle: 'Ligação recebida' 
     }
+  },
+  {
+    id: 'mother-chat',
+    type: 'whatsapp_open',
+    at: 16,
+    blocking: true,
+    payload: {
+      contactName: "Mamãe",
+      contactSubtitle: "online",
+      messages: [
+        {
+          id: "msg-01",
+          type: "text",
+          sender: "contact",
+          text: "Você está sozinha?",
+          timestamp: "22:14",
+          delay: 400
+        },
+        {
+          id: "msg-02",
+          type: "text",
+          sender: "user",
+          text: "Sim.",
+          timestamp: "22:14",
+          delay: 700
+        },
+        {
+          id: "msg-03",
+          type: "text",
+          sender: "contact",
+          text: "Preciso te mandar uma coisa.",
+          timestamp: "22:15",
+          delay: 800
+        },
+        {
+          id: "msg-04",
+          type: "voice_once",
+          sender: "contact",
+          timestamp: "22:15",
+          delay: 500,
+          duration: 8
+        }
+      ]
+    }
   }
 ];
+
 
 function TimelineLab() {
   const [videoUrl, setVideoUrl] = useState<string>("");
   const [sfxFile, setSfxFile] = useState<{ url: string, name: string }>({ url: "", name: "" });
+  const [chatAudioFile, setChatAudioFile] = useState<{ url: string, name: string }>({ url: "", name: "" });
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [logs, setLogs] = useState<EventLog[]>([]);
+  
+  // Overlay Control
+  const [activeOverlay, setActiveOverlay] = useState<'none' | 'incoming_call' | 'messaging'>('none');
+  const [messagingCloseBehavior, setMessagingCloseBehavior] = useState<'prevent' | 'skip'>('prevent');
   
   // Timeline State
   const [events, setEvents] = useState<TimelineEvent[]>(INITIAL_EVENTS);
@@ -73,17 +123,16 @@ function TimelineLab() {
   
   // UI States for events
   const [activeText, setActiveText] = useState<string | null>(null);
-  const [isCallOpen, setIsCallOpen] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
-  const sfxAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const addLog = useCallback((event: string) => {
     const timestamp = new Date().toLocaleTimeString('pt-BR', { 
       hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' 
     });
-    setLogs(prev => [{ timestamp, event }, ...prev].slice(0, 100));
+    setLogs(prev => [{ timestamp, event }, ...prev].slice(0, 150));
   }, []);
+
 
   // Update engine if events change (e.g. from editor)
   useEffect(() => {
@@ -108,6 +157,16 @@ function TimelineLab() {
     }
   };
 
+  const handleChatAudioFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (chatAudioFile.url) URL.revokeObjectURL(chatAudioFile.url);
+      setChatAudioFile({ url: URL.createObjectURL(file), name: file.name });
+      addLog(`chat_audio_loaded: ${file.name}`);
+    }
+  };
+
+
   const processEvents = useCallback((time: number) => {
     const { triggered, pauseRequired } = engine.process(time, isPlaying);
     
@@ -131,10 +190,18 @@ function TimelineLab() {
       }
       
       if (event.type === 'incoming_call') {
-        setIsCallOpen(true);
+        setActiveOverlay('incoming_call');
         addLog(`blocking_started: ${event.id}`);
+        addLog(`call_opened`);
+      }
+
+      if (event.type === 'whatsapp_open') {
+        setActiveOverlay('messaging');
+        addLog(`blocking_started: ${event.id}`);
+        addLog(`messaging_opened`);
       }
     });
+
 
     if (pauseRequired && videoRef.current) {
       videoRef.current.pause();
@@ -148,11 +215,12 @@ function TimelineLab() {
       const activeId = engine.getActiveBlockingEventId();
       if (activeId) {
         engine.completeEvent(activeId);
-        addLog(`event_completed: ${activeId}`);
+        addLog(`call_completed`);
+        addLog(`blocking_completed: ${activeId}`);
       }
       
       setTimeout(() => {
-        setIsCallOpen(false);
+        setActiveOverlay('none');
         setTimeout(() => {
           if (videoRef.current) {
             videoRef.current.play();
@@ -163,17 +231,91 @@ function TimelineLab() {
     }
   };
 
+  const handleMessagingComplete = () => {
+    addLog(`messaging_completed`);
+    const activeId = engine.getActiveBlockingEventId();
+    if (activeId) {
+      engine.completeEvent(activeId);
+      addLog(`blocking_completed: ${activeId}`);
+    }
+
+    setTimeout(() => {
+      setActiveOverlay('none');
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.play();
+          addLog(`video_resumed`);
+        }
+      }, 400);
+    }, 500);
+  };
+
+  const handleMessagingClose = () => {
+    if (messagingCloseBehavior === 'prevent') {
+      addLog(`messaging_close_prevented`);
+      return;
+    }
+
+    addLog(`messaging_skipped`);
+    const activeId = engine.getActiveBlockingEventId();
+    if (activeId) {
+      engine.skipEvent(activeId);
+      addLog(`blocking_skipped: ${activeId}`);
+    }
+
+    setActiveOverlay('none');
+    setTimeout(() => {
+      if (videoRef.current) {
+        videoRef.current.play();
+        addLog(`video_resumed`);
+      }
+    }, 400);
+  };
+
+  const forceSkipMessaging = () => {
+    addLog(`messaging_force_skipped`);
+    const activeId = engine.getActiveBlockingEventId();
+    if (activeId) {
+      engine.skipEvent(activeId);
+    }
+    setActiveOverlay('none');
+    setTimeout(() => {
+      videoRef.current?.play();
+    }, 400);
+  };
+
+
   const handleReset = () => {
     if (videoRef.current) {
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
     }
     engine.reset();
-    setIsCallOpen(false);
+    setActiveOverlay('none');
     setActiveText(null);
     setCurrentTime(0);
+    addLog("video_play");
     addLog("experience_reset");
   };
+
+  const chatPayload = useMemo(() => {
+    const event = events.find(e => e.type === 'whatsapp_open');
+    if (!event || !event.payload) return null;
+    
+    // Inject local audio if available
+    const messages = (event.payload.messages as ChatMessage[]).map(m => {
+      if (m.type === 'voice_once') {
+        return { ...m, audioSrc: chatAudioFile.url || m.audioSrc };
+      }
+      return m;
+    });
+
+    return {
+      ...event.payload,
+      messages
+    };
+  }, [events, chatAudioFile.url]);
+
 
   const updateEventTime = (id: string, newTime: number) => {
     setEvents(prev => prev.map(e => e.id === id ? { ...e, at: newTime } : e));
@@ -226,11 +368,24 @@ function TimelineLab() {
 
               {/* Blocking Call Overlay */}
               <IncomingCallOverlay 
-                open={isCallOpen}
+                open={activeOverlay === 'incoming_call'}
                 callerName="Mamãe"
                 onStateChange={handleCallStateChange}
               />
+
+              {chatPayload && (
+                <MessagingOverlay 
+                  open={activeOverlay === 'messaging'}
+                  contactName={chatPayload.contactName}
+                  contactSubtitle={chatPayload.contactSubtitle}
+                  messages={chatPayload.messages as ChatMessage[]}
+                  onComplete={handleMessagingComplete}
+                  onClose={handleMessagingClose}
+                  onInteraction={(e) => addLog(`${e.type}${e.messageId ? `: ${e.messageId}` : ''}`)}
+                />
+              )}
             </div>
+
 
             {/* Video Controls & Timeline Visual */}
             <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6 space-y-6">
@@ -275,7 +430,44 @@ function TimelineLab() {
                   <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">SFX Event Source</label>
                   <input type="file" accept="audio/*" onChange={handleSfxFile} className="w-full text-xs bg-black/20 border border-zinc-800 p-2 rounded-lg" />
                 </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">mother-chat / voice_once</label>
+                  <input type="file" accept="audio/*" onChange={handleChatAudioFile} className="w-full text-xs bg-black/20 border border-zinc-800 p-2 rounded-lg" />
+                </div>
               </div>
+
+              <div className="pt-4 border-t border-zinc-800">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Messaging close behavior</label>
+                    <div className="flex gap-2">
+                      {['prevent', 'skip'].map((b) => (
+                        <button
+                          key={b}
+                          onClick={() => setMessagingCloseBehavior(b as any)}
+                          className={cn(
+                            "px-3 py-1 text-[10px] rounded border transition-all",
+                            messagingCloseBehavior === b 
+                              ? "bg-blue-600 border-blue-500 text-white" 
+                              : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-zinc-200"
+                          )}
+                        >
+                          {b.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {activeOverlay === 'messaging' && (
+                    <button 
+                      onClick={forceSkipMessaging}
+                      className="px-4 py-2 bg-red-900/30 border border-red-800 text-red-500 text-[10px] font-bold rounded-lg hover:bg-red-900/50 transition-all"
+                    >
+                      FORCE CLOSE / SKIP
+                    </button>
+                  )}
+                </div>
+              </div>
+
             </div>
           </div>
 
@@ -298,7 +490,9 @@ function TimelineLab() {
                         {event.type === 'text_reveal' && <Type className="w-3 h-3 text-blue-400" />}
                         {event.type === 'play_sfx' && <Volume2 className="w-3 h-3 text-purple-400" />}
                         {event.type === 'incoming_call' && <PhoneIncoming className="w-3 h-3 text-green-400" />}
+                        {event.type === 'whatsapp_open' && <MessageSquare className="w-3 h-3 text-emerald-400" />}
                         <span className="text-xs font-bold truncate max-w-[100px]">{event.id}</span>
+
                       </div>
                       <span className={cn(
                         "text-[9px] px-1.5 py-0.5 rounded uppercase font-bold",
@@ -333,10 +527,34 @@ function TimelineLab() {
 
             {/* Timeline Debug & Logs */}
             <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6 flex flex-col h-[400px]">
+              <div className="mb-4 space-y-2">
+                <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2 shrink-0">
+                  <Activity className="w-4 h-4" />
+                  Timeline Debug
+                </h3>
+                <div className="bg-black/40 rounded-lg p-3 space-y-1 text-[10px] font-mono">
+                  <div className="flex justify-between">
+                    <span className="text-zinc-600">Active blocking:</span>
+                    <span className="text-zinc-300">{engine.getActiveBlockingEventId() || 'none'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-600">Overlay:</span>
+                    <span className="text-zinc-300">{activeOverlay}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-600">Messaging state:</span>
+                    <span className="text-zinc-300">
+                      {events.find(e => e.id === 'mother-chat')?.status || 'armed'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2 shrink-0">
                 <Terminal className="w-4 h-4" />
                 Event Log
               </h3>
+
               <div className="flex-1 overflow-y-auto space-y-1 font-mono text-[10px] scrollbar-thin scrollbar-thumb-zinc-800">
                 {logs.map((log, i) => (
                   <div key={i} className={cn(
