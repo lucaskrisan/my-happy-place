@@ -63,17 +63,24 @@ export function DevCard({
   icon,
   title,
   onClick,
-  disabled
+  disabled,
+  testId
 }: {
   icon: React.ReactNode;
   title: string;
   onClick: () => void;
   disabled?: boolean;
+  testId?: string;
 }) {
+
+
   return (
     <button
       onClick={onClick}
       disabled={disabled}
+      data-testid={testId}
+
+
       className="flex flex-col items-center justify-center p-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 transition-all disabled:opacity-50 active:scale-95 text-center group"
     >
       <div className="mb-2 group-hover:scale-110 transition-transform">{icon}</div>

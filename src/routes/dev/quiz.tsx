@@ -12,7 +12,8 @@ import {
   CheckCircle2, 
   Clock, 
   Tag, 
-  Activity 
+  Activity,
+  ClipboardList
 } from "lucide-react";
 
 // TEMPORARY DEVELOPMENT QUIZ DEFINITION
@@ -129,6 +130,41 @@ const DEV_QUIZ: QuizDefinition = {
   completionLabel: "Quiz Concluído"
 };
 
+// AUDIT QUIZ DEFINITION
+const AUDIT_QUIZ: QuizDefinition = {
+  id: "audit-deterministic-01",
+  title: "Teste de Auditoria Determinística",
+  questions: [
+    {
+      id: "Q1",
+      title: "Pergunta 1 (score 1, urgency)",
+      options: [
+        { id: "Q1_O1", label: "Opção A", score: 1, tags: ["urgency"] },
+        { id: "Q1_O2", label: "Opção B", score: 0, tags: ["none"] }
+      ]
+    },
+    {
+      id: "Q2",
+      title: "Pergunta 2 (score 2, defense)",
+      options: [
+        { id: "Q2_O1", label: "Opção A", score: 2, tags: ["defense"] },
+        { id: "Q2_O2", label: "Opção B", score: 0, tags: ["none"] }
+      ]
+    },
+    {
+      id: "Q3",
+      title: "Pergunta 3 (score 3, urgency)",
+      options: [
+        { id: "Q3_O1", label: "Opção A", score: 3, tags: ["urgency"] },
+        { id: "Q3_O2", label: "Opção B", score: 0, tags: ["none"] }
+      ]
+    }
+  ],
+  showProgress: true,
+  feedbackMode: 'none',
+  completionLabel: "Auditoria Concluída"
+};
+
 export const Route = createFileRoute("/dev/quiz")({
   component: QuizLab,
 });
@@ -140,6 +176,7 @@ function QuizLab() {
   const [feedbackMode, setFeedbackMode] = useState<'none' | 'after_each'>('after_each');
   const [allowPrevious, setAllowPrevious] = useState(false);
   const [closeBehavior, setCloseBehavior] = useState<'allow' | 'prevent'>('allow');
+  const [activeDefinition, setActiveDefinition] = useState<QuizDefinition>(DEV_QUIZ);
   
   const [result, setResult] = useState<QuizResult | null>(null);
   const [eventLog, setEventLog] = useState<string[]>([]);
@@ -147,23 +184,21 @@ function QuizLab() {
   const [currentQuestionTime, setCurrentQuestionTime] = useState(0);
   const questionStartTimeRef = useRef<number>(Date.now());
 
-  // Definition based on settings
-  const definition: QuizDefinition = {
-    ...DEV_QUIZ,
-    showProgress,
-    feedbackMode
-  };
-
   const addEvent = useCallback((event: string) => {
     setEventLog(prev => [event, ...prev].slice(0, 100));
   }, []);
 
-  const handleOpen = () => {
+  const handleOpen = (def: QuizDefinition = DEV_QUIZ) => {
+    setActiveDefinition({
+      ...def,
+      showProgress,
+      feedbackMode
+    });
     setIsOpen(true);
     setResult(null);
     setStartTime(Date.now());
     questionStartTimeRef.current = Date.now();
-    addEvent("quiz_opened");
+    addEvent(`quiz_opened: ${def.id}`);
   };
 
   const handleReset = () => {
@@ -186,7 +221,7 @@ function QuizLab() {
   };
 
   const handleQuestionChange = (index: number) => {
-    const q = definition.questions[index];
+    const q = activeDefinition.questions[index];
     addEvent(`question_viewed: ${q?.id || 'unknown'}`);
     questionStartTimeRef.current = Date.now();
   };
@@ -202,11 +237,9 @@ function QuizLab() {
   // Timers
   useEffect(() => {
     if (!isOpen || result) return;
-
     const interval = setInterval(() => {
       setCurrentQuestionTime(Math.floor((Date.now() - questionStartTimeRef.current) / 1000));
     }, 1000);
-
     return () => clearInterval(interval);
   }, [isOpen, result]);
 
@@ -221,17 +254,22 @@ function QuizLab() {
       title="Quiz Experience Lab"
       subtitle="Interactive sequence of narrative questions with score and tag aggregation."
     >
-
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Controls */}
         <div className="lg:col-span-4 space-y-6">
           <DevSection title="Controles">
             <div className="grid grid-cols-2 gap-3">
               <DevCard
                 icon={<Play className="w-5 h-5 text-green-500" />}
                 title="Open Quiz"
-                onClick={handleOpen}
+                onClick={() => handleOpen(DEV_QUIZ)}
               />
+              <DevCard
+                icon={<ClipboardList className="w-5 h-5 text-purple-500" />}
+                title="Audit Test"
+                onClick={() => handleOpen(AUDIT_QUIZ)}
+                testId="audit-test-btn"
+              />
+
               <DevCard
                 icon={<RotateCcw className="w-5 h-5 text-amber-500" />}
                 title="Reset"
@@ -239,13 +277,8 @@ function QuizLab() {
               />
               <DevCard
                 icon={<X className="w-5 h-5 text-red-500" />}
-                title="Close"
+                title="Force Close"
                 onClick={() => setIsOpen(false)}
-              />
-              <DevCard
-                icon={<Maximize2 className="w-5 h-5 text-blue-500" />}
-                title={fullscreen ? "Exit Full" : "Fullscreen"}
-                onClick={() => setFullscreen(!fullscreen)}
               />
             </div>
           </DevSection>
@@ -269,7 +302,7 @@ function QuizLab() {
                 <span className="text-sm font-medium text-zinc-300">Feedback Mode</span>
                 <select
                   value={feedbackMode}
-                  onChange={(e) => setFeedbackMode(e.target.value as any)}
+                  onChange={(e) => setFeedbackMode(e.target.value as 'none' | 'after_each')}
                   className="bg-zinc-800 text-zinc-200 text-xs rounded-lg px-2 py-1 outline-none border border-zinc-700"
                 >
                   <option value="none">none</option>
@@ -304,79 +337,39 @@ function QuizLab() {
               </div>
             </div>
           </DevSection>
-
-          <DevSection title="Debug Info">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-900/50 border border-zinc-800">
-                <Clock className="w-4 h-4 text-zinc-500" />
-                <div className="flex-1">
-                  <div className="text-[10px] uppercase tracking-wider text-zinc-600 font-bold">Quiz Duration</div>
-                  <div className="text-sm font-mono text-zinc-300">{quizDuration}s</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-900/50 border border-zinc-800">
-                <Activity className="w-4 h-4 text-zinc-500" />
-                <div className="flex-1">
-                  <div className="text-[10px] uppercase tracking-wider text-zinc-600 font-bold">Question Time</div>
-                  <div className="text-sm font-mono text-zinc-300">{currentQuestionTime}s</div>
-                </div>
-              </div>
-            </div>
-          </DevSection>
         </div>
 
-        {/* Right Column: Results & Logs */}
         <div className="lg:col-span-8 space-y-6">
           <DevSection title="QUIZ RESULT">
             {result ? (
-              <div className="bg-zinc-900/50 rounded-xl border border-zinc-800 p-6 space-y-6">
+              <div className="bg-zinc-900/50 rounded-xl border border-zinc-800 p-6 space-y-6" id="quiz-result-data">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="p-3 bg-zinc-950 rounded-lg border border-zinc-800">
                     <div className="text-[10px] uppercase font-bold text-zinc-500 mb-1">Total Score</div>
-                    <div className="text-xl font-bold text-white">{result.totalScore}</div>
+                    <div className="text-xl font-bold text-white" id="result-total-score">{result.totalScore}</div>
                   </div>
                   <div className="p-3 bg-zinc-950 rounded-lg border border-zinc-800">
                     <div className="text-[10px] uppercase font-bold text-zinc-500 mb-1">Answers</div>
-                    <div className="text-xl font-bold text-white">{result.answers.length} / {definition.questions.length}</div>
-                  </div>
-                  <div className="p-3 bg-zinc-950 rounded-lg border border-zinc-800">
-                    <div className="text-[10px] uppercase font-bold text-zinc-500 mb-1">Completed</div>
-                    <div className="flex items-center gap-2 text-green-500">
-                      <CheckCircle2 className="w-5 h-5" />
-                      <span className="text-sm font-bold uppercase">True</span>
-                    </div>
-                  </div>
-                  <div className="p-3 bg-zinc-950 rounded-lg border border-zinc-800">
-                    <div className="text-[10px] uppercase font-bold text-zinc-500 mb-1">Quiz ID</div>
-                    <div className="text-xs font-mono text-zinc-400 truncate">{result.quizId}</div>
+                    <div className="text-xl font-bold text-white" id="result-answers-length">{result.answers.length}</div>
                   </div>
                 </div>
-
                 <div>
-                  <div className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3">
-                    <Tag className="w-3 h-3" />
-                    Tag Counts
-                  </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3">Tag Counts</div>
+                  <div className="flex flex-wrap gap-2" id="result-tag-counts">
                     {Object.entries(result.tagCounts).map(([tag, count]) => (
                       <div key={tag} className="px-3 py-1.5 bg-zinc-950 rounded-full border border-zinc-800 flex items-center gap-2">
                         <span className="text-zinc-300 text-xs font-medium">{tag}</span>
-                        <span className="bg-zinc-800 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{count}</span>
+                        <span className="bg-zinc-800 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full tag-count-value" data-tag={tag}>{count}</span>
                       </div>
                     ))}
-                    {Object.keys(result.tagCounts).length === 0 && (
-                      <span className="text-zinc-600 text-xs">No tags recorded.</span>
-                    )}
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   <div className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3">Raw Answers</div>
-                  <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                  <div className="space-y-2 max-h-40 overflow-y-auto pr-2" id="result-raw-answers">
                     {result.answers.map((ans, idx) => (
-                      <div key={idx} className="p-2 bg-zinc-950 rounded border border-zinc-800 text-[10px] font-mono text-zinc-400 flex justify-between">
-                        <span>{ans.questionId}: {ans.optionId}</span>
-                        <span className="text-zinc-600">Score: {ans.score} | Tags: {ans.tags?.join(',')}</span>
+                      <div key={idx} className="p-2 bg-zinc-950 rounded border border-zinc-800 text-[10px] font-mono text-zinc-400 raw-answer-item" data-question-id={ans.questionId}>
+                        {ans.questionId}: {ans.optionId} (Score: {ans.score})
                       </div>
                     ))}
                   </div>
@@ -394,27 +387,20 @@ function QuizLab() {
             <div className="bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden">
               <div className="h-60 overflow-y-auto p-4 font-mono text-[10px] space-y-1">
                 {eventLog.map((log, i) => (
-                  <div key={i} className={cn(
-                    "flex gap-3",
-                    i === 0 ? "text-zinc-100" : "text-zinc-600"
-                  )}>
+                  <div key={i} className={cn("flex gap-3", i === 0 ? "text-zinc-100" : "text-zinc-600")}>
                     <span className="text-zinc-800">[{eventLog.length - i}]</span>
                     <span>{log}</span>
                   </div>
                 ))}
-                {eventLog.length === 0 && (
-                  <div className="text-zinc-800 italic">Logs de eventos aparecerão aqui...</div>
-                )}
               </div>
             </div>
           </DevSection>
         </div>
       </div>
 
-      {/* The Overlay */}
       <QuizOverlay
         open={isOpen}
-        definition={definition}
+        definition={activeDefinition}
         onClose={() => setIsOpen(false)}
         onComplete={handleComplete}
         onAnswer={handleAnswer}
@@ -423,23 +409,6 @@ function QuizLab() {
         allowPrevious={allowPrevious}
         closeBehavior={closeBehavior}
       />
-
-      {/* Exit Fullscreen for Dev (Discreet) */}
-      {fullscreen && isOpen && (
-        <button
-          onClick={() => setFullscreen(false)}
-          className="fixed bottom-4 right-4 z-[60] px-4 py-2 bg-black/50 backdrop-blur-md text-white/50 hover:text-white rounded-full text-xs font-bold border border-white/10 transition-all"
-        >
-          Exit Preview
-        </button>
-      )}
-
-      {/* Custom Styles for full screen simulation in lab */}
-      {fullscreen && isOpen && (
-        <style dangerouslySetInnerHTML={{ __html: `
-          body { overflow: hidden; }
-        `}} />
-      )}
     </DevModuleLayout>
   );
 }
