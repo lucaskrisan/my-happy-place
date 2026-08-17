@@ -4,6 +4,7 @@ import { DevBackButton } from "@/components/dev-tools";
 import { VideoStage } from "@/components/dev/VideoStage";
 import { IncomingCallOverlay, CallState } from "@/components/dev/IncomingCallOverlay";
 import { MessagingOverlay } from "@/components/dev/MessagingOverlay";
+import { NotificationOverlay, NotificationInteractionEvent } from "@/components/dev/NotificationOverlay";
 import { ChatMessage } from "@/types/messaging";
 
 import { TimelineEngine } from "@/engine/timeline/timelineEngine";
@@ -60,10 +61,29 @@ const INITIAL_EVENTS: TimelineEvent[] = [
     }
   },
   {
-    id: 'mother-chat',
-    type: 'whatsapp_open',
-    at: 16,
-    blocking: true,
+    id: 'mother-notification',
+    type: 'notification',
+    at: 15,
+    blocking: false,
+    payload: {
+      appName: "Mensagens",
+      senderName: "Mamãe",
+      message: "Preciso te mandar uma coisa.",
+      timestamp: "agora",
+      autoDismiss: true,
+      autoDismissMs: 5000,
+      tapAction: {
+        type: "open_messaging",
+        id: "mother-chat-from-notification"
+      }
+    }
+  }
+];
+
+const INTERACTION_LIBRARY: Record<string, any> = {
+  "mother-chat-from-notification": {
+    id: "mother-chat-from-notification",
+    type: "messaging",
     payload: {
       contactName: "Mamãe",
       contactSubtitle: "online",
@@ -103,7 +123,10 @@ const INITIAL_EVENTS: TimelineEvent[] = [
       ]
     }
   }
-];
+};
+
+type InteractionAction = 
+  | { type: 'open_messaging'; id: string };
 
 
 function TimelineLab() {
