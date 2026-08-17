@@ -87,6 +87,8 @@ export const NotificationOverlay: React.FC<NotificationOverlayProps> = ({
 
   // Handle incoming open prop
   useEffect(() => {
+    let enteringTimeout: NodeJS.Timeout;
+
     if (open && (state === 'hidden' || state === 'dismissed')) {
       updateState('entering');
       emit('notification_opened');
@@ -106,16 +108,19 @@ export const NotificationOverlay: React.FC<NotificationOverlayProps> = ({
       }
 
       // Entering animation duration
-      const timeout = setTimeout(() => {
+      enteringTimeout = setTimeout(() => {
         updateState('visible');
         emit('notification_visible');
       }, 250);
-
-      return () => clearTimeout(timeout);
     } else if (!open && (state === 'visible' || state === 'entering' || state === 'pressed')) {
       handleDismiss();
     }
-  }, [open, soundSrc]);
+
+    return () => {
+      if (enteringTimeout) clearTimeout(enteringTimeout);
+    };
+  }, [open, soundSrc, handleDismiss, updateState, emit, onOpen, state]);
+
 
   // Auto-dismiss logic
   useEffect(() => {
