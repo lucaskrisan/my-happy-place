@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DevModuleLayout } from "@/components/dev-tools";
+import { DevPlaceholderPage } from "@/components/dev-tools";
 
 export const Route = createFileRoute("/dev/secret-whatsapp")({
-  component: () => <DevModuleLayout title="Secret WhatsApp" description="Conversa secreta com áudio íntimo." />,
+  component: () => <DevPlaceholderPage number="14" title="Secret WhatsApp" description="Conversa secreta com áudio íntimo." />,
 });
