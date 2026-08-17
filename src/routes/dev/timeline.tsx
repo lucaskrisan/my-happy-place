@@ -425,6 +425,82 @@ function TimelineLab() {
     addLog(`event_time_updated: ${id} -> ${newTime}s`);
   };
 
+  const handleCallStateChange = (state: CallState) => {
+    addLog(`call_state: ${state}`);
+    if (state === 'ended' || state === 'declined') {
+      const activeId = engine.getActiveBlockingEventId();
+      if (activeId) {
+        engine.completeEvent(activeId);
+        addLog(`call_completed`);
+        addLog(`blocking_completed: ${activeId}`);
+      }
+      
+      setTimeout(() => {
+        setActiveOverlay('none');
+        setTimeout(() => {
+          if (videoRef.current) {
+            videoRef.current.play();
+            addLog(`video_resumed`);
+          }
+        }, 400);
+      }, 500);
+    }
+  };
+
+  const handleMessagingComplete = () => {
+    addLog(`messaging_completed`);
+    const activeId = engine.getActiveBlockingEventId();
+    if (activeId) {
+      engine.completeEvent(activeId);
+      addLog(`blocking_completed: ${activeId}`);
+    }
+
+    setTimeout(() => {
+      setActiveOverlay('none');
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.play();
+          addLog(`video_resumed`);
+        }
+      }, 400);
+    }, 500);
+  };
+
+  const handleMessagingClose = () => {
+    if (messagingCloseBehavior === 'prevent') {
+      addLog(`messaging_close_prevented`);
+      return;
+    }
+
+    addLog(`messaging_skipped`);
+    const activeId = engine.getActiveBlockingEventId();
+    if (activeId) {
+      engine.skipEvent(activeId);
+      addLog(`blocking_skipped: ${activeId}`);
+    }
+
+    setActiveOverlay('none');
+    setTimeout(() => {
+      if (videoRef.current) {
+        videoRef.current.play();
+        addLog(`video_resumed`);
+      }
+    }, 400);
+  };
+
+  const forceSkipMessaging = () => {
+    addLog(`messaging_force_skipped`);
+    const activeId = engine.getActiveBlockingEventId();
+    if (activeId) {
+      engine.skipEvent(activeId);
+    }
+    setActiveOverlay('none');
+    setTimeout(() => {
+      videoRef.current?.play();
+    }, 400);
+  };
+
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 p-4 md:p-8 font-sans pb-24">
       <div className="max-w-6xl mx-auto space-y-8">
