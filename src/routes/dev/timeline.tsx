@@ -133,6 +133,7 @@ function TimelineLab() {
   const [videoUrl, setVideoUrl] = useState<string>("");
   const [sfxFile, setSfxFile] = useState<{ url: string, name: string }>({ url: "", name: "" });
   const [chatAudioFile, setChatAudioFile] = useState<{ url: string, name: string }>({ url: "", name: "" });
+  const [notificationSfxFile, setNotificationSfxFile] = useState<{ url: string, name: string }>({ url: "", name: "" });
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -140,6 +141,10 @@ function TimelineLab() {
   
   // Overlay Control
   const [activeOverlay, setActiveOverlay] = useState<'none' | 'incoming_call' | 'messaging'>('none');
+  const [activeNotificationId, setActiveNotificationId] = useState<string | null>(null);
+  const [actionExecuted, setActionExecuted] = useState(false);
+  const [videoPausedAt, setVideoPausedAt] = useState<number | null>(null);
+  const [triggeredBy, setTriggeredBy] = useState<string | null>(null);
   const [messagingCloseBehavior, setMessagingCloseBehavior] = useState<'prevent' | 'skip'>('prevent');
   
   // Timeline State
