@@ -63,14 +63,16 @@ export function DevCard({
   icon,
   title,
   onClick,
-  disabled
+  disabled,
+  testId
 }: {
   icon: React.ReactNode;
   title: string;
   onClick: () => void;
   disabled?: boolean;
-  "data-testid"?: string;
+  testId?: string;
 }) {
+
 
   return (
     <button
