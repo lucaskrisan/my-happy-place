@@ -4,6 +4,7 @@ import { DevBackButton } from "@/components/dev-tools";
 import { VideoStage } from "@/components/dev/VideoStage";
 import { IncomingCallOverlay, CallState } from "@/components/dev/IncomingCallOverlay";
 import { MessagingOverlay } from "@/components/dev/MessagingOverlay";
+import { NotificationOverlay, NotificationInteractionEvent } from "@/components/dev/NotificationOverlay";
 import { ChatMessage } from "@/types/messaging";
 
 import { TimelineEngine } from "@/engine/timeline/timelineEngine";
@@ -21,7 +22,8 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  MessageSquare
+  MessageSquare,
+  Bell
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -60,10 +62,29 @@ const INITIAL_EVENTS: TimelineEvent[] = [
     }
   },
   {
-    id: 'mother-chat',
-    type: 'whatsapp_open',
-    at: 16,
-    blocking: true,
+    id: 'mother-notification',
+    type: 'notification',
+    at: 15,
+    blocking: false,
+    payload: {
+      appName: "Mensagens",
+      senderName: "Mamãe",
+      message: "Preciso te mandar uma coisa.",
+      timestamp: "agora",
+      autoDismiss: true,
+      autoDismissMs: 5000,
+      tapAction: {
+        type: "open_messaging",
+        id: "mother-chat-from-notification"
+      }
+    }
+  }
+];
+
+const INTERACTION_LIBRARY: Record<string, any> = {
+  "mother-chat-from-notification": {
+    id: "mother-chat-from-notification",
+    type: "messaging",
     payload: {
       contactName: "Mamãe",
       contactSubtitle: "online",
@@ -103,13 +124,17 @@ const INITIAL_EVENTS: TimelineEvent[] = [
       ]
     }
   }
-];
+};
+
+type InteractionAction = 
+  | { type: 'open_messaging'; id: string };
 
 
 function TimelineLab() {
   const [videoUrl, setVideoUrl] = useState<string>("");
   const [sfxFile, setSfxFile] = useState<{ url: string, name: string }>({ url: "", name: "" });
   const [chatAudioFile, setChatAudioFile] = useState<{ url: string, name: string }>({ url: "", name: "" });
+  const [notificationSfxFile, setNotificationSfxFile] = useState<{ url: string, name: string }>({ url: "", name: "" });
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -117,6 +142,10 @@ function TimelineLab() {
   
   // Overlay Control
   const [activeOverlay, setActiveOverlay] = useState<'none' | 'incoming_call' | 'messaging'>('none');
+  const [activeNotificationId, setActiveNotificationId] = useState<string | null>(null);
+  const [actionExecuted, setActionExecuted] = useState(false);
+  const [videoPausedAt, setVideoPausedAt] = useState<number | null>(null);
+  const [triggeredBy, setTriggeredBy] = useState<string | null>(null);
   const [messagingCloseBehavior, setMessagingCloseBehavior] = useState<'prevent' | 'skip'>('prevent');
   
   // Timeline State
@@ -159,6 +188,15 @@ function TimelineLab() {
     }
   };
 
+  const handleNotificationSfxFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (notificationSfxFile.url) URL.revokeObjectURL(notificationSfxFile.url);
+      setNotificationSfxFile({ url: URL.createObjectURL(file), name: file.name });
+      addLog(`notification_sfx_loaded: ${file.name}`);
+    }
+  };
+
   const handleChatAudioFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -167,6 +205,7 @@ function TimelineLab() {
       addLog(`chat_audio_loaded: ${file.name}`);
     }
   };
+
 
 
   const processEvents = useCallback((time: number) => {
@@ -195,6 +234,21 @@ function TimelineLab() {
         setActiveOverlay('incoming_call');
         addLog(`blocking_started: ${event.id}`);
         addLog(`call_opened`);
+      }
+
+      if (event.type === 'notification') {
+        // Only show if no blocking overlay is active
+        if (activeOverlay === 'none') {
+          setActiveNotificationId(event.id);
+        } else {
+          // If blocking is active, we should keep it armed so it fires after blocking
+          // The current engine completes non-blocking immediately.
+          // To follow instruction 23, we should have the engine re-process later or handle it here.
+          // For now, let's just log that it was suppressed.
+          addLog(`notification_suppressed_by_blocking: ${event.id}`);
+          // Force engine to re-arm this so it can try again when no blocking is active
+          engine.rearmEvent(event.id);
+        }
       }
 
       if (event.type === 'whatsapp_open') {
@@ -294,13 +348,103 @@ function TimelineLab() {
     }
     engine.reset();
     setActiveOverlay('none');
+    setActiveNotificationId(null);
+    setActionExecuted(false);
+    setVideoPausedAt(null);
+    setTriggeredBy(null);
     setActiveText(null);
     setCurrentTime(0);
     addLog("video_play");
     addLog("experience_reset");
   };
 
+  const resolveInteractionAction = (action: InteractionAction, sourceId: string) => {
+    if (actionExecuted) return;
+    
+    if (action.type === 'open_messaging') {
+      setActionExecuted(true);
+      setTriggeredBy(sourceId);
+      
+      if (videoRef.current) {
+        const timeAtTap = videoRef.current.currentTime;
+        setVideoPausedAt(timeAtTap);
+        videoRef.current.pause();
+        addLog(`video_current_time: ${timeAtTap.toFixed(3)}`);
+        addLog(`video_paused_for_interaction`);
+      }
+      
+      setActiveOverlay('messaging');
+      addLog(`interaction_action: open_messaging`);
+      addLog(`messaging_opened`);
+    }
+  };
+
+  const handleNotificationInteraction = (e: NotificationInteractionEvent) => {
+    addLog(e.type);
+    
+    if (e.type === 'notification_auto_dismissed' || e.type === 'notification_swiped') {
+      setActiveNotificationId(null);
+      if (activeNotificationId) {
+        engine.completeEvent(activeNotificationId);
+        addLog(`event_completed: ${activeNotificationId}`);
+      }
+    }
+    
+    if (e.type === 'notification_tapped') {
+      if (activeNotificationId) {
+        const event = events.find(ev => ev.id === activeNotificationId);
+        const tapAction = event?.payload?.['tapAction'] as InteractionAction | undefined;
+        
+        engine.completeEvent(activeNotificationId);
+        addLog(`event_completed: ${activeNotificationId}`);
+        
+        if (tapAction) {
+          resolveInteractionAction(tapAction, activeNotificationId);
+        }
+        
+        setActiveNotificationId(null);
+      }
+    }
+  };
+
+
+  const activeNotificationPayload = useMemo(() => {
+    if (!activeNotificationId) return null;
+    const event = events.find(e => e.id === activeNotificationId);
+    if (!event || !event.payload) return null;
+    return {
+      appName: event.payload['appName'],
+      senderName: event.payload['senderName'],
+      message: event.payload['message'],
+      timestamp: event.payload['timestamp'],
+      autoDismiss: event.payload['autoDismiss'],
+      autoDismissMs: event.payload['autoDismissMs'],
+      soundSrc: notificationSfxFile.url || event.payload['soundSrc']
+    };
+  }, [activeNotificationId, events, notificationSfxFile.url]);
+
+
   const chatPayload = useMemo(() => {
+    // If we have a triggered interaction, use that config
+    if (triggeredBy && INTERACTION_LIBRARY[triggeredBy]) {
+      const config = INTERACTION_LIBRARY[triggeredBy];
+      const payload = config.payload;
+      
+      const messages = payload.messages.map((m: any) => {
+        if (m.type === 'voice_once') {
+          return { ...m, audioSrc: chatAudioFile.url || m.audioSrc };
+        }
+        return m;
+      });
+
+      return {
+        contactName: payload.contactName,
+        contactSubtitle: payload.contactSubtitle,
+        messages
+      };
+    }
+
+    // Fallback to legacy behavior if needed
     const event = events.find(e => e.type === 'whatsapp_open');
     if (!event || !event.payload) return null;
     
@@ -310,7 +454,6 @@ function TimelineLab() {
       messages: ChatMessage[] 
     };
 
-    // Inject local audio if available
     const messages = payload.messages.map(m => {
       if (m.type === 'voice_once') {
         return { ...m, audioSrc: chatAudioFile.url || m.audioSrc };
@@ -323,7 +466,8 @@ function TimelineLab() {
       contactSubtitle: payload.contactSubtitle,
       messages
     };
-  }, [events, chatAudioFile.url]);
+  }, [triggeredBy, events, chatAudioFile.url]);
+
 
 
 
@@ -331,6 +475,8 @@ function TimelineLab() {
     setEvents(prev => prev.map(e => e.id === id ? { ...e, at: newTime } : e));
     addLog(`event_time_updated: ${id} -> ${newTime}s`);
   };
+
+
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 p-4 md:p-8 font-sans pb-24">
@@ -394,6 +540,20 @@ function TimelineLab() {
                   onInteraction={(e) => addLog(`${e.type}${e.messageId ? `: ${e.messageId}` : ''}`)}
                 />
               )}
+
+              {activeNotificationPayload && (
+                <NotificationOverlay 
+                  open={!!activeNotificationId}
+                  appName={activeNotificationPayload.appName}
+                  senderName={activeNotificationPayload.senderName}
+                  message={activeNotificationPayload.message}
+                  timestamp={activeNotificationPayload.timestamp}
+                  autoDismiss={activeNotificationPayload.autoDismiss}
+                  autoDismissMs={activeNotificationPayload.autoDismissMs}
+                  soundSrc={activeNotificationPayload.soundSrc}
+                  onInteraction={handleNotificationInteraction}
+                />
+              )}
             </div>
 
 
@@ -441,9 +601,14 @@ function TimelineLab() {
                   <input type="file" accept="audio/*" onChange={handleSfxFile} className="w-full text-xs bg-black/20 border border-zinc-800 p-2 rounded-lg" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">mother-chat / voice_once</label>
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Notification SFX</label>
+                  <input type="file" accept="audio/*" onChange={handleNotificationSfxFile} className="w-full text-xs bg-black/20 border border-zinc-800 p-2 rounded-lg" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Chat Voice Once</label>
                   <input type="file" accept="audio/*" onChange={handleChatAudioFile} className="w-full text-xs bg-black/20 border border-zinc-800 p-2 rounded-lg" />
                 </div>
+
               </div>
 
               <div className="pt-4 border-t border-zinc-800">
@@ -500,7 +665,9 @@ function TimelineLab() {
                         {event.type === 'text_reveal' && <Type className="w-3 h-3 text-blue-400" />}
                         {event.type === 'play_sfx' && <Volume2 className="w-3 h-3 text-purple-400" />}
                         {event.type === 'incoming_call' && <PhoneIncoming className="w-3 h-3 text-green-400" />}
+                        {event.type === 'notification' && <Bell className="w-3 h-3 text-orange-400" />}
                         {event.type === 'whatsapp_open' && <MessageSquare className="w-3 h-3 text-emerald-400" />}
+
                         <span className="text-xs font-bold truncate max-w-[100px]">{event.id}</span>
 
                       </div>
@@ -551,13 +718,36 @@ function TimelineLab() {
                     <span className="text-zinc-600">Overlay:</span>
                     <span className="text-zinc-300">{activeOverlay}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-600">Messaging state:</span>
-                    <span className="text-zinc-300">
-                      {events.find(e => e.id === 'mother-chat')?.status || 'armed'}
+                  <div className="flex justify-between border-t border-zinc-800/50 mt-1 pt-1">
+                    <span className="text-zinc-600">Notification:</span>
+                    <span className={cn(activeNotificationId ? "text-orange-400" : "text-zinc-500")}>
+                      {activeNotificationId ? 'active' : 'idle'}
                     </span>
                   </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-600">Notification event:</span>
+                    <span className="text-zinc-300">{activeNotificationId || 'none'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-600">Action executed:</span>
+                    <span className={cn(actionExecuted ? "text-green-400" : "text-zinc-500")}>
+                      {actionExecuted.toString()}
+                    </span>
+                  </div>
+                  {videoPausedAt !== null && (
+                    <div className="flex justify-between">
+                      <span className="text-zinc-600">Video paused at:</span>
+                      <span className="text-blue-400">{videoPausedAt.toFixed(3)}s</span>
+                    </div>
+                  )}
+                  {triggeredBy && (
+                    <div className="flex justify-between">
+                      <span className="text-zinc-600">Triggered by:</span>
+                      <span className="text-orange-400">{triggeredBy}</span>
+                    </div>
+                  )}
                 </div>
+
               </div>
 
               <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2 shrink-0">
