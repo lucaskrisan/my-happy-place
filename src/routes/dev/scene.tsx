@@ -230,12 +230,12 @@ function SceneLab() {
     if (activeInteraction?.type !== 'incoming_call') return null;
     const p = activeInteraction.payload;
     return {
-      callerName: p.callerName,
-      callerSubtitle: p.callerSubtitle,
+      callerName: p['callerName'] as string,
+      callerSubtitle: p['callerSubtitle'] as string,
       ringtoneSrc: sfxUrls['ringtone'],
-      connectSrc: sfxUrls['connect'],
-      voiceSrc: sfxUrls['voice'],
-      endSrc: sfxUrls['end']
+      connectSfxSrc: sfxUrls['connect'],
+      voiceAudioSrc: sfxUrls['voice'],
+      endSfxSrc: sfxUrls['end']
     };
   }, [activeInteraction, sfxUrls]);
 
@@ -244,7 +244,8 @@ function SceneLab() {
     const p = activeInteraction.payload;
     
     // Inject local audio for voice messages
-    const messages = (p.messages as any[]).map(m => {
+    const rawMessages = p['messages'] as any[];
+    const messages = (rawMessages || []).map(m => {
       if (m.type === 'voice_once') {
         return { ...m, audioSrc: sfxUrls['voice_once'] || m.audioSrc };
       }
@@ -252,21 +253,23 @@ function SceneLab() {
     });
 
     return {
-      contactName: p.contactName,
-      contactSubtitle: p.contactSubtitle,
+      contactName: p['contactName'] as string,
+      contactSubtitle: p['contactSubtitle'] as string,
       messages
     };
   }, [activeInteraction, sfxUrls]);
 
   const notificationPayload = useMemo(() => {
     if (!runtimeState?.activeNotificationId) return null;
-    const event = SCENES[activeSceneId].events.find(e => e.id === runtimeState.activeNotificationId);
+    const scene = SCENES[activeSceneId];
+    if (!scene) return null;
+    const event = scene.events.find(e => e.id === runtimeState.activeNotificationId);
     if (!event || !event.payload) return null;
     
     return {
-      appName: event.payload.appName,
-      senderName: event.payload.senderName,
-      message: event.payload.message,
+      appName: event.payload['appName'],
+      senderName: event.payload['senderName'],
+      message: event.payload['message'],
       timestamp: "agora",
       autoDismiss: true,
       autoDismissMs: 5000,
@@ -332,6 +335,7 @@ function SceneLab() {
               {activeInteraction?.type === 'incoming_call' && callPayload && (
                 <div className="absolute inset-0 z-50">
                   <IncomingCallOverlay 
+                    open={true}
                     {...callPayload}
                     onStateChange={(state) => {
                       if (state === 'ended' || state === 'declined') {
@@ -345,6 +349,7 @@ function SceneLab() {
               {activeInteraction?.type === 'messaging' && messagingPayload && (
                 <div className="absolute inset-0 z-50">
                   <MessagingOverlay 
+                    open={true}
                     {...messagingPayload}
                     onComplete={() => engineRef.current?.completeInteraction(activeInteraction.id)}
                   />
@@ -356,11 +361,13 @@ function SceneLab() {
                 <div className="absolute inset-0 z-[60] pointer-events-none">
                   <div className="pointer-events-auto">
                     <NotificationOverlay 
+                      open={true}
                       {...notificationPayload}
                       onInteraction={(e) => {
                         if (e.type === 'notification_tapped') {
-                          const event = SCENES[activeSceneId].events.find(ev => ev.id === runtimeState.activeNotificationId);
-                          const action = event?.payload?.tapAction as InteractionAction;
+                          const scene = SCENES[activeSceneId];
+                          const event = scene?.events.find(ev => ev.id === runtimeState.activeNotificationId);
+                          const action = event?.payload?.['tapAction'] as InteractionAction;
                           if (action) {
                             engineRef.current?.handleInteractionAction(action, runtimeState.activeNotificationId!);
                           }
