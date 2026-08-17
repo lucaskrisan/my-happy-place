@@ -7,10 +7,7 @@ export type InteractionType = 'incoming_call' | 'messaging' | 'choice';
 export type InteractionDefinition = {
   id: string;
   type: InteractionType;
-  payload: {
-    definition?: any;
-    interactionId?: string;
-  };
+  payload: any;
 };
 
 export type InteractionAction =
