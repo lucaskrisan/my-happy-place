@@ -66,6 +66,8 @@ export const ChoiceOverlay: React.FC<ChoiceOverlayProps> = ({
       }, 500);
       return () => clearTimeout(timer);
     }
+    
+    return undefined;
   }, [state, definition.id]);
 
   const handleOptionClick = (option: ChoiceOption) => {
