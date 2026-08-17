@@ -352,10 +352,16 @@ function TimelineLab() {
     const event = events.find(e => e.id === activeNotificationId);
     if (!event || !event.payload) return null;
     return {
-      ...event.payload,
-      soundSrc: notificationSfxFile.url || event.payload.soundSrc
+      appName: event.payload['appName'],
+      senderName: event.payload['senderName'],
+      message: event.payload['message'],
+      timestamp: event.payload['timestamp'],
+      autoDismiss: event.payload['autoDismiss'],
+      autoDismissMs: event.payload['autoDismissMs'],
+      soundSrc: notificationSfxFile.url || event.payload['soundSrc']
     };
   }, [activeNotificationId, events, notificationSfxFile.url]);
+
 
   const chatPayload = useMemo(() => {
     // If we have a triggered interaction, use that config
