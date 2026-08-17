@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DevModuleLayout } from "@/components/dev-tools";
+import { DevPlaceholderPage } from "@/components/dev-tools";
 
 export const Route = createFileRoute("/dev/record")({
-  component: () => <DevModuleLayout title="Record Audio" description="Simulação de gravação de áudio." />,
+  component: () => <DevPlaceholderPage number="11" title="Record Audio" description="Simulação de gravação de áudio." />,
 });

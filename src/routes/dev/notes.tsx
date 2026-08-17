@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DevModuleLayout } from "@/components/dev-tools";
+import { DevPlaceholderPage } from "@/components/dev-tools";
 
 export const Route = createFileRoute("/dev/notes")({
-  component: () => <DevModuleLayout title="Locked Notes" description="Tela de notas bloqueadas/desbloqueáveis." />,
+  component: () => <DevPlaceholderPage number="08" title="Locked Notes" description="Tela de notas bloqueadas/desbloqueáveis." />,
 });
