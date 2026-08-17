@@ -1,34 +1,59 @@
-# Plano de Implementação - Etapa 07: Notification Overlay Lab
+# Plan - Hotfix 12.1 Quiz Audit & Fixes
 
-Criar um sistema de notificação mobile-first realista para uso em narrativas interativas, com suporte a gestos, áudio e estados explícitos.
+Audit and fix the Quiz module, ensuring deterministic results, robust interaction protection, improved accessibility, and comprehensive testing.
 
-## 1. Criação do Componente Reutilizável
-- Criar `src/components/dev/NotificationOverlay.tsx`.
-- Implementar estado explícito: `hidden | entering | visible | pressed | dismissing | dismissed`.
-- Interface baseada em notificações modernas (frosted glass, safe area, mobile-first).
-- Suporte a swipe manual (gesto para cima) para descartar.
-- Suporte a `autoDismiss` com timer gerenciado no estado `visible`.
-- Suporte a áudio via `soundSrc` com limpeza rigorosa.
+## Technical Details
 
-## 2. Implementação da Rota de Laboratório
-- Modificar `src/routes/dev/notification.tsx`.
-- Painel de controle para editar: App Name, Sender, Message, Timestamp.
-- Gerenciamento de arquivos locais (Avatar e SFX) via `URL.createObjectURL` com limpeza no `unmount` e substituição.
-- Modo "Preview Fullscreen" com background fictício.
-- Event Log e Debug Panel.
+### 1. Deterministic Result Calculation
+Refactor `handleOptionClick` to calculate `nextAnswers` synchronously and pass it to `calculateResult(nextAnswers)`. This prevents stale state bugs where the last answer is omitted from results.
 
-## 3. Detalhes Técnicos
-- **Posicionamento**: `fixed top-0` com `safe-area-inset-top`.
-- **Animações**: Transições suaves de opacidade e transform (slide-in discreto).
-- **Acessibilidade**: Suporte a teclado e `prefers-reduced-motion`.
-- **Independência**: O componente não conhecerá o `TimelineEngine` ou `MessagingOverlay`.
+### 2. Answer Replacement (Allow Previous)
+Ensure `setAnswers` uses the current question ID as a key, effectively overwriting any existing answer for that question when navigating back and re-answering.
 
-## 4. Estratégia de Limpeza
-- `useEffect` para revogar Object URLs ao desmontar.
-- Limpeza de `setTimeout` nos estados de animação e auto-dismiss.
-- Reset de instâncias de áudio.
+### 3. Advanced Keyboard Navigation
+- Add focus management for quiz options.
+- Implement `ArrowUp` and `ArrowDown` to move focus between options.
+- Implement `Enter` and `Space` to select the focused option.
+- Ensure 1-9 numeric shortcuts remain functional.
+- Prevent keyboard interception when focus is in input/select elements (using `e.target` checks).
 
-## 5. Verificação e Testes
-- Validar disparos sucessivos (Teste H).
-- Validar thresholds de swipe (Testes D e E).
-- Validar autoplay de áudio condicional ao gesto de disparo (Teste F).
+### 4. Reduced Motion
+Wrap animations in `prefers-reduced-motion` checks.
+- Disable `x`, `y`, `scale`, and `stagger` animations when reduced motion is preferred.
+- Use simple `opacity` transitions instead.
+
+### 5. Double-Answer Protection & Single onComplete
+- Introduce a `processingRef` (MutableRefObject) to block interactions synchronously during transitions.
+- Ensure `onComplete` is guarded by a state check or ref to prevent multiple calls.
+
+### 6. Close Behavior
+Verify `closeBehavior='prevent'` correctly hides/disables the internal close button while allowing the external dev-tool force-close to work.
+
+### 7. Automated Validation (Playwright)
+Create a comprehensive test suite in `/tmp/browser/quiz_audit.py` covering:
+- Deterministic result calculation (answers.length=3, score=6, tags).
+- Answer replacement logic.
+- Keyboard navigation (Arrows, Enter, Space).
+- Double tap protection.
+- Reduced motion compliance.
+- Single `onComplete` trigger.
+
+## Proposed Changes
+
+### src/components/dev
+#### [EDIT] QuizOverlay.tsx
+- Refactor `calculateResult` to accept answers as an argument.
+- Update `handleOptionClick` to compute `nextAnswers` and use it immediately for result calculation.
+- Add `useRef` for `isProcessing` guard.
+- Implement keyboard focus logic and event listeners for `ArrowUp`/`ArrowDown`.
+- Apply `prefersReducedMotion` to motion components.
+
+### src/routes/dev
+#### [EDIT] quiz.tsx
+- Update the lab to include a "Audit Test" button that loads a specific 3-question set for validation.
+- Add a "Reduced Motion Toggle" simulation if possible, or instructions for manual OS-level testing.
+
+## Verification Plan
+1. `bun run build:dev` to ensure no regressions.
+2. Execute `/tmp/browser/quiz_audit.py`.
+3. Manual smoke test of `/dev`, `/dev/choice`, `/dev/quiz`, and `/dev/scene`.
