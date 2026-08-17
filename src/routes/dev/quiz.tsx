@@ -267,8 +267,9 @@ function QuizLab() {
                 icon={<ClipboardList className="w-5 h-5 text-purple-500" />}
                 title="Audit Test"
                 onClick={() => handleOpen(AUDIT_QUIZ)}
-                data-testid="audit-test-btn"
+                testId="audit-test-btn"
               />
+
               <DevCard
                 icon={<RotateCcw className="w-5 h-5 text-amber-500" />}
                 title="Reset"
