@@ -1,6 +1,6 @@
 import { TimelineEvent } from '../timeline/timelineTypes';
 
-export type SceneState = 'idle' | 'loading' | 'ready' | 'playing' | 'blocked' | 'completing' | 'completed' | 'error';
+export type SceneState = 'idle' | 'loading' | 'ready' | 'playing' | 'blocked' | 'transitioning' | 'completing' | 'completed' | 'error';
 
 export type InteractionType = 'incoming_call' | 'messaging' | 'choice';
 
@@ -42,5 +42,7 @@ export type SceneRuntimeState = {
   activeNotificationId: string | null;
   videoPausedAt: number | null;
   lastAction: InteractionAction | null;
+  lastChoiceResult?: import('@/types/choice').ChoiceResult | null;
+  transitionTargetId?: string | null;
   error?: string;
 };
