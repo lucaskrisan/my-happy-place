@@ -2,7 +2,7 @@ import { TimelineEvent } from '../timeline/timelineTypes';
 
 export type SceneState = 'idle' | 'loading' | 'ready' | 'playing' | 'blocked' | 'transitioning' | 'completing' | 'completed' | 'error';
 
-export type InteractionType = 'incoming_call' | 'messaging' | 'choice';
+export type InteractionType = 'incoming_call' | 'messaging' | 'choice' | 'quiz';
 
 export type InteractionDefinition = {
   id: string;
@@ -43,6 +43,7 @@ export type SceneRuntimeState = {
   videoPausedAt: number | null;
   lastAction: InteractionAction | null;
   lastChoiceResult?: import('@/types/choice').ChoiceResult | null;
+  quizResults: Record<string, import('@/types/quiz').QuizResult>;
   transitionTargetId?: string | null;
   error?: string;
 };

@@ -9,6 +9,7 @@ import {
 } from './sceneTypes';
 import { resolveInteraction, processInteractionAction, resolveChoiceAction } from './interactionResolver';
 import { ChoiceResult } from '@/types/choice';
+import { QuizResult } from '@/types/quiz';
 
 export type SceneEngineCallback = (state: SceneRuntimeState, log?: string) => void;
 
@@ -36,6 +37,7 @@ export class SceneEngine {
       videoPausedAt: null,
       lastAction: null,
       lastChoiceResult: null,
+      quizResults: {},
       transitionTargetId: null,
     };
     
@@ -72,7 +74,7 @@ export class SceneEngine {
     // Check if event type exists in registry is handled by TimelineEngine.process
     // We just handle the business logic here.
     
-    if (event.type === 'incoming_call' || event.type === 'choice') {
+    if (event.type === 'incoming_call' || event.type === 'choice' || event.type === 'quiz') {
       const interactionId = event.payload?.['interactionId'];
       if (interactionId) {
         this.openInteraction(interactionId);
@@ -123,6 +125,17 @@ export class SceneEngine {
       if (this.runtime.activeInteraction) {
         this.completeInteraction(this.runtime.activeInteraction.id);
       }
+    }
+  }
+
+  public handleQuizComplete(quizId: string, result: QuizResult) {
+    if (this.runtime.state === 'transitioning') return;
+
+    this.runtime.quizResults[quizId] = result;
+    this.notify(`quiz_completed: ${quizId}`);
+    
+    if (this.runtime.activeInteraction?.id === quizId) {
+      this.completeInteraction(quizId);
     }
   }
 
@@ -207,6 +220,7 @@ export class SceneEngine {
       activeNotificationId: null,
       videoPausedAt: null,
       lastAction: null,
+      quizResults: {},
     };
     this.notify('scene_reset');
   }

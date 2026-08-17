@@ -6,6 +6,7 @@ import { IncomingCallOverlay } from "@/components/dev/IncomingCallOverlay";
 import { MessagingOverlay } from "@/components/dev/MessagingOverlay";
 import { NotificationOverlay } from "@/components/dev/NotificationOverlay";
 import { ChoiceOverlay } from "@/components/dev/ChoiceOverlay";
+import { QuizOverlay } from "@/components/dev/QuizOverlay";
 import { 
   Play, 
   Pause, 
@@ -25,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { SceneEngine } from "@/engine/scene/sceneEngine";
 import { SceneDefinition, SceneRuntimeState, InteractionAction } from "@/engine/scene/sceneTypes";
 import { ChoiceDefinition, ChoiceResult } from "@/types/choice";
+import { QuizDefinition, QuizResult } from "@/types/quiz";
 
 export const Route = createFileRoute("/dev/scene")({
   component: SceneLab,
@@ -97,6 +99,13 @@ const SCENE_01: SceneDefinition = {
       at: 18,
       blocking: true,
       payload: { interactionId: 'reaction-choice' }
+    },
+    {
+      id: 'final-quiz-event',
+      type: 'quiz',
+      at: 25,
+      blocking: true,
+      payload: { interactionId: 'final-quiz' }
     }
   ],
   interactions: {
@@ -180,6 +189,27 @@ const SCENE_01: SceneDefinition = {
               id: "defend",
               label: "Se defende antes de qualquer acusação",
               action: { type: "go_to_scene", sceneId: "scene-defend" }
+            }
+          ]
+        }
+      }
+    },
+    "final-quiz": {
+      id: "final-quiz",
+      type: "quiz",
+      payload: {
+        definition: {
+          id: "final-quiz-01",
+          title: "Avaliação de Cena",
+          closeBehavior: "prevent",
+          questions: [
+            {
+              id: "q1",
+              text: "Você prestou atenção?",
+              options: [
+                { id: "o1", text: "Sim", score: 2, tags: ["attentive"] },
+                { id: "o2", text: "Não", score: 0, tags: ["distracted"] }
+              ]
             }
           ]
         }
@@ -396,6 +426,11 @@ function SceneLab() {
     if (activeInteraction?.type !== 'choice') return null;
     return activeInteraction.payload.definition as ChoiceDefinition;
   }, [activeInteraction]);
+  
+  const quizPayload = useMemo(() => {
+    if (activeInteraction?.type !== 'quiz') return null;
+    return activeInteraction.payload.definition as QuizDefinition;
+  }, [activeInteraction]);
 
   // File Handlers
   const handleFile = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -503,8 +538,21 @@ function SceneLab() {
                     open={true}
                     definition={choicePayload}
                     onComplete={(result) => engineRef.current?.handleChoiceComplete(result)}
-                    onClose={() => engineRef.current?.completeInteraction(activeInteraction.id)}
-                    closeBehavior="prevent"
+                  />
+                </div>
+              )}
+
+              {activeInteraction?.type === 'quiz' && quizPayload && (
+                <div className="absolute inset-0 z-50">
+                  <QuizOverlay 
+                    open={true}
+                    definition={quizPayload}
+                    onComplete={(result) => engineRef.current?.handleQuizComplete(activeInteraction.id, result)}
+                    onClose={() => {
+                      if (quizPayload.closeBehavior === 'skip') {
+                        engineRef.current?.completeInteraction(activeInteraction.id);
+                      }
+                    }}
                   />
                 </div>
               )}
