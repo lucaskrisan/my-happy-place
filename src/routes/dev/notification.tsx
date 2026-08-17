@@ -472,7 +472,3 @@ function NotificationLab() {
   );
 }
 
-// Helper for addLog inside the component
-const useCallback = (fn: any, deps: any) => {
-  return React.useCallback(fn, deps);
-};
