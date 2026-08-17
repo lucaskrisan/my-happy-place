@@ -650,7 +650,7 @@ function SceneLab() {
                   {!Object.keys(runtimeState?.quizResults || {}).length && (
                     <div className="text-zinc-600 italic">No quiz results yet.</div>
                   )}
-                </div>
+              </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-zinc-500 uppercase flex items-center gap-2">
                   <FileVideoIcon className="w-3 h-3" /> Scene Video
