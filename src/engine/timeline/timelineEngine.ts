@@ -74,6 +74,17 @@ export class TimelineEngine {
     }
   }
 
+  public skipEvent(eventId: string) {
+    const event = this.events.find(e => e.id === eventId);
+    if (event) {
+      event.status = 'skipped';
+      if (this.activeBlockingEventId === eventId) {
+        this.activeBlockingEventId = null;
+      }
+    }
+  }
+
+
   public rearmEvent(eventId: string) {
     const event = this.events.find(e => e.id === eventId);
     if (event) {
