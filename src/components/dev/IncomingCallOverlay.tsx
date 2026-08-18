@@ -348,8 +348,13 @@ export function IncomingCallOverlay({
               <span className="text-[11px] font-semibold uppercase tracking-widest text-white/50">ATENDER</span>
             </button>
           </>
-        ) : (callState === 'active' || callState === 'connecting') && (
-          <div className="w-full flex justify-center">
+        ) : (callState === "active" || callState === "connecting" || callState === "ended") && (
+          <div
+            className={cn(
+              "w-full flex justify-center transition-opacity duration-300",
+              callState === "ended" && "opacity-0 pointer-events-none"
+            )}
+          >
             <button
               onClick={handleEnd}
               className="group flex flex-col items-center gap-3 transition-transform active:scale-95 duration-200"
