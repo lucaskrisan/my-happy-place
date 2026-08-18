@@ -36,6 +36,8 @@ interface Asset {
 const SCENE_ASSETS: Asset[] = [
   { path: "/assets/scene-01/video/scene-01-door.mp4", label: "scene-01-door.mp4", type: 'video' },
   { path: "/assets/scene-01/video/scene-01-memory.mp4", label: "scene-01-memory.mp4", type: 'video' },
+  { path: "/assets/scene-01/video/scene-01-memory-door.mp4", label: "scene-01-memory-door.mp4", type: 'video' },
+  { path: "/assets/scene-01/video/scene-01-mother-precall.mp4", label: "scene-01-mother-precall.mp4", type: 'video' },
   { path: scene02DinnerAsset.url, label: "scene-02-dinner.mp4", type: 'video' },
   { path: "/assets/scene-01/audio/ringtone.mp3", label: "ringtone.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/phone-vibration.mp3", label: "phone-vibration.mp3", type: 'audio' },
@@ -55,7 +57,7 @@ function DoorScenePreview() {
   const [duration, setDuration] = useState(0);
 
   // New Scene Logic States
-  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "transition" | "call" | "scene02">("idle");
+  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "memory-door" | "pre-call" | "call" | "scene02">("idle");
   const [showCopy, setShowCopy] = useState(false);
   const [isNotificationVisible, setIsNotificationVisible] = useState(false);
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
@@ -63,6 +65,8 @@ function DoorScenePreview() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const memoryVideoRef = useRef<HTMLVideoElement>(null);
+  const memoryDoorVideoRef = useRef<HTMLVideoElement>(null);
+  const preCallVideoRef = useRef<HTMLVideoElement>(null);
   const scene02VideoRef = useRef<HTMLVideoElement>(null);
 
   // Real detection of assets
@@ -96,31 +100,36 @@ function DoorScenePreview() {
       videoRef.current.currentTime = 0;
       videoRef.current.play().catch(console.error);
     }
-    if (memoryVideoRef.current) {
-      memoryVideoRef.current.currentTime = 0;
-      memoryVideoRef.current.load();
-    }
-    if (scene02VideoRef.current) {
-      scene02VideoRef.current.currentTime = 0;
-      scene02VideoRef.current.load();
-      scene02NotificationTriggeredRef.current = false;
-    }
+    [memoryVideoRef, memoryDoorVideoRef, preCallVideoRef, scene02VideoRef].forEach(ref => {
+      if (ref.current) {
+        ref.current.currentTime = 0;
+        ref.current.load();
+      }
+    });
+    scene02NotificationTriggeredRef.current = false;
   };
 
   const handleVideoEnded = () => {
     if (sceneStep === "present") {
-      // Step A ended -> Step B: Memory (CORTE SECO)
       setSceneStep("memory");
       if (memoryVideoRef.current) {
         memoryVideoRef.current.play().catch(console.error);
       }
     } else if (sceneStep === "memory") {
-      // Step B ended -> Step C: Transition Copy (IMEDIATO)
-      setSceneStep("transition");
-      setShowCopy(true);
-      setIsPlaying(false);
+      setSceneStep("memory-door");
+      if (memoryDoorVideoRef.current) {
+        memoryDoorVideoRef.current.play().catch(console.error);
+      }
+    } else if (sceneStep === "memory-door") {
+      setSceneStep("pre-call");
+      if (preCallVideoRef.current) {
+        preCallVideoRef.current.play().catch(console.error);
+      }
+    } else if (sceneStep === "pre-call") {
+      // Step Pre-call ended -> Open Call Overlay IMMEDIATELY
+      setSceneStep("call");
+      setIsCallOpen(true);
     } else if (sceneStep === "scene02") {
-      // Final da Cena 02 -> Congelar/Parar
       setIsPlaying(false);
     }
   };
@@ -143,6 +152,8 @@ function DoorScenePreview() {
   const togglePlay = () => {
     const activeVideo = 
       sceneStep === "memory" ? memoryVideoRef.current : 
+      sceneStep === "memory-door" ? memoryDoorVideoRef.current :
+      sceneStep === "pre-call" ? preCallVideoRef.current :
       sceneStep === "scene02" ? scene02VideoRef.current : 
       videoRef.current;
       
@@ -173,6 +184,14 @@ function DoorScenePreview() {
       memoryVideoRef.current.currentTime = 0;
       memoryVideoRef.current.pause();
     }
+    if (memoryDoorVideoRef.current) {
+      memoryDoorVideoRef.current.currentTime = 0;
+      memoryDoorVideoRef.current.pause();
+    }
+    if (preCallVideoRef.current) {
+      preCallVideoRef.current.currentTime = 0;
+      preCallVideoRef.current.pause();
+    }
     if (scene02VideoRef.current) {
       scene02VideoRef.current.currentTime = 0;
       scene02VideoRef.current.pause();
@@ -182,6 +201,8 @@ function DoorScenePreview() {
   const handleTimeUpdate = () => {
     const activeVideo = 
       sceneStep === "memory" ? memoryVideoRef.current : 
+      sceneStep === "memory-door" ? memoryDoorVideoRef.current :
+      sceneStep === "pre-call" ? preCallVideoRef.current :
       sceneStep === "scene02" ? scene02VideoRef.current : 
       videoRef.current;
       
@@ -205,6 +226,8 @@ function DoorScenePreview() {
   const handleLoadedMetadata = () => {
     const activeVideo = 
       sceneStep === "memory" ? memoryVideoRef.current : 
+      sceneStep === "memory-door" ? memoryDoorVideoRef.current :
+      sceneStep === "pre-call" ? preCallVideoRef.current :
       sceneStep === "scene02" ? scene02VideoRef.current : 
       videoRef.current;
       
@@ -217,6 +240,8 @@ function DoorScenePreview() {
     const time = parseFloat(e.target.value);
     const activeVideo = 
       sceneStep === "memory" ? memoryVideoRef.current : 
+      sceneStep === "memory-door" ? memoryDoorVideoRef.current :
+      sceneStep === "pre-call" ? preCallVideoRef.current :
       sceneStep === "scene02" ? scene02VideoRef.current : 
       videoRef.current;
       
@@ -357,7 +382,37 @@ function DoorScenePreview() {
               preload="auto"
               className={cn(
                 "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
-                sceneStep === "memory" || sceneStep === "transition" ? "opacity-100 z-10" : "opacity-0 z-0"
+                sceneStep === "memory" ? "opacity-100 z-10" : "opacity-0 z-0"
+              )}
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onEnded={handleVideoEnded}
+            />
+            <video
+              ref={memoryDoorVideoRef}
+              src="/assets/scene-01/video/scene-01-memory-door.mp4"
+              playsInline
+              preload="auto"
+              className={cn(
+                "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
+                sceneStep === "memory-door" ? "opacity-100 z-10" : "opacity-0 z-0"
+              )}
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onEnded={handleVideoEnded}
+            />
+            <video
+              ref={preCallVideoRef}
+              src="/assets/scene-01/video/scene-01-mother-precall.mp4"
+              playsInline
+              preload="auto"
+              className={cn(
+                "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
+                sceneStep === "pre-call" || sceneStep === "call" ? "opacity-100 z-10" : "opacity-0 z-0"
               )}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
