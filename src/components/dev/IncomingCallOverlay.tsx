@@ -243,17 +243,17 @@ export function IncomingCallOverlay({
     // Ensure all audio is paused
     if (voiceAudioRef.current) voiceAudioRef.current.pause();
     if (endSfxRef.current) endSfxRef.current.pause();
-    
+
     if (durationTimerRef.current) clearInterval(durationTimerRef.current);
 
-    updateState('ended');
+    updateState("ended");
     onEnd?.();
-    
-    // Auto-close overlay after transition
+
+    // Visual ENDED state for ~900ms as requested
     timerRef.current = window.setTimeout(() => {
       setIsVisible(false);
-      updateState('idle');
-    }, 800); 
+      updateState("idle");
+    }, 900);
   };
 
   const formatDuration = (seconds: number) => {
