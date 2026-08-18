@@ -39,6 +39,7 @@ const SCENE_ASSETS: Asset[] = [
   { path: "/assets/scene-01/video/scene-01-memory-door.mp4", label: "scene-01-memory-door.mp4", type: 'video' },
   { path: "/assets/scene-01/video/scene-01-mother-precall.mp4", label: "scene-01-mother-precall.mp4", type: 'video' },
   { path: scene02DinnerAsset.url, label: "scene-02-dinner.mp4", type: 'video' },
+  { path: "/assets/scene-02/video/scene-02-lucia-send-audio.mp4", label: "scene-02-lucia-send-audio.mp4", type: 'video' },
   { path: "/assets/scene-01/audio/ringtone.mp3", label: "ringtone.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/phone-vibration.mp3", label: "phone-vibration.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/call-connect.mp3", label: "call-connect.mp3", type: 'audio' },
@@ -57,7 +58,7 @@ function DoorScenePreview() {
   const [duration, setDuration] = useState(0);
 
   // New Scene Logic States
-  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "memory-door" | "pre-call" | "call" | "scene02">("idle");
+  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "memory-door" | "pre-call" | "call" | "scene02" | "lucia-send-audio">("idle");
   const [showCopy, setShowCopy] = useState(false);
   const [isNotificationVisible, setIsNotificationVisible] = useState(false);
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
@@ -68,6 +69,7 @@ function DoorScenePreview() {
   const memoryDoorVideoRef = useRef<HTMLVideoElement>(null);
   const preCallVideoRef = useRef<HTMLVideoElement>(null);
   const scene02VideoRef = useRef<HTMLVideoElement>(null);
+  const luciaSendAudioVideoRef = useRef<HTMLVideoElement>(null);
 
   // Real detection of assets
   useEffect(() => {
@@ -100,7 +102,7 @@ function DoorScenePreview() {
       videoRef.current.currentTime = 0;
       videoRef.current.play().catch(console.error);
     }
-    [memoryVideoRef, memoryDoorVideoRef, preCallVideoRef, scene02VideoRef].forEach(ref => {
+    [memoryVideoRef, memoryDoorVideoRef, preCallVideoRef, scene02VideoRef, luciaSendAudioVideoRef].forEach(ref => {
       if (ref.current) {
         ref.current.currentTime = 0;
         ref.current.load();
@@ -131,6 +133,9 @@ function DoorScenePreview() {
       setIsCallOpen(true);
     } else if (sceneStep === "scene02") {
       setIsPlaying(false);
+    } else if (sceneStep === "lucia-send-audio") {
+      setIsPlaying(false);
+      setIsMessagingOpen(true);
     }
   };
 
@@ -155,6 +160,7 @@ function DoorScenePreview() {
       sceneStep === "memory-door" ? memoryDoorVideoRef.current :
       sceneStep === "pre-call" ? preCallVideoRef.current :
       sceneStep === "scene02" ? scene02VideoRef.current : 
+      sceneStep === "lucia-send-audio" ? luciaSendAudioVideoRef.current :
       videoRef.current;
       
     if (activeVideo) {
@@ -196,6 +202,10 @@ function DoorScenePreview() {
       scene02VideoRef.current.currentTime = 0;
       scene02VideoRef.current.pause();
     }
+    if (luciaSendAudioVideoRef.current) {
+      luciaSendAudioVideoRef.current.currentTime = 0;
+      luciaSendAudioVideoRef.current.pause();
+    }
   };
 
   const handleTimeUpdate = () => {
@@ -204,6 +214,7 @@ function DoorScenePreview() {
       sceneStep === "memory-door" ? memoryDoorVideoRef.current :
       sceneStep === "pre-call" ? preCallVideoRef.current :
       sceneStep === "scene02" ? scene02VideoRef.current : 
+      sceneStep === "lucia-send-audio" ? luciaSendAudioVideoRef.current :
       videoRef.current;
       
     if (activeVideo) {
@@ -229,6 +240,7 @@ function DoorScenePreview() {
       sceneStep === "memory-door" ? memoryDoorVideoRef.current :
       sceneStep === "pre-call" ? preCallVideoRef.current :
       sceneStep === "scene02" ? scene02VideoRef.current : 
+      sceneStep === "lucia-send-audio" ? luciaSendAudioVideoRef.current :
       videoRef.current;
       
     if (activeVideo) {
@@ -243,6 +255,7 @@ function DoorScenePreview() {
       sceneStep === "memory-door" ? memoryDoorVideoRef.current :
       sceneStep === "pre-call" ? preCallVideoRef.current :
       sceneStep === "scene02" ? scene02VideoRef.current : 
+      sceneStep === "lucia-send-audio" ? luciaSendAudioVideoRef.current :
       videoRef.current;
       
     if (activeVideo) {
@@ -276,7 +289,7 @@ function DoorScenePreview() {
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
               <span className="text-zinc-500 block mb-1">Current Scene</span>
               <span className="font-mono font-bold text-blue-400">
-                {sceneStep === "scene02" ? "SCENE_02" : "SCENE_01"}
+                {sceneStep === "scene02" || sceneStep === "lucia-send-audio" ? "SCENE_02" : "SCENE_01"}
               </span>
             </div>
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
@@ -435,6 +448,21 @@ function DoorScenePreview() {
               onPause={() => setIsPlaying(false)}
               onEnded={handleVideoEnded}
             />
+            <video
+              ref={luciaSendAudioVideoRef}
+              src="/assets/scene-02/video/scene-02-lucia-send-audio.mp4"
+              playsInline
+              preload="auto"
+              className={cn(
+                "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
+                sceneStep === "lucia-send-audio" ? "opacity-100 z-10" : "opacity-0 z-0"
+              )}
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onEnded={handleVideoEnded}
+            />
 
             {/* Transition Copy Overlay */}
             {showCopy && (
@@ -503,7 +531,10 @@ function DoorScenePreview() {
               autoDismiss={false}
               onTap={() => {
                 setIsNotificationVisible(false);
-                setIsMessagingOpen(true);
+                setSceneStep("lucia-send-audio");
+                if (luciaSendAudioVideoRef.current) {
+                  luciaSendAudioVideoRef.current.play().catch(console.error);
+                }
               }}
               onDismiss={() => setIsNotificationVisible(false)}
             />
