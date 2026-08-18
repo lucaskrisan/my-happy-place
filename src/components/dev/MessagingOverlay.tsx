@@ -437,7 +437,7 @@ function VoiceMessageBubble({
   // Regular Voice Message
   return (
     <div className="min-w-[220px] py-2 px-1 flex items-center gap-3">
-      <audio ref={audioRef} src={message.audioSrc || undefined} />
+      <audio ref={audioRef} src={message.audioSrc || undefined} preload="auto" />
       
       <button 
         onClick={togglePlay}
