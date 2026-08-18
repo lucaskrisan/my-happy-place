@@ -357,31 +357,52 @@ function VoiceMessageBubble({
     };
   }, [message.audioSrc]);
 
-  // Sync state with audio element
+  // Sync state with audio element (Pause and Reset ONLY)
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (state === 'playing') {
-      audio.play().catch(err => {
-        console.error("Audio playback error:", err);
-        onStateChange('error');
-      });
-    } else if (state === 'paused' || state === 'consumed') {
+    if (state === 'paused' || state === 'consumed') {
       audio.pause();
     }
+    // We removed the 'playing' check here to prevent indirect .play()
   }, [state]);
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
+    const audio = audioRef.current;
+
+    if (!audio) {
+      console.error("Voice audio element not available");
+      return;
+    }
+
     if (state === 'consumed') return;
+
+    console.log("VOICE PLAY CLICK", message.audioSrc);
     
     if (state === 'playing') {
+      audio.pause();
       onStateChange('paused');
       onInteraction('voice_paused');
-    } else {
+      return;
+    }
+
+    try {
+      console.log("AUDIO READY", {
+        src: audio.currentSrc,
+        readyState: audio.readyState,
+        networkState: audio.networkState
+      });
+
+      await audio.play();
+
+      console.log("VOICE PLAY STARTED");
       onStateChange('playing');
       onVoiceStart();
       onInteraction('voice_started');
+    } catch (error) {
+      console.error("VOICE PLAY FAILED", error);
+      onStateChange('error');
     }
   };
 
