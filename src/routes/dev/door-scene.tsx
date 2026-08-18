@@ -627,6 +627,7 @@ function DoorScenePreview() {
           {/* Scene 02 Prediction Quiz */}
           <QuizOverlay
             open={isPredictionQuizOpen}
+            variant="cinematic"
             definition={{
               id: "scene-02-prediction",
               title: "Antes de continuar...",

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Check, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Check, ChevronLeft, X } from 'lucide-react';
 import { 
   QuizDefinition, 
   QuizQuestion, 
@@ -15,6 +15,7 @@ import {
 interface QuizOverlayProps {
   open: boolean;
   definition: QuizDefinition;
+  variant?: 'default' | 'cinematic';
   onOpen?: () => void;
   onAnswer?: (answer: QuizAnswer) => void;
   onQuestionChange?: (index: number) => void;
@@ -29,6 +30,7 @@ interface QuizOverlayProps {
 export const QuizOverlay: React.FC<QuizOverlayProps> = ({
   open,
   definition,
+  variant = 'default',
   onOpen,
   onAnswer,
   onQuestionChange,
@@ -72,18 +74,18 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
     if (state === 'entering') {
       onOpen?.();
       onInteraction?.({ type: 'quiz_opened', quizId: definition.id });
-      const timer = setTimeout(() => setState('active'), 500);
+      const timer = setTimeout(() => setState('active'), variant === 'cinematic' ? 300 : 500);
       return () => clearTimeout(timer);
     }
     if (state === 'exiting') {
       const timer = setTimeout(() => {
         setState('hidden');
         onClose?.();
-      }, 500);
+      }, variant === 'cinematic' ? 300 : 500);
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [state, definition.id, onOpen, onInteraction, onClose, onStateChange]);
+  }, [state, definition.id, onOpen, onInteraction, onClose, onStateChange, variant]);
 
   const calculateResult = useCallback((finalAnswers: Record<string, QuizAnswer>): QuizResult => {
     const answerList = Object.values(finalAnswers);
@@ -105,28 +107,23 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
   }, [definition.id, startTime]);
 
   const moveToNext = useCallback((finalAnswers: Record<string, QuizAnswer>) => {
-    if (!currentQuestion || isProcessing.current) return;
+    if (!currentQuestion) return;
     
-    isProcessing.current = true;
     onInteraction?.({ type: 'question_completed', quizId: definition.id, questionId: currentQuestion.id });
     
     if (isLastQuestion) {
-      if (isCompleted.current) { 
-        isProcessing.current = false; 
-        return; 
-      }
+      if (isCompleted.current) return;
       isCompleted.current = true;
       setState('completed');
       onComplete?.(calculateResult(finalAnswers));
       onInteraction?.({ type: 'quiz_completed', quizId: definition.id });
-      // Keep isProcessing true until unmount/reset
     } else {
       setState('transitioning');
       setTimeout(() => {
         setCurrentQuestionIndex(prev => prev + 1);
         onQuestionChange?.(currentQuestionIndex + 1);
         setState('active');
-        isProcessing.current = false;
+        isProcessing.current = false; // Release for next question
         const nextQ = definition.questions[currentQuestionIndex + 1];
         if (nextQ) onInteraction?.({ type: 'question_viewed', quizId: definition.id, questionId: nextQ.id });
       }, 400);
@@ -135,6 +132,7 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
 
   const handleFeedbackContinue = useCallback(() => {
     if (state !== 'feedback' || isProcessing.current) return;
+    isProcessing.current = true;
     moveToNext(answers);
   }, [state, moveToNext, answers]);
 
@@ -209,6 +207,8 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [state, currentQuestion, handleOptionClick]);
 
+  const isCinematic = variant === 'cinematic';
+
   return (
     <AnimatePresence>
       {open && (
@@ -217,9 +217,24 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: prefersReducedMotion ? 0 : 0.3 }}
-          className="fixed inset-0 z-50 flex flex-col bg-zinc-950 text-zinc-100 overflow-hidden font-sans"
+          className={cn(
+            "fixed inset-0 z-50 flex flex-col overflow-hidden font-sans",
+            isCinematic 
+              ? "bg-transparent" 
+              : "bg-zinc-950 text-zinc-100"
+          )}
         >
-          {definition.showProgress && state !== 'completed' && (
+          {isCinematic && (
+            <div 
+              className="absolute inset-0 pointer-events-none" 
+              style={{
+                background: 'linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.28) 40%, rgba(0,0,0,0.82) 100%)',
+                backdropFilter: 'blur(3px)'
+              }}
+            />
+          )}
+
+          {definition.showProgress && state !== 'completed' && !isCinematic && (
             <div className="w-full bg-zinc-900 h-1 mt-[env(safe-area-inset-top,0px)]">
               <motion.div 
                 className="bg-zinc-100 h-full"
@@ -229,36 +244,45 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
               />
             </div>
           )}
-          <header className="flex items-center justify-between p-4 md:p-6 border-b border-zinc-900">
-            <div className="flex flex-col">
-              {definition.showProgress && state !== 'completed' && (
-                <span className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase mb-0.5">
-                  Pergunta {currentQuestionIndex + 1} de {definition.questions.length}
-                </span>
-              )}
-              <h1 className="text-sm font-semibold text-zinc-300 truncate max-w-[200px] md:max-w-md">
-                {definition.title || 'Quiz'}
-              </h1>
-            </div>
-            <div className="flex items-center gap-2">
-              {allowPrevious && currentQuestionIndex > 0 && state === 'active' && (
-                <button
-                  onClick={handleBack}
-                  className="p-2 rounded-full bg-zinc-900 text-zinc-400 hover:text-white transition-colors"
-                  aria-label="Voltar"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-              )}
-              {closeBehavior === 'allow' && (
-                <button onClick={onClose} className="p-2 rounded-full bg-zinc-900 text-zinc-400 hover:text-white" aria-label="Fechar"><X className="w-5 h-5" /></button>
-              )}
-            </div>
-          </header>
-          <main className="flex-1 overflow-y-auto relative flex flex-col">
-            <div className="max-w-xl mx-auto w-full px-6 py-12 flex-1 flex flex-col">
+
+          {!isCinematic && (
+            <header className="flex items-center justify-between p-4 md:p-6 border-b border-zinc-900 shrink-0">
+              <div className="flex flex-col">
+                {definition.showProgress && state !== 'completed' && (
+                  <span className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase mb-0.5">
+                    Pergunta {currentQuestionIndex + 1} de {definition.questions.length}
+                  </span>
+                )}
+                <h1 className="text-sm font-semibold text-zinc-300 truncate max-w-[200px] md:max-w-md">
+                  {definition.title || 'Quiz'}
+                </h1>
+              </div>
+              <div className="flex items-center gap-2">
+                {allowPrevious && currentQuestionIndex > 0 && state === 'active' && (
+                  <button
+                    onClick={handleBack}
+                    className="p-2 rounded-full bg-zinc-900 text-zinc-400 hover:text-white transition-colors"
+                    aria-label="Voltar"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                )}
+                {closeBehavior === 'allow' && (
+                  <button onClick={onClose} className="p-2 rounded-full bg-zinc-900 text-zinc-400 hover:text-white" aria-label="Fechar"><X className="w-5 h-5" /></button>
+                )}
+              </div>
+            </header>
+          )}
+
+          <main className="flex-1 relative flex flex-col justify-end">
+            <div className={cn(
+              "w-full px-6 flex flex-col",
+              isCinematic 
+                ? "max-w-[560px] mx-auto pb-12" 
+                : "max-w-xl mx-auto py-12 flex-1"
+            )}>
               <AnimatePresence mode="wait">
-                {state === 'completed' ? (
+                {state === 'completed' && !isCinematic ? (
                   <motion.div 
                     key="completed"
                     initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 20 }} 
@@ -273,32 +297,58 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
                 ) : currentQuestion ? (
                   <motion.div 
                     key={currentQuestion.id} 
-                    initial={{ opacity: 0, x: prefersReducedMotion ? 0 : 20 }} 
-                    animate={{ opacity: 1, x: 0 }} 
-                    exit={{ opacity: 0, x: prefersReducedMotion ? 0 : -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex-1 flex flex-col"
+                    initial={isCinematic ? { opacity: 0, y: 18 } : { opacity: 0, x: 20 }} 
+                    animate={{ opacity: 1, x: 0, y: 0 }} 
+                    exit={isCinematic ? { opacity: 0, y: 10 } : { opacity: 0, x: -20 }}
+                    transition={{ duration: 0.25 }}
+                    className={cn(
+                      "flex flex-col",
+                      isCinematic 
+                        ? "bg-[rgba(15,15,18,0.84)] backdrop-blur-[18px] border border-white/10 rounded-[24px] p-6 shadow-2xl overflow-hidden" 
+                        : "flex-1"
+                    )}
                   >
-                    <div className="mb-10">
-                      <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 leading-tight tracking-tight">{currentQuestion.title}</h2>
+                    <div className={isCinematic ? "mb-6" : "mb-10"}>
+                      {isCinematic && definition.title && (
+                        <span className="text-[10px] font-medium tracking-[0.15em] text-zinc-400 uppercase block mb-2">
+                          {definition.title}
+                        </span>
+                      )}
+                      <h2 className={cn(
+                        "font-bold leading-tight tracking-tight text-white",
+                        isCinematic ? "text-lg md:text-xl" : "text-2xl md:text-3xl"
+                      )}>
+                        {currentQuestion.title}
+                      </h2>
                     </div>
-                    <div className="space-y-3 mb-12">
+
+                    <div className={cn("space-y-2.5", isCinematic ? "mb-0" : "mb-12")}>
                       {currentQuestion.options.map((option, idx) => (
                         <button
                           key={option.id}
                           ref={el => { if (optionRefs.current) optionRefs.current[idx] = el; }}
                           onClick={() => handleOptionClick(option)}
                           className={cn(
-                            "w-full text-left p-5 rounded-2xl border transition-all duration-200 group relative",
-                            "bg-zinc-900/50 border-white/5 hover:border-white/10",
-                            currentAnswer?.optionId === option.id && "bg-zinc-100 border-white ring-2 ring-white/20 text-zinc-950"
+                            "w-full text-left p-4 rounded-2xl border transition-all duration-200 group relative",
+                            isCinematic 
+                              ? "bg-white/5 border-white/10 hover:bg-white/10" 
+                              : "bg-zinc-900/50 border-white/5 hover:border-white/10",
+                            currentAnswer?.optionId === option.id && (
+                              isCinematic 
+                                ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-100" 
+                                : "bg-zinc-100 border-white ring-2 ring-white/20 text-zinc-950"
+                            )
                           )}
                         >
-                          <span className="block font-semibold text-lg">{option.label}</span>
+                          <span className={cn(
+                            "block font-medium",
+                            isCinematic ? "text-sm md:text-base" : "text-lg"
+                          )}>{option.label}</span>
                         </button>
                       ))}
                     </div>
-                    {state === 'feedback' && currentAnswer && (
+
+                    {state === 'feedback' && currentAnswer && !isCinematic && (
                       <motion.div
                         initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -322,7 +372,7 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
               </AnimatePresence>
             </div>
           </main>
-          <div className="h-[env(safe-area-inset-bottom,20px)] bg-zinc-950" />
+          <div className={cn("shrink-0", isCinematic ? "h-6" : "h-[env(safe-area-inset-bottom,20px)] bg-zinc-950")} />
         </motion.div>
       )}
     </AnimatePresence>
