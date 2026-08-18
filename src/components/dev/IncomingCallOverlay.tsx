@@ -303,12 +303,17 @@ export function IncomingCallOverlay({
         </p>
       </div>
 
-      {callState === 'active' && (
-        <div className="grid grid-cols-3 gap-8 w-full max-w-xs px-4 animate-fade-in">
+      {(callState === "active" || callState === "ended") && (
+        <div
+          className={cn(
+            "grid grid-cols-3 gap-8 w-full max-w-xs px-4 animate-fade-in transition-opacity duration-300",
+            callState === "ended" && "opacity-0 pointer-events-none"
+          )}
+        >
           {[
-            { icon: Mic, label: 'mudo' },
-            { icon: Grid, label: 'teclado' },
-            { icon: Volume2, label: 'áudio' },
+            { icon: Mic, label: "mudo" },
+            { icon: Grid, label: "teclado" },
+            { icon: Volume2, label: "áudio" },
           ].map((item, i) => (
             <div key={i} className="flex flex-col items-center gap-2 opacity-40 cursor-not-allowed">
               <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center">
