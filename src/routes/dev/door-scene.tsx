@@ -30,7 +30,7 @@ type AssetStatus = 'loading' | 'ready' | 'missing';
 interface Asset {
   path: string;
   label: string;
-  type: 'video' | 'audio';
+  type: 'video' | 'audio' | 'image';
 }
 
 const SCENE_ASSETS: Asset[] = [
@@ -47,6 +47,7 @@ const SCENE_ASSETS: Asset[] = [
   { path: "/assets/scene-01/audio/mother-voice-once-01.mp3", label: "mother-voice-once-01.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/call-end.mp3", label: "call-end.mp3", type: 'audio' },
   { path: "/assets/scene-02/audio/notification.mp3", label: "notification.mp3", type: 'audio' },
+  { path: "/assets/characters/lucia.webp", label: "lucia.webp", type: 'image' },
 ];
 
 function DoorScenePreview() {
@@ -361,6 +362,14 @@ function DoorScenePreview() {
                 <AssetRow key={asset.path} asset={asset} status={assetStatuses[asset.path] || 'loading'} />
               ))}
             </div>
+            <div className="space-y-2">
+              <h3 className="text-[9px] font-bold text-zinc-600 uppercase flex items-center gap-2">
+                <Info className="w-3 h-3" /> Characters
+              </h3>
+              {SCENE_ASSETS.filter(a => a.type === 'image').map(asset => (
+                <AssetRow key={asset.path} asset={asset} status={assetStatuses[asset.path] || 'loading'} />
+              ))}
+            </div>
           </div>
         </section>
       </div>
@@ -510,6 +519,7 @@ function DoorScenePreview() {
             <IncomingCallOverlay
               open={isCallOpen}
               callerName="Mamãe"
+              callerAvatar="/assets/characters/lucia.webp"
               callerSubtitle="Celular"
               ringtoneSrc={undefined} // No ringtone for Scene 01 as per requirement
               vibrationSrc={assetStatuses["/assets/scene-01/audio/phone-vibration.mp3"] === 'ready' ? "/assets/scene-01/audio/phone-vibration.mp3" : undefined}
@@ -526,6 +536,7 @@ function DoorScenePreview() {
               open={isNotificationVisible}
               appName="Mensagens"
               senderName="Mamãe"
+              avatar="/assets/characters/lucia.webp"
               message="Preciso te mandar uma coisa."
               soundSrc={assetStatuses["/assets/scene-02/audio/notification.mp3"] === 'ready' ? "/assets/scene-02/audio/notification.mp3" : undefined}
               autoDismiss={false}
