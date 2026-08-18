@@ -243,17 +243,17 @@ export function IncomingCallOverlay({
     // Ensure all audio is paused
     if (voiceAudioRef.current) voiceAudioRef.current.pause();
     if (endSfxRef.current) endSfxRef.current.pause();
-    
+
     if (durationTimerRef.current) clearInterval(durationTimerRef.current);
 
-    updateState('ended');
+    updateState("ended");
     onEnd?.();
-    
-    // Auto-close overlay after transition
+
+    // Visual ENDED state for ~900ms as requested
     timerRef.current = window.setTimeout(() => {
       setIsVisible(false);
-      updateState('idle');
-    }, 800); 
+      updateState("idle");
+    }, 900);
   };
 
   const formatDuration = (seconds: number) => {
@@ -303,12 +303,17 @@ export function IncomingCallOverlay({
         </p>
       </div>
 
-      {callState === 'active' && (
-        <div className="grid grid-cols-3 gap-8 w-full max-w-xs px-4 animate-fade-in">
+      {(callState === "active" || callState === "ended") && (
+        <div
+          className={cn(
+            "grid grid-cols-3 gap-8 w-full max-w-xs px-4 animate-fade-in transition-opacity duration-300",
+            callState === "ended" && "opacity-0 pointer-events-none"
+          )}
+        >
           {[
-            { icon: Mic, label: 'mudo' },
-            { icon: Grid, label: 'teclado' },
-            { icon: Volume2, label: 'áudio' },
+            { icon: Mic, label: "mudo" },
+            { icon: Grid, label: "teclado" },
+            { icon: Volume2, label: "áudio" },
           ].map((item, i) => (
             <div key={i} className="flex flex-col items-center gap-2 opacity-40 cursor-not-allowed">
               <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center">
@@ -343,8 +348,13 @@ export function IncomingCallOverlay({
               <span className="text-[11px] font-semibold uppercase tracking-widest text-white/50">ATENDER</span>
             </button>
           </>
-        ) : (callState === 'active' || callState === 'connecting') && (
-          <div className="w-full flex justify-center">
+        ) : (callState === "active" || callState === "connecting" || callState === "ended") && (
+          <div
+            className={cn(
+              "w-full flex justify-center transition-opacity duration-300",
+              callState === "ended" && "opacity-0 pointer-events-none"
+            )}
+          >
             <button
               onClick={handleEnd}
               className="group flex flex-col items-center gap-3 transition-transform active:scale-95 duration-200"
