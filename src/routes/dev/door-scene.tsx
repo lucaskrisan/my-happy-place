@@ -30,6 +30,7 @@ interface Asset {
 
 const SCENE_ASSETS: Asset[] = [
   { path: "/assets/scene-01/video/scene-01-door.mp4", label: "scene-01-door.mp4", type: 'video' },
+  { path: "/assets/scene-01/video/scene-01-memory.mp4", label: "scene-01-memory.mp4", type: 'video' },
   { path: "/assets/scene-01/audio/ringtone.mp3", label: "ringtone.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/phone-vibration.mp3", label: "phone-vibration.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/call-connect.mp3", label: "call-connect.mp3", type: 'audio' },
@@ -46,6 +47,10 @@ function DoorScenePreview() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  
+  // New Scene Logic States
+  const [sceneStep, setSceneStep] = useState<'idle' | 'present' | 'memory' | 'transition' | 'call'>('idle');
+  const [showCopy, setShowCopy] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -71,6 +76,39 @@ function DoorScenePreview() {
     });
   }, []);
 
+  const playFullScene = () => {
+    setSceneStep('present');
+    setShowCopy(false);
+    setIsCallOpen(false);
+    if (videoRef.current) {
+      videoRef.current.src = "/assets/scene-01/video/scene-01-door.mp4";
+      videoRef.current.play().catch(console.error);
+    }
+  };
+
+  const handleVideoEnded = () => {
+    if (sceneStep === 'present') {
+      // Step A ended -> Step B: Memory
+      setSceneStep('memory');
+      if (videoRef.current) {
+        videoRef.current.src = "/assets/scene-01/video/scene-01-memory.mp4";
+        videoRef.current.play().catch(console.error);
+      }
+    } else if (sceneStep === 'memory') {
+      // Step B ended -> Step C: Transition Copy
+      setSceneStep('transition');
+      setShowCopy(true);
+      setIsPlaying(false);
+      
+      // Wait ~2 seconds then show call
+      setTimeout(() => {
+        setShowCopy(false);
+        setSceneStep('call');
+        setIsCallOpen(true);
+      }, 2000);
+    }
+  };
+
   const togglePlay = () => {
     if (videoRef.current) {
       if (isPlaying) {
@@ -83,11 +121,14 @@ function DoorScenePreview() {
   };
 
   const resetScene = () => {
+    setSceneStep('idle');
+    setShowCopy(false);
+    setIsPlaying(false);
+    setIsCallOpen(false);
     if (videoRef.current) {
+      videoRef.current.src = "/assets/scene-01/video/scene-01-door.mp4";
       videoRef.current.currentTime = 0;
       videoRef.current.pause();
-      setIsPlaying(false);
-      setIsCallOpen(false);
     }
   };
 
@@ -205,7 +246,31 @@ function DoorScenePreview() {
               onLoadedMetadata={handleLoadedMetadata}
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
+              onEnded={handleVideoEnded}
             />
+
+            {/* Transition Copy Overlay */}
+            {showCopy && (
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center p-8 z-20 animate-in fade-in duration-700">
+                <div className="text-center space-y-2">
+                  <p className="text-white text-lg font-light leading-relaxed animate-in slide-in-from-bottom-4 duration-1000">
+                    "Antes de entender o que sentiu...
+                  </p>
+                  <p className="text-white text-lg font-light leading-relaxed animate-in slide-in-from-bottom-4 duration-1000 delay-300">
+                    o corpo dela já tinha lembrado."
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Call prompt hint */}
+            {isCallOpen && callState === 'incoming' && (
+              <div className="absolute bottom-12 left-0 right-0 text-center z-50 pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-1000">
+                <span className="text-[10px] text-white/50 uppercase tracking-widest font-medium">
+                  Atenda para continuar
+                </span>
+              </div>
+            )}
 
             {/* In-Video Controls (Overlay on Hover) */}
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
@@ -265,13 +330,22 @@ function DoorScenePreview() {
                 </button>
               </div>
 
-              <button
-                onClick={() => setIsCallOpen(true)}
-                className="flex-1 flex items-center justify-center gap-2 px-4 h-10 bg-green-600 hover:bg-green-500 text-white rounded-full font-bold text-xs uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-green-900/20"
-              >
-                <PhoneCall className="w-4 h-4" />
-                Testar Ligação
-              </button>
+              <div className="flex-1 flex gap-2">
+                <button
+                  onClick={playFullScene}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 h-10 bg-white text-black hover:bg-zinc-200 rounded-full font-bold text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-lg"
+                >
+                  <Play className="w-4 h-4 fill-current" />
+                  Reproduzir Cena 01
+                </button>
+                <button
+                  onClick={() => setIsCallOpen(true)}
+                  className="w-12 h-10 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 text-white rounded-full transition-all active:scale-95 shadow-lg"
+                  title="Testar Ligação (Debug)"
+                >
+                  <PhoneCall className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
