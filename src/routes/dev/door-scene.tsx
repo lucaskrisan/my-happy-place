@@ -47,7 +47,7 @@ const SCENE_ASSETS: Asset[] = [
   { path: "/assets/scene-01/audio/phone-vibration.mp3", label: "phone-vibration.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/call-connect.mp3", label: "call-connect.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/mother-call-01.mp3", label: "mother-call-01.mp3", type: 'audio' },
-  { path: "/assets/scene-01/audio/mother-voice-once-01.mp3", label: "mother-voice-once-01.mp3", type: 'audio' },
+  { path: "/assets/scene-02/audio/mother-voice-once-01.mp3", label: "mother-voice-once-01.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/call-end.mp3", label: "call-end.mp3", type: 'audio' },
   { path: "/assets/scene-02/audio/notification.mp3", label: "notification.mp3", type: 'audio' },
   { path: "/assets/characters/lucia.webp", label: "lucia.webp", type: 'image' },
@@ -560,18 +560,30 @@ function DoorScenePreview() {
             contactAvatar={LUCIA_AVATAR_URL}
             contactSubtitle="online"
             messages={[
-                {
-                  id: 'msg-01',
-                  type: 'text',
-                  sender: 'contact',
-                  text: 'Preciso te mandar uma coisa.',
-                  timestamp: 'agora',
-                  delay: 0
-                }
-              ]}
-              progressiveReveal={true}
-              onClose={() => setIsMessagingOpen(false)}
-            />
+              {
+                id: 'msg-01',
+                type: 'text',
+                sender: 'contact',
+                text: 'Preciso te mandar uma coisa.',
+                timestamp: '22:15',
+                delay: 0
+              },
+              {
+                id: 'msg-voice-01',
+                type: 'voice_once',
+                sender: 'contact',
+                audioSrc: '/assets/scene-02/audio/mother-voice-once-01.mp3',
+                duration: 6,
+                timestamp: '22:15',
+                delay: 1000
+              }
+            ]}
+            progressiveReveal={true}
+            onComplete={() => {
+              console.log("Audio de reprodução única terminado. Fluxo pausado conforme solicitado.");
+            }}
+            onClose={() => setIsMessagingOpen(false)}
+          />
           </div>
 
           {/* Player Controls */}
