@@ -164,34 +164,34 @@ export function MessagingOverlay({
       style={{ height: '100dvh' }}
     >
       {/* Header */}
-      <div className="bg-[#202c33] text-[#e9edef] px-4 py-3 flex items-center gap-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] border-b border-[#313d45]">
+      <div className="bg-[#202c33] text-[#e9edef] px-5 py-4 flex items-center gap-4 pt-[calc(env(safe-area-inset-top)+1rem)] border-b border-[#313d45]">
         <button onClick={onClose} className="p-1 -ml-2 text-[#8696a0]">
-          <ArrowLeft size={24} />
+          <ArrowLeft size={28} />
         </button>
-        <div className="w-10 h-10 rounded-full bg-zinc-700 overflow-hidden flex-shrink-0">
+        <div className="w-[52px] h-[52px] rounded-full bg-zinc-700 overflow-hidden flex-shrink-0">
           {contactAvatar ? (
             <img src={contactAvatar} alt={contactName} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-zinc-500">
-              <Circle size={24} fill="currentColor" />
+              <Circle size={28} fill="currentColor" />
             </div>
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="font-semibold text-base truncate">{contactName}</h2>
-          <p className="text-xs text-[#8696a0] truncate">{isTyping ? 'digitando...' : contactSubtitle}</p>
+          <h2 className="font-semibold text-[1.15rem] leading-tight truncate">{contactName}</h2>
+          <p className="text-[0.85rem] text-[#8696a0] truncate mt-0.5">{isTyping ? 'digitando...' : contactSubtitle}</p>
         </div>
-        <div className="flex items-center gap-5 text-[#8696a0]">
-          <Video size={20} />
-          <Phone size={20} />
-          <MoreVertical size={20} />
+        <div className="flex items-center gap-6 text-[#8696a0]">
+          <Video size={24} />
+          <Phone size={24} />
+          <MoreVertical size={24} />
         </div>
       </div>
 
       {/* Messages Area */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto bg-[#0b141a] p-4 flex flex-col gap-2 bg-[url('https://w0.peakpx.com/wallpaper/580/650/HD-wallpaper-whatsapp-dark-background-w-whatsapp-black.jpg')] bg-repeat bg-contain"
+        className="flex-1 overflow-y-auto bg-[#0b141a] p-5 flex flex-col gap-3 bg-[url('https://w0.peakpx.com/wallpaper/580/650/HD-wallpaper-whatsapp-dark-background-w-whatsapp-black.jpg')] bg-repeat bg-contain"
       >
         <AnimatePresence initial={false}>
           {messages.filter(m => visibleMessageIds.has(m.id)).map((msg) => (
@@ -211,9 +211,9 @@ export function MessagingOverlay({
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="self-start bg-[#202c33] text-[#e9edef] px-3 py-2 rounded-lg rounded-tl-none text-sm"
+            className="self-start bg-[#202c33] text-[#e9edef] px-4 py-2.5 rounded-xl rounded-tl-none text-[15px]"
           >
-            <div className="flex gap-1">
+            <div className="flex gap-1.5">
               <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 0.6 }}>•</motion.span>
               <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }}>•</motion.span>
               <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }}>•</motion.span>
@@ -223,12 +223,12 @@ export function MessagingOverlay({
       </div>
 
       {/* Footer */}
-      <div className="bg-[#202c33] p-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] flex items-center gap-2">
-        <div className="flex-1 bg-[#2a3942] rounded-full px-4 py-2 text-[#8696a0] text-base">
+      <div className="bg-[#202c33] p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] flex items-center gap-3">
+        <div className="flex-1 bg-[#2a3942] rounded-full px-5 py-3 text-[#8696a0] text-[1.05rem]">
           Mensagem
         </div>
-        <button className="w-12 h-12 rounded-full bg-[#00a884] flex items-center justify-center text-white">
-          <Mic size={24} />
+        <button className="w-14 h-14 rounded-full bg-[#00a884] flex items-center justify-center text-white flex-shrink-0 shadow-lg">
+          <Mic size={28} />
         </button>
       </div>
     </motion.div>
@@ -265,7 +265,7 @@ function MessageBubble({
       initial={{ opacity: 0, y: 10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       className={cn(
-        "max-w-[85%] rounded-lg px-2 py-1 relative text-[#e9edef] text-[15px] shadow-sm",
+        "max-w-[85%] rounded-xl px-3 py-1.5 relative text-[#e9edef] text-[17px] shadow-sm",
         isContact ? "self-start bg-[#202c33] rounded-tl-none" : "self-end bg-[#005c4b] rounded-tr-none"
       )}
     >
@@ -322,9 +322,16 @@ function VoiceMessageBubble({
     const audio = audioRef.current;
     if (!audio) return;
 
+    // Se audioSrc mudar, recarregar
+    if (message.audioSrc) {
+      audio.load();
+    }
+
     const updateProgress = () => {
-      setCurrentTime(audio.currentTime);
-      setProgress((audio.currentTime / audio.duration) * 100);
+      if (audio.duration) {
+        setCurrentTime(audio.currentTime);
+        setProgress((audio.currentTime / audio.duration) * 100);
+      }
     };
 
     const handleEnded = () => {
@@ -348,7 +355,7 @@ function VoiceMessageBubble({
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.pause();
     };
-  }, []);
+  }, [message.audioSrc]);
 
   // Sync state with audio element
   useEffect(() => {
@@ -388,37 +395,37 @@ function VoiceMessageBubble({
   if (isOnce) {
     return (
       <div className="min-w-[200px] py-2 px-1 flex items-center gap-3">
-        <audio ref={audioRef} src={message.audioSrc || undefined} />
+        <audio ref={audioRef} src={message.audioSrc || undefined} preload="auto" />
 
         
         <button 
           onClick={togglePlay}
           disabled={state === 'consumed'}
           className={cn(
-            "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors",
+            "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 transition-colors shadow-md",
             state === 'consumed' ? "bg-zinc-800 text-zinc-600" : "bg-[#005c4b] text-[#e9edef] hover:bg-[#007a64]"
           )}
         >
-          {state === 'playing' ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-0.5" />}
+          {state === 'playing' ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" className="ml-1" />}
         </button>
 
         <div className="flex-1 flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Mic size={16} className={cn(state === 'consumed' ? "text-zinc-500" : "text-[#53bdeb]")} />
+          <div className="flex items-center gap-2 text-[1rem] font-medium">
+            <Mic size={18} className={cn(state === 'consumed' ? "text-zinc-500" : "text-[#53bdeb]")} />
             <span>{state === 'consumed' ? 'Ouvida' : 'Mensagem de voz'}</span>
             {isOnce && state !== 'consumed' && (
-              <span className="text-[10px] bg-zinc-800 text-zinc-400 px-1 rounded border border-zinc-700">1</span>
+              <span className="text-[11px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded border border-zinc-700">1</span>
             )}
           </div>
           
-          <div className="h-1 bg-zinc-800 rounded-full overflow-hidden w-full relative">
+          <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden w-full relative">
             <motion.div 
               className="absolute inset-y-0 left-0 bg-[#53bdeb]" 
               style={{ width: `${progress}%` }}
             />
           </div>
 
-          <div className="flex justify-between text-[10px] text-[#8696a0]">
+          <div className="flex justify-between text-[11px] text-[#8696a0] font-medium">
             <span>{formatTime(currentTime)}</span>
             <span>{formatTime(duration || message.duration || 0)}</span>
           </div>
@@ -430,7 +437,7 @@ function VoiceMessageBubble({
   // Regular Voice Message
   return (
     <div className="min-w-[220px] py-2 px-1 flex items-center gap-3">
-      <audio ref={audioRef} src={message.audioSrc || undefined} />
+      <audio ref={audioRef} src={message.audioSrc || undefined} preload="auto" />
       
       <button 
         onClick={togglePlay}
