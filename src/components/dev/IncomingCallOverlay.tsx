@@ -196,6 +196,9 @@ export function IncomingCallOverlay({
                 handleEnd();
               };
               
+              // Ensure we stop if endSfx fails
+              eAudio.onerror = () => handleEnd();
+              
               eAudio.play().catch(e => {
                 console.warn("End SFX blocked:", e);
                 handleEnd();
