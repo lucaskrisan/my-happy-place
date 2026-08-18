@@ -42,112 +42,125 @@ const SCENE_ASSETS: Asset[] = [
 
 function DoorScenePreview() {
   const [isCallOpen, setIsCallOpen] = useState(false);
-  const [callState, setCallState] = useState<CallState>('idle');
+  const [callState, setCallState] = useState<CallState>("idle");
   const [assetStatuses, setAssetStatuses] = useState<Record<string, AssetStatus>>({});
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  
+
   // New Scene Logic States
-  const [sceneStep, setSceneStep] = useState<'idle' | 'present' | 'memory' | 'transition' | 'call'>('idle');
+  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "transition" | "call">("idle");
   const [showCopy, setShowCopy] = useState(false);
-  
+
   const videoRef = useRef<HTMLVideoElement>(null);
+  const memoryVideoRef = useRef<HTMLVideoElement>(null);
 
   // Real detection of assets
   useEffect(() => {
-    SCENE_ASSETS.forEach(asset => {
-      setAssetStatuses(prev => ({ ...prev, [asset.path]: 'loading' }));
-      
+    SCENE_ASSETS.forEach((asset) => {
+      setAssetStatuses((prev) => ({ ...prev, [asset.path]: "loading" }));
+
       const checkAsset = async () => {
         try {
-          const response = await fetch(asset.path, { method: 'HEAD' });
+          const response = await fetch(asset.path, { method: "HEAD" });
           if (response.ok) {
-            setAssetStatuses(prev => ({ ...prev, [asset.path]: 'ready' }));
+            setAssetStatuses((prev) => ({ ...prev, [asset.path]: "ready" }));
           } else {
-            setAssetStatuses(prev => ({ ...prev, [asset.path]: 'missing' }));
+            setAssetStatuses((prev) => ({ ...prev, [asset.path]: "missing" }));
           }
         } catch (error) {
-          setAssetStatuses(prev => ({ ...prev, [asset.path]: 'missing' }));
+          setAssetStatuses((prev) => ({ ...prev, [asset.path]: "missing" }));
         }
       };
-      
+
       checkAsset();
     });
   }, []);
 
   const playFullScene = () => {
-    setSceneStep('present');
+    setSceneStep("present");
     setShowCopy(false);
     setIsCallOpen(false);
+
     if (videoRef.current) {
-      videoRef.current.src = "/assets/scene-01/video/scene-01-door.mp4";
+      videoRef.current.currentTime = 0;
       videoRef.current.play().catch(console.error);
+    }
+    if (memoryVideoRef.current) {
+      memoryVideoRef.current.currentTime = 0;
+      memoryVideoRef.current.load();
     }
   };
 
   const handleVideoEnded = () => {
-    if (sceneStep === 'present') {
-      // Step A ended -> Step B: Memory
-      setSceneStep('memory');
-      if (videoRef.current) {
-        videoRef.current.src = "/assets/scene-01/video/scene-01-memory.mp4";
-        videoRef.current.play().catch(console.error);
+    if (sceneStep === "present") {
+      // Step A ended -> Step B: Memory (CORTE SECO)
+      setSceneStep("memory");
+      if (memoryVideoRef.current) {
+        memoryVideoRef.current.play().catch(console.error);
       }
-    } else if (sceneStep === 'memory') {
-      // Step B ended -> Step C: Transition Copy
-      setSceneStep('transition');
+    } else if (sceneStep === "memory") {
+      // Step B ended -> Step C: Transition Copy (IMEDIATO)
+      setSceneStep("transition");
       setShowCopy(true);
       setIsPlaying(false);
-      
-      // Wait ~2 seconds then show call
-      setTimeout(() => {
-        setShowCopy(false);
-        setSceneStep('call');
-        setIsCallOpen(true);
-      }, 2000);
     }
   };
 
+  const handleContinue = () => {
+    setShowCopy(false);
+    setSceneStep("call");
+    setIsCallOpen(true);
+  };
+
   const togglePlay = () => {
-    if (videoRef.current) {
+    const activeVideo = sceneStep === "memory" ? memoryVideoRef.current : videoRef.current;
+    if (activeVideo) {
       if (isPlaying) {
-        videoRef.current.pause();
+        activeVideo.pause();
       } else {
-        videoRef.current.play();
+        activeVideo.play().catch(console.error);
       }
       setIsPlaying(!isPlaying);
     }
   };
 
   const resetScene = () => {
-    setSceneStep('idle');
+    setSceneStep("idle");
     setShowCopy(false);
     setIsPlaying(false);
     setIsCallOpen(false);
+
     if (videoRef.current) {
-      videoRef.current.src = "/assets/scene-01/video/scene-01-door.mp4";
       videoRef.current.currentTime = 0;
       videoRef.current.pause();
+    }
+    if (memoryVideoRef.current) {
+      memoryVideoRef.current.currentTime = 0;
+      memoryVideoRef.current.pause();
     }
   };
 
   const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime);
+    const activeVideo = sceneStep === "memory" ? memoryVideoRef.current : videoRef.current;
+    if (activeVideo) {
+      setCurrentTime(activeVideo.currentTime);
     }
   };
 
   const handleLoadedMetadata = () => {
-    if (videoRef.current) {
+    if (videoRef.current && sceneStep !== "memory") {
       setDuration(videoRef.current.duration);
+    } else if (memoryVideoRef.current && sceneStep === "memory") {
+      setDuration(memoryVideoRef.current.duration);
     }
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const time = parseFloat(e.target.value);
-    if (videoRef.current) {
-      videoRef.current.currentTime = time;
+    const activeVideo = sceneStep === "memory" ? memoryVideoRef.current : videoRef.current;
+    if (activeVideo) {
+      activeVideo.currentTime = time;
       setCurrentTime(time);
     }
   };
@@ -237,11 +250,30 @@ function DoorScenePreview() {
         <div className="w-full max-w-[400px] flex flex-col items-center gap-6 relative z-10">
           {/* Video Stage */}
           <div className="relative w-full aspect-[9/16] bg-zinc-950 rounded-[2.5rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-zinc-800/50 group">
-            <video 
+            <video
               ref={videoRef}
               src="/assets/scene-01/video/scene-01-door.mp4"
               playsInline
-              className="w-full h-full object-cover"
+              preload="auto"
+              className={cn(
+                "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
+                sceneStep === "present" || sceneStep === "idle" ? "opacity-100 z-10" : "opacity-0 z-0"
+              )}
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onEnded={handleVideoEnded}
+            />
+            <video
+              ref={memoryVideoRef}
+              src="/assets/scene-01/video/scene-01-memory.mp4"
+              playsInline
+              preload="auto"
+              className={cn(
+                "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
+                sceneStep === "memory" || sceneStep === "transition" ? "opacity-100 z-10" : "opacity-0 z-0"
+              )}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
               onPlay={() => setIsPlaying(true)}
@@ -251,14 +283,28 @@ function DoorScenePreview() {
 
             {/* Transition Copy Overlay */}
             {showCopy && (
-              <div className="absolute inset-0 bg-black/60 flex items-center justify-center p-8 z-20 animate-in fade-in duration-700">
-                <div className="text-center space-y-2">
-                  <p className="text-white text-lg font-light leading-relaxed animate-in slide-in-from-bottom-4 duration-1000">
-                    "Antes de entender o que sentiu...
-                  </p>
-                  <p className="text-white text-lg font-light leading-relaxed animate-in slide-in-from-bottom-4 duration-1000 delay-300">
-                    o corpo dela já tinha lembrado."
-                  </p>
+              <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center p-8 z-30 animate-in fade-in duration-300">
+                <div className="text-center space-y-6">
+                  <div className="space-y-2">
+                    <p className="text-white text-lg font-light leading-relaxed animate-in slide-in-from-bottom-4 duration-700">
+                      "Antes de entender o que sentiu...
+                    </p>
+                    <p className="text-white text-lg font-light leading-relaxed animate-in slide-in-from-bottom-4 duration-700 delay-150">
+                      o corpo dela já tinha lembrado."
+                    </p>
+                  </div>
+                  
+                  <div className="flex flex-col items-center gap-3 animate-in fade-in zoom-in-95 duration-700 delay-500">
+                    <button
+                      onClick={handleContinue}
+                      className="px-8 py-3 bg-white text-black rounded-full font-bold text-sm uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+                    >
+                      Continuar
+                    </button>
+                    <span className="text-[10px] text-white/40 uppercase tracking-widest">
+                      Toque para continuar
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
