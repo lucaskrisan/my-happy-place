@@ -217,7 +217,7 @@ function DoorScenePreview() {
               open={isCallOpen}
               callerName="Mamãe"
               callerSubtitle="Celular"
-              ringtoneSrc={assetStatuses["/assets/scene-01/audio/ringtone.mp3"] === 'ready' ? "/assets/scene-01/audio/ringtone.mp3" : undefined}
+              ringtoneSrc={undefined} // No ringtone for Scene 01 as per requirement
               vibrationSrc={assetStatuses["/assets/scene-01/audio/phone-vibration.mp3"] === 'ready' ? "/assets/scene-01/audio/phone-vibration.mp3" : undefined}
               connectSfxSrc={assetStatuses["/assets/scene-01/audio/call-connect.mp3"] === 'ready' ? "/assets/scene-01/audio/call-connect.mp3" : undefined}
               voiceAudioSrc={assetStatuses["/assets/scene-01/audio/mother-call-01.mp3"] === 'ready' ? "/assets/scene-01/audio/mother-call-01.mp3" : undefined}
