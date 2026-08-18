@@ -395,11 +395,11 @@ function VoiceMessageBubble({
           onClick={togglePlay}
           disabled={state === 'consumed'}
           className={cn(
-            "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors",
+            "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 transition-colors shadow-md",
             state === 'consumed' ? "bg-zinc-800 text-zinc-600" : "bg-[#005c4b] text-[#e9edef] hover:bg-[#007a64]"
           )}
         >
-          {state === 'playing' ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-0.5" />}
+          {state === 'playing' ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" className="ml-1" />}
         </button>
 
         <div className="flex-1 flex flex-col gap-1">
