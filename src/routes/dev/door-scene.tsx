@@ -586,10 +586,68 @@ function DoorScenePreview() {
             ]}
             progressiveReveal={true}
             onComplete={() => {
-              console.log("Audio de reprodução única terminado. Fluxo pausado conforme solicitado.");
+              setIsMessagingOpen(false);
+              // Iniciar Replay da Cena 02
+              setSceneStep("scene02-replay");
+              if (scene02VideoRef.current) {
+                scene02VideoRef.current.currentTime = 19.0;
+                scene02VideoRef.current.play().catch(console.error);
+              }
             }}
             onClose={() => setIsMessagingOpen(false)}
           />
+
+          {/* Pattern Reveal Copy Overlay */}
+          <AnimatePresence>
+            {showRevealCopy && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="absolute inset-0 z-[60] flex flex-col items-center justify-center p-8 text-center"
+              >
+                {/* Darken background slightly */}
+                <div className="absolute inset-0 bg-black/40 pointer-events-none" />
+                
+                <div className="relative z-10 flex flex-col items-center gap-8">
+                  <div className="space-y-4">
+                    <motion.p 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 }}
+                      className="text-zinc-200 text-lg md:text-xl font-light leading-relaxed"
+                    >
+                      "Ela achava que estava evitando uma discussão."
+                    </motion.p>
+                    <motion.p 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1.2 }}
+                      className="text-white text-2xl md:text-3xl font-bold leading-tight"
+                    >
+                      Mas estava obedecendo uma <span className="text-orange-400">regra antiga</span>.
+                    </motion.p>
+                  </div>
+
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 2.2 }}
+                    className="flex flex-col items-center gap-2"
+                  >
+                    <button
+                      onClick={() => setSceneStep("pattern-reveal-complete")}
+                      className="px-8 py-3 bg-white text-black rounded-full font-bold uppercase tracking-wider hover:bg-zinc-200 transition-colors shadow-lg"
+                    >
+                      Continuar
+                    </button>
+                    <span className="text-[10px] text-zinc-400 uppercase tracking-[0.2em]">
+                      Toque para continuar
+                    </span>
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           </div>
 
           {/* Player Controls */}
