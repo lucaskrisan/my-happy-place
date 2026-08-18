@@ -42,112 +42,125 @@ const SCENE_ASSETS: Asset[] = [
 
 function DoorScenePreview() {
   const [isCallOpen, setIsCallOpen] = useState(false);
-  const [callState, setCallState] = useState<CallState>('idle');
+  const [callState, setCallState] = useState<CallState>("idle");
   const [assetStatuses, setAssetStatuses] = useState<Record<string, AssetStatus>>({});
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  
+
   // New Scene Logic States
-  const [sceneStep, setSceneStep] = useState<'idle' | 'present' | 'memory' | 'transition' | 'call'>('idle');
+  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "transition" | "call">("idle");
   const [showCopy, setShowCopy] = useState(false);
-  
+
   const videoRef = useRef<HTMLVideoElement>(null);
+  const memoryVideoRef = useRef<HTMLVideoElement>(null);
 
   // Real detection of assets
   useEffect(() => {
-    SCENE_ASSETS.forEach(asset => {
-      setAssetStatuses(prev => ({ ...prev, [asset.path]: 'loading' }));
-      
+    SCENE_ASSETS.forEach((asset) => {
+      setAssetStatuses((prev) => ({ ...prev, [asset.path]: "loading" }));
+
       const checkAsset = async () => {
         try {
-          const response = await fetch(asset.path, { method: 'HEAD' });
+          const response = await fetch(asset.path, { method: "HEAD" });
           if (response.ok) {
-            setAssetStatuses(prev => ({ ...prev, [asset.path]: 'ready' }));
+            setAssetStatuses((prev) => ({ ...prev, [asset.path]: "ready" }));
           } else {
-            setAssetStatuses(prev => ({ ...prev, [asset.path]: 'missing' }));
+            setAssetStatuses((prev) => ({ ...prev, [asset.path]: "missing" }));
           }
         } catch (error) {
-          setAssetStatuses(prev => ({ ...prev, [asset.path]: 'missing' }));
+          setAssetStatuses((prev) => ({ ...prev, [asset.path]: "missing" }));
         }
       };
-      
+
       checkAsset();
     });
   }, []);
 
   const playFullScene = () => {
-    setSceneStep('present');
+    setSceneStep("present");
     setShowCopy(false);
     setIsCallOpen(false);
+
     if (videoRef.current) {
-      videoRef.current.src = "/assets/scene-01/video/scene-01-door.mp4";
+      videoRef.current.currentTime = 0;
       videoRef.current.play().catch(console.error);
+    }
+    if (memoryVideoRef.current) {
+      memoryVideoRef.current.currentTime = 0;
+      memoryVideoRef.current.load();
     }
   };
 
   const handleVideoEnded = () => {
-    if (sceneStep === 'present') {
-      // Step A ended -> Step B: Memory
-      setSceneStep('memory');
-      if (videoRef.current) {
-        videoRef.current.src = "/assets/scene-01/video/scene-01-memory.mp4";
-        videoRef.current.play().catch(console.error);
+    if (sceneStep === "present") {
+      // Step A ended -> Step B: Memory (CORTE SECO)
+      setSceneStep("memory");
+      if (memoryVideoRef.current) {
+        memoryVideoRef.current.play().catch(console.error);
       }
-    } else if (sceneStep === 'memory') {
-      // Step B ended -> Step C: Transition Copy
-      setSceneStep('transition');
+    } else if (sceneStep === "memory") {
+      // Step B ended -> Step C: Transition Copy (IMEDIATO)
+      setSceneStep("transition");
       setShowCopy(true);
       setIsPlaying(false);
-      
-      // Wait ~2 seconds then show call
-      setTimeout(() => {
-        setShowCopy(false);
-        setSceneStep('call');
-        setIsCallOpen(true);
-      }, 2000);
     }
   };
 
+  const handleContinue = () => {
+    setShowCopy(false);
+    setSceneStep("call");
+    setIsCallOpen(true);
+  };
+
   const togglePlay = () => {
-    if (videoRef.current) {
+    const activeVideo = sceneStep === "memory" ? memoryVideoRef.current : videoRef.current;
+    if (activeVideo) {
       if (isPlaying) {
-        videoRef.current.pause();
+        activeVideo.pause();
       } else {
-        videoRef.current.play();
+        activeVideo.play().catch(console.error);
       }
       setIsPlaying(!isPlaying);
     }
   };
 
   const resetScene = () => {
-    setSceneStep('idle');
+    setSceneStep("idle");
     setShowCopy(false);
     setIsPlaying(false);
     setIsCallOpen(false);
+
     if (videoRef.current) {
-      videoRef.current.src = "/assets/scene-01/video/scene-01-door.mp4";
       videoRef.current.currentTime = 0;
       videoRef.current.pause();
+    }
+    if (memoryVideoRef.current) {
+      memoryVideoRef.current.currentTime = 0;
+      memoryVideoRef.current.pause();
     }
   };
 
   const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime);
+    const activeVideo = sceneStep === "memory" ? memoryVideoRef.current : videoRef.current;
+    if (activeVideo) {
+      setCurrentTime(activeVideo.currentTime);
     }
   };
 
   const handleLoadedMetadata = () => {
-    if (videoRef.current) {
+    if (videoRef.current && sceneStep !== "memory") {
       setDuration(videoRef.current.duration);
+    } else if (memoryVideoRef.current && sceneStep === "memory") {
+      setDuration(memoryVideoRef.current.duration);
     }
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const time = parseFloat(e.target.value);
-    if (videoRef.current) {
-      videoRef.current.currentTime = time;
+    const activeVideo = sceneStep === "memory" ? memoryVideoRef.current : videoRef.current;
+    if (activeVideo) {
+      activeVideo.currentTime = time;
       setCurrentTime(time);
     }
   };
