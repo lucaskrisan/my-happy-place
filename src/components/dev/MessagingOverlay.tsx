@@ -322,9 +322,16 @@ function VoiceMessageBubble({
     const audio = audioRef.current;
     if (!audio) return;
 
+    // Se audioSrc mudar, recarregar
+    if (message.audioSrc) {
+      audio.load();
+    }
+
     const updateProgress = () => {
-      setCurrentTime(audio.currentTime);
-      setProgress((audio.currentTime / audio.duration) * 100);
+      if (audio.duration) {
+        setCurrentTime(audio.currentTime);
+        setProgress((audio.currentTime / audio.duration) * 100);
+      }
     };
 
     const handleEnded = () => {
@@ -348,7 +355,7 @@ function VoiceMessageBubble({
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.pause();
     };
-  }, []);
+  }, [message.audioSrc]);
 
   // Sync state with audio element
   useEffect(() => {
