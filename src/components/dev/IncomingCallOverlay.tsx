@@ -57,6 +57,7 @@ export function IncomingCallOverlay({
   const [callState, setCallState] = useState<CallState>('idle');
   const [duration, setDuration] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
+  const [isVoicePlaying, setIsVoicePlaying] = useState(false);
   
   // Refs for audio elements
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
@@ -180,10 +181,13 @@ export function IncomingCallOverlay({
           const vAudio = new Audio(voiceAudioSrc);
           vAudio.volume = voiceVolume;
           vAudio.preload = "auto";
-          voiceAudioRef.current = vAudio;
-          onVoiceStart?.();
+          vAudio.onplay = () => {
+            setIsVoicePlaying(true);
+            onVoiceStart?.();
+          };
           
           vAudio.onended = () => {
+            setIsVoicePlaying(false);
             onVoiceEnd?.();
             // 4. After Voice ends, play End SFX ONCE
             if (endSfxSrc) {
@@ -241,7 +245,10 @@ export function IncomingCallOverlay({
 
   const handleEnd = () => {
     // Ensure all audio is paused
-    if (voiceAudioRef.current) voiceAudioRef.current.pause();
+    if (voiceAudioRef.current) {
+      voiceAudioRef.current.pause();
+      setIsVoicePlaying(false);
+    }
     if (endSfxRef.current) endSfxRef.current.pause();
 
     if (durationTimerRef.current) clearInterval(durationTimerRef.current);
@@ -267,106 +274,149 @@ export function IncomingCallOverlay({
 
   return (
     <div className={cn(
-      "fixed inset-0 z-[9999] flex flex-col items-center justify-between bg-black/40 backdrop-blur-xl transition-all duration-500 font-sans text-white pb-[env(safe-area-inset-bottom,2rem)] pt-[env(safe-area-inset-top,2rem)] overflow-hidden",
-      callState === 'idle' ? "opacity-0" : "opacity-100",
-      callState === 'incoming' && "animate-subtle-shake motion-reduce:animate-none"
+      "fixed inset-0 z-[9999] flex flex-col items-center justify-between font-sans text-white pb-[env(safe-area-inset-bottom,2rem)] pt-[env(safe-area-inset-top,2rem)] overflow-hidden transition-all duration-700",
+      callState === 'idle' ? "opacity-0 pointer-events-none" : "opacity-100",
+      callState === 'incoming' && "animate-subtle-shake motion-reduce:animate-none bg-black/40 backdrop-blur-xl"
     )}>
-      {/* Vibration overlay indicator removed in favor of whole container shake */}
+      {/* Background Cinematic Visual for ACTIVE state */}
+      {callState !== 'incoming' && (
+        <div className="absolute inset-0 z-0">
+          {/* Base cinematic background */}
+          <div className="absolute inset-0 bg-zinc-950" />
+          
+          {/* Animated ambient gradients */}
+          <div className="absolute inset-0 opacity-40 overflow-hidden">
+            <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-zinc-800 rounded-full blur-[100px] animate-pulse-slow" />
+            <div className="absolute -bottom-[10%] -right-[10%] w-[50%] h-[50%] bg-zinc-900 rounded-full blur-[80px] animate-pulse-slow delay-700" />
+          </div>
 
-      <div className={cn(
-        "flex flex-col items-center mt-12 transition-all duration-700",
-        callState === 'idle' ? "translate-y-4 opacity-0" : "translate-y-0 opacity-100"
-      )}>
-        <div className={cn(
-          "w-32 h-32 rounded-full mb-6 overflow-hidden border-2 border-white/10 shadow-2xl relative",
-          callState === 'incoming' && "animate-pulse-subtle"
-        )}>
-          {callerAvatar ? (
-            <img src={callerAvatar} alt={callerName} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center">
-              <span className="text-4xl font-light text-white/50">{callerName.charAt(0)}</span>
-            </div>
-          )}
-        </div>
-
-        <h2 className="text-3xl font-medium tracking-tight mb-1">{callerName}</h2>
-        
-        <p className={cn(
-          "text-sm font-medium text-white/60 tracking-wide uppercase",
-          callState === 'active' && "text-white/80"
-        )}>
-          {callState === 'incoming' && callerSubtitle}
-          {callState === 'connecting' && "conectando..."}
-          {callState === 'active' && formatDuration(duration)}
-          {callState === 'ended' && "Ligação encerrada"}
-          {callState === 'declined' && "Chamada recusada"}
-        </p>
-      </div>
-
-      {(callState === "active" || callState === "ended") && (
-        <div
-          className={cn(
-            "grid grid-cols-3 gap-8 w-full max-w-xs px-4 animate-fade-in transition-opacity duration-300",
-            callState === "ended" && "opacity-0 pointer-events-none"
-          )}
-        >
-          {[
-            { icon: Mic, label: "mudo" },
-            { icon: Grid, label: "teclado" },
-            { icon: Volume2, label: "áudio" },
-          ].map((item, i) => (
-            <div key={i} className="flex flex-col items-center gap-2 opacity-40 cursor-not-allowed">
-              <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center">
-                <item.icon className="w-6 h-6" />
-              </div>
-              <span className="text-[10px] uppercase tracking-widest">{item.label}</span>
-            </div>
-          ))}
+          {/* Optional Ambient Texture Overlay */}
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-[0.03] pointer-events-none" />
+          
+          {/* Vignette */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
+          
+          {/* Overall blur */}
+          <div className="absolute inset-0 backdrop-blur-3xl" />
         </div>
       )}
 
-      <div className="w-full px-12 mb-12 flex justify-between items-center max-w-md">
-        {callState === 'incoming' ? (
-          <>
-            <button
-              onClick={handleDecline}
-              className="group flex flex-col items-center gap-3 transition-transform active:scale-95 duration-200"
-            >
-              <div className="w-20 h-20 rounded-full bg-red-500 flex items-center justify-center shadow-lg shadow-red-500/20 group-hover:bg-red-400 transition-colors">
-                <PhoneOff className="w-8 h-8 rotate-[135deg] text-white" />
+      {/* Main Content Container */}
+      <div className="relative z-10 w-full flex flex-col items-center justify-between h-full">
+        <div className={cn(
+          "flex flex-col items-center mt-12 transition-all duration-700 w-full",
+          callState === 'idle' ? "translate-y-4 opacity-0" : "translate-y-0 opacity-100"
+        )}>
+          {/* Avatar Area */}
+          <div className={cn(
+            "w-32 h-32 rounded-full mb-8 overflow-hidden border-2 border-white/10 shadow-2xl relative transition-all duration-500",
+            callState === 'incoming' ? "animate-pulse-subtle scale-100" : "scale-110",
+            callState === 'active' && isVoicePlaying && "ring-4 ring-green-500/20"
+          )}>
+            {callerAvatar ? (
+              <img src={callerAvatar} alt={callerName} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-zinc-800 to-zinc-950 flex items-center justify-center">
+                <span className="text-4xl font-light text-white/30 tracking-widest">{callerName.charAt(0)}</span>
               </div>
-              <span className="text-[11px] font-semibold uppercase tracking-widest text-white/50">RECUSAR</span>
-            </button>
-            
-            <button
-              onClick={handleAccept}
-              className="group flex flex-col items-center gap-3 transition-transform active:scale-95 duration-200"
-            >
-              <div className="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center shadow-lg shadow-green-500/20 group-hover:bg-green-400 transition-colors">
-                <Phone className="w-8 h-8 text-white" />
-              </div>
-              <span className="text-[11px] font-semibold uppercase tracking-widest text-white/50">ATENDER</span>
-            </button>
-          </>
-        ) : (callState === "active" || callState === "connecting" || callState === "ended") && (
-          <div
-            className={cn(
-              "w-full flex justify-center transition-opacity duration-300",
-              callState === "ended" && "opacity-0 pointer-events-none"
             )}
-          >
-            <button
-              onClick={handleEnd}
-              className="group flex flex-col items-center gap-3 transition-transform active:scale-95 duration-200"
-            >
-              <div className="w-20 h-20 rounded-full bg-red-500 flex items-center justify-center shadow-lg shadow-red-500/20 group-hover:bg-red-400 transition-colors">
-                <PhoneOff className="w-8 h-8 text-white" />
+            
+            {/* Overlay if active and playing */}
+            {callState === 'active' && isVoicePlaying && (
+              <div className="absolute inset-0 bg-green-500/5 flex items-center justify-center">
+                <div className="w-full h-full animate-pulse bg-green-500/5" />
               </div>
-              <span className="text-[11px] font-semibold uppercase tracking-widest text-white/50">ENCERRAR</span>
-            </button>
+            )}
           </div>
-        )}
+
+          <h2 className="text-3xl font-medium tracking-tight mb-2 px-6 text-center">{callerName}</h2>
+          
+          <div className="flex flex-col items-center gap-1">
+            <p className={cn(
+              "text-xs font-medium tracking-widest uppercase transition-colors duration-300",
+              callState === 'active' ? "text-green-500/80" : "text-white/40"
+            )}>
+              {callState === 'incoming' && callerSubtitle}
+              {callState === 'connecting' && "conectando..."}
+              {callState === 'active' && (isVoicePlaying ? "Em reprodução" : "Mensagem de voz")}
+              {callState === 'ended' && "Ligação encerrada"}
+              {callState === 'declined' && "Chamada recusada"}
+            </p>
+
+            {callState === 'active' && (
+              <div className="mt-4 flex flex-col items-center gap-4 animate-fade-in">
+                <div className="text-2xl font-mono font-light tracking-tighter text-white/90">
+                  {formatDuration(duration)}
+                </div>
+
+                {/* Waveform Indicator */}
+                <div className={cn(
+                  "flex items-end gap-[3px] h-6 transition-opacity duration-500",
+                  isVoicePlaying ? "opacity-100" : "opacity-0"
+                )}>
+                  {[...Array(12)].map((_, i) => (
+                    <div
+                      key={i}
+                      className={cn(
+                        "w-[3px] bg-green-500 rounded-full transition-all duration-300",
+                        isVoicePlaying ? "animate-waveform" : "h-[2px]"
+                      )}
+                      style={{
+                        animationDelay: `${i * 0.1}s`,
+                        height: isVoicePlaying ? `${Math.random() * 100}%` : '2px',
+                        opacity: 0.6 + (Math.random() * 0.4)
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Action Controls */}
+        <div className="w-full px-12 mb-12 flex justify-between items-center max-w-md">
+          {callState === 'incoming' ? (
+            <>
+              <button
+                onClick={handleDecline}
+                className="group flex flex-col items-center gap-3 transition-transform active:scale-95 duration-200"
+              >
+                <div className="w-20 h-20 rounded-full bg-red-500 flex items-center justify-center shadow-lg shadow-red-500/20 group-hover:bg-red-400 transition-colors">
+                  <PhoneOff className="w-8 h-8 rotate-[135deg] text-white" />
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">RECUSAR</span>
+              </button>
+              
+              <button
+                onClick={handleAccept}
+                className="group flex flex-col items-center gap-3 transition-transform active:scale-95 duration-200"
+              >
+                <div className="w-20 h-20 rounded-full bg-green-600 flex items-center justify-center shadow-lg shadow-green-600/20 group-hover:bg-green-500 transition-colors">
+                  <Phone className="w-8 h-8 text-white" />
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">ATENDER</span>
+              </button>
+            </>
+          ) : (callState === "active" || callState === "connecting" || callState === "ended") && (
+            <div
+              className={cn(
+                "w-full flex justify-center transition-opacity duration-500",
+                callState === "ended" && "opacity-0 pointer-events-none"
+              )}
+            >
+              <button
+                onClick={handleEnd}
+                className="group flex flex-col items-center gap-4 transition-transform active:scale-95 duration-200"
+              >
+                <div className="w-20 h-20 rounded-full bg-red-600 flex items-center justify-center shadow-lg shadow-red-600/30 group-hover:bg-red-500 transition-colors">
+                  <PhoneOff className="w-8 h-8 text-white" />
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">ENCERRAR</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <style>{`
@@ -387,12 +437,26 @@ export function IncomingCallOverlay({
         .animate-pulse-subtle {
           animation: pulse-subtle 2s ease-in-out infinite;
         }
+        @keyframes pulse-slow {
+          0%, 100% { opacity: 0.3; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(1.1); }
+        }
+        .animate-pulse-slow {
+          animation: pulse-slow 8s ease-in-out infinite;
+        }
         .animate-fade-in {
           animation: fadeIn 0.5s ease-out forwards;
         }
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes waveform {
+          0%, 100% { height: 4px; }
+          50% { height: 100%; }
+        }
+        .animate-waveform {
+          animation: waveform 0.6s ease-in-out infinite;
         }
       `}</style>
     </div>
