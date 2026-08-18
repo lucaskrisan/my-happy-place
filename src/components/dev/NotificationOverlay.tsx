@@ -46,8 +46,10 @@ export const NotificationOverlay: React.FC<NotificationOverlayProps> = ({
   const [swipeOffset, setSwipeOffset] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const enteringTimerRef = useRef<NodeJS.Timeout | null>(null);
   const dragStartY = useRef<number | null>(null);
   const isDragging = useRef(false);
+  const previousOpenRef = useRef(open);
 
   const updateState = useCallback((newState: NotificationState) => {
     setState(newState);
@@ -85,16 +87,17 @@ export const NotificationOverlay: React.FC<NotificationOverlayProps> = ({
     }, 100);
   }, [clearTimer, updateState, emit, onTap, handleDismiss]);
 
-  // Handle incoming open prop
+  // Handle incoming open prop - ROBUST LIFECYCLE
   useEffect(() => {
-    let enteringTimeout: NodeJS.Timeout;
-
-    if (open && (state === 'hidden' || state === 'dismissed')) {
+    // Detect open false -> true
+    if (open && !previousOpenRef.current) {
+      if (enteringTimerRef.current) clearTimeout(enteringTimerRef.current);
+      
       updateState('entering');
       emit('notification_opened');
       onOpen?.();
 
-      // Sound handling
+      // Sound handling - strictly once on open
       if (soundSrc) {
         if (!audioRef.current) {
           audioRef.current = new Audio(soundSrc);
@@ -103,23 +106,26 @@ export const NotificationOverlay: React.FC<NotificationOverlayProps> = ({
           audioRef.current.currentTime = 0;
           audioRef.current.src = soundSrc;
         }
-        
         audioRef.current.play().catch(e => console.warn('Notification audio blocked:', e));
       }
 
-      // Entering animation duration
-      enteringTimeout = setTimeout(() => {
+      enteringTimerRef.current = setTimeout(() => {
         updateState('visible');
         emit('notification_visible');
+        enteringTimerRef.current = null;
       }, 250);
-    } else if (!open && (state === 'visible' || state === 'entering' || state === 'pressed')) {
+    } 
+    // Detect open true -> false
+    else if (!open && previousOpenRef.current) {
+      if (enteringTimerRef.current) {
+        clearTimeout(enteringTimerRef.current);
+        enteringTimerRef.current = null;
+      }
       handleDismiss();
     }
 
-    return () => {
-      if (enteringTimeout) clearTimeout(enteringTimeout);
-    };
-  }, [open, soundSrc, handleDismiss, updateState, emit, onOpen, state]);
+    previousOpenRef.current = open;
+  }, [open, soundSrc, handleDismiss, updateState, emit, onOpen]);
 
 
   // Auto-dismiss logic
