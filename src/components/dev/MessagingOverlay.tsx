@@ -403,11 +403,11 @@ function VoiceMessageBubble({
         </button>
 
         <div className="flex-1 flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Mic size={16} className={cn(state === 'consumed' ? "text-zinc-500" : "text-[#53bdeb]")} />
+          <div className="flex items-center gap-2 text-[1rem] font-medium">
+            <Mic size={18} className={cn(state === 'consumed' ? "text-zinc-500" : "text-[#53bdeb]")} />
             <span>{state === 'consumed' ? 'Ouvida' : 'Mensagem de voz'}</span>
             {isOnce && state !== 'consumed' && (
-              <span className="text-[10px] bg-zinc-800 text-zinc-400 px-1 rounded border border-zinc-700">1</span>
+              <span className="text-[11px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded border border-zinc-700">1</span>
             )}
           </div>
           
