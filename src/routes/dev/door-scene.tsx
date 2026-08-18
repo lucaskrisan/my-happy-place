@@ -62,8 +62,9 @@ function DoorScenePreview() {
   const [duration, setDuration] = useState(0);
 
   // New Scene Logic States
-  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "memory-door" | "pre-call" | "call" | "scene02" | "lucia-send-audio">("idle");
+  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "memory-door" | "pre-call" | "call" | "scene02" | "lucia-send-audio" | "scene02-replay" | "pattern-reveal-complete">("idle");
   const [showCopy, setShowCopy] = useState(false);
+  const [showRevealCopy, setShowRevealCopy] = useState(false);
   const [isNotificationVisible, setIsNotificationVisible] = useState(false);
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
   const scene02NotificationTriggeredRef = useRef(false);
@@ -137,6 +138,9 @@ function DoorScenePreview() {
       setIsCallOpen(true);
     } else if (sceneStep === "scene02") {
       setIsPlaying(false);
+    } else if (sceneStep === "scene02-replay") {
+      setIsPlaying(false);
+      setShowRevealCopy(true);
     } else if (sceneStep === "lucia-send-audio") {
       setIsPlaying(false);
       setIsMessagingOpen(true);
@@ -180,6 +184,7 @@ function DoorScenePreview() {
   const resetScene = () => {
     setSceneStep("idle");
     setShowCopy(false);
+    setShowRevealCopy(false);
     setIsPlaying(false);
     setIsCallOpen(false);
     setIsNotificationVisible(false);
@@ -452,7 +457,7 @@ function DoorScenePreview() {
               preload="auto"
               className={cn(
                 "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
-                sceneStep === "scene02" ? "opacity-100 z-10" : "opacity-0 z-0"
+                sceneStep === "scene02" || sceneStep === "scene02-replay" ? "opacity-100 z-10" : "opacity-0 z-0"
               )}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
