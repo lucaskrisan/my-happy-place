@@ -434,6 +434,13 @@ export function IncomingCallOverlay({
         .animate-pulse-subtle {
           animation: pulse-subtle 2s ease-in-out infinite;
         }
+        @keyframes pulse-green {
+          0%, 100% { box-shadow: 0 0 10px rgba(16,185,129,0.3); }
+          50% { box-shadow: 0 0 20px rgba(16,185,129,0.6); }
+        }
+        .animate-pulse-green {
+          animation: pulse-green 2s ease-in-out infinite;
+        }
         @keyframes pulse-slow {
           0%, 100% { opacity: 0.3; transform: scale(1); }
           50% { opacity: 0.5; transform: scale(1.1); }
@@ -453,7 +460,7 @@ export function IncomingCallOverlay({
           50% { height: 100%; }
         }
         .animate-waveform {
-          animation: waveform 0.6s ease-in-out infinite;
+          animation: waveform 0.8s ease-in-out infinite;
         }
       `}</style>
     </div>
