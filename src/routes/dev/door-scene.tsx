@@ -47,7 +47,7 @@ const SCENE_ASSETS: Asset[] = [
   { path: "/assets/scene-01/audio/phone-vibration.mp3", label: "phone-vibration.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/call-connect.mp3", label: "call-connect.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/mother-call-01.mp3", label: "mother-call-01.mp3", type: 'audio' },
-  { path: "/assets/scene-01/audio/mother-voice-once-01.mp3", label: "mother-voice-once-01.mp3", type: 'audio' },
+  { path: "/assets/scene-02/audio/mother-voice-once-01.mp3", label: "mother-voice-once-01.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/call-end.mp3", label: "call-end.mp3", type: 'audio' },
   { path: "/assets/scene-02/audio/notification.mp3", label: "notification.mp3", type: 'audio' },
   { path: "/assets/characters/lucia.webp", label: "lucia.webp", type: 'image' },
