@@ -250,11 +250,30 @@ function DoorScenePreview() {
         <div className="w-full max-w-[400px] flex flex-col items-center gap-6 relative z-10">
           {/* Video Stage */}
           <div className="relative w-full aspect-[9/16] bg-zinc-950 rounded-[2.5rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-zinc-800/50 group">
-            <video 
+            <video
               ref={videoRef}
               src="/assets/scene-01/video/scene-01-door.mp4"
               playsInline
-              className="w-full h-full object-cover"
+              preload="auto"
+              className={cn(
+                "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
+                sceneStep === "present" || sceneStep === "idle" ? "opacity-100 z-10" : "opacity-0 z-0"
+              )}
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onEnded={handleVideoEnded}
+            />
+            <video
+              ref={memoryVideoRef}
+              src="/assets/scene-01/video/scene-01-memory.mp4"
+              playsInline
+              preload="auto"
+              className={cn(
+                "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
+                sceneStep === "memory" || sceneStep === "transition" ? "opacity-100 z-10" : "opacity-0 z-0"
+              )}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
               onPlay={() => setIsPlaying(true)}
@@ -264,14 +283,28 @@ function DoorScenePreview() {
 
             {/* Transition Copy Overlay */}
             {showCopy && (
-              <div className="absolute inset-0 bg-black/60 flex items-center justify-center p-8 z-20 animate-in fade-in duration-700">
-                <div className="text-center space-y-2">
-                  <p className="text-white text-lg font-light leading-relaxed animate-in slide-in-from-bottom-4 duration-1000">
-                    "Antes de entender o que sentiu...
-                  </p>
-                  <p className="text-white text-lg font-light leading-relaxed animate-in slide-in-from-bottom-4 duration-1000 delay-300">
-                    o corpo dela já tinha lembrado."
-                  </p>
+              <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center p-8 z-30 animate-in fade-in duration-300">
+                <div className="text-center space-y-6">
+                  <div className="space-y-2">
+                    <p className="text-white text-lg font-light leading-relaxed animate-in slide-in-from-bottom-4 duration-700">
+                      "Antes de entender o que sentiu...
+                    </p>
+                    <p className="text-white text-lg font-light leading-relaxed animate-in slide-in-from-bottom-4 duration-700 delay-150">
+                      o corpo dela já tinha lembrado."
+                    </p>
+                  </div>
+                  
+                  <div className="flex flex-col items-center gap-3 animate-in fade-in zoom-in-95 duration-700 delay-500">
+                    <button
+                      onClick={handleContinue}
+                      className="px-8 py-3 bg-white text-black rounded-full font-bold text-sm uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+                    >
+                      Continuar
+                    </button>
+                    <span className="text-[10px] text-white/40 uppercase tracking-widest">
+                      Toque para continuar
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
