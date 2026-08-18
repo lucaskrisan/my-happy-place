@@ -575,7 +575,8 @@ function DoorScenePreview() {
                 audioSrc: '/assets/scene-02/audio/mother-voice-once-01.mp3',
                 duration: 6,
                 timestamp: '22:15',
-                delay: 1000
+                delay: 1000,
+                once: true
               }
             ]}
             progressiveReveal={true}
