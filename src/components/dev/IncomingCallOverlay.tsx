@@ -179,6 +179,7 @@ export function IncomingCallOverlay({
         if (voiceAudioSrc) {
           const vAudio = new Audio(voiceAudioSrc);
           vAudio.volume = voiceVolume;
+          vAudio.preload = "auto";
           voiceAudioRef.current = vAudio;
           onVoiceStart?.();
           
