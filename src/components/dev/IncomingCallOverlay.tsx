@@ -13,6 +13,7 @@ interface IncomingCallOverlayProps {
   // Audio sources
   ringtoneSrc?: string | undefined;
   connectSfxSrc?: string | undefined;
+  vibrationSrc?: string | undefined;
   voiceAudioSrc?: string | undefined;
   endSfxSrc?: string | undefined;
   
@@ -39,6 +40,7 @@ export function IncomingCallOverlay({
   callerAvatar,
   ringtoneSrc,
   connectSfxSrc,
+  vibrationSrc,
   voiceAudioSrc,
   endSfxSrc,
   ringtoneVolume = 0.7,
@@ -58,6 +60,7 @@ export function IncomingCallOverlay({
   
   // Refs for audio elements
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
+  const vibrationRef = useRef<HTMLAudioElement | null>(null);
   const connectSfxRef = useRef<HTMLAudioElement | null>(null);
   const voiceAudioRef = useRef<HTMLAudioElement | null>(null);
   const endSfxRef = useRef<HTMLAudioElement | null>(null);
@@ -71,7 +74,7 @@ export function IncomingCallOverlay({
   }, [onStateChange]);
 
   const stopAllAudio = useCallback(() => {
-    [ringtoneRef, connectSfxRef, voiceAudioRef, endSfxRef].forEach(ref => {
+    [ringtoneRef, vibrationRef, connectSfxRef, voiceAudioRef, endSfxRef].forEach(ref => {
       if (ref.current) {
         ref.current.pause();
         ref.current.currentTime = 0;
@@ -108,10 +111,19 @@ export function IncomingCallOverlay({
       audio.play().catch(e => console.warn("Ringtone playback blocked:", e));
     }
 
+    // Vibration SFX start
+    if (vibrationSrc) {
+      const audio = new Audio(vibrationSrc);
+      audio.loop = true;
+      audio.volume = sfxVolume;
+      vibrationRef.current = audio;
+      audio.play().catch(e => console.warn("Vibration playback blocked:", e));
+    }
+
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate([500, 500]); 
     }
-  }, [ringtoneSrc, ringtoneVolume, updateState]);
+  }, [ringtoneSrc, vibrationSrc, ringtoneVolume, sfxVolume, updateState]);
 
   // Sync internal state with open prop
   useEffect(() => {
@@ -140,6 +152,10 @@ export function IncomingCallOverlay({
     if (ringtoneRef.current) {
       ringtoneRef.current.pause();
       ringtoneRef.current.currentTime = 0;
+    }
+    if (vibrationRef.current) {
+      vibrationRef.current.pause();
+      vibrationRef.current.currentTime = 0;
     }
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(0);
@@ -230,11 +246,10 @@ export function IncomingCallOverlay({
   return (
     <div className={cn(
       "fixed inset-0 z-[9999] flex flex-col items-center justify-between bg-black/40 backdrop-blur-xl transition-all duration-500 font-sans text-white pb-[env(safe-area-inset-bottom,2rem)] pt-[env(safe-area-inset-top,2rem)] overflow-hidden",
-      callState === 'idle' ? "opacity-0" : "opacity-100"
+      callState === 'idle' ? "opacity-0" : "opacity-100",
+      callState === 'incoming' && "animate-subtle-shake motion-reduce:animate-none"
     )}>
-      {callState === 'incoming' && (
-        <div className="absolute inset-0 pointer-events-none animate-subtle-shake opacity-20" />
-      )}
+      {/* Vibration overlay indicator removed in favor of whole container shake */}
 
       <div className={cn(
         "flex flex-col items-center mt-12 transition-all duration-700",
