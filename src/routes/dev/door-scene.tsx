@@ -6,6 +6,8 @@ import { IncomingCallOverlay, type CallState } from "@/components/dev/IncomingCa
 import { NotificationOverlay } from "@/components/dev/NotificationOverlay";
 import { MessagingOverlay } from "@/components/dev/MessagingOverlay";
 import scene02DinnerAsset from "@/assets/scene-02/video/scene-02-dinner.mp4.asset.json";
+import { QuizOverlay } from "@/components/dev/QuizOverlay";
+import { QuizDefinition, QuizResult } from "@/types/quiz";
 import { 
   PhoneCall, 
   Play, 
@@ -18,7 +20,8 @@ import {
   Music,
   Info,
   Bell,
-  MessageSquare
+  MessageSquare,
+  HelpCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
  
@@ -63,12 +66,17 @@ function DoorScenePreview() {
   const [duration, setDuration] = useState(0);
 
   // New Scene Logic States
-  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "memory-door" | "pre-call" | "call" | "scene02" | "lucia-send-audio" | "scene02-replay" | "pattern-reveal-complete">("idle");
+  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "memory-door" | "pre-call" | "call" | "scene02" | "lucia-send-audio" | "pattern-reveal-complete">("idle");
   const [showCopy, setShowCopy] = useState(false);
-  const [showRevealCopy, setShowRevealCopy] = useState(false);
   const [isNotificationVisible, setIsNotificationVisible] = useState(false);
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
+  
+  // Quiz States
+  const [isPredictionQuizOpen, setIsPredictionQuizOpen] = useState(false);
+  const [quizChoice, setQuizChoice] = useState<QuizResult | null>(null);
+  
   const scene02NotificationTriggeredRef = useRef(false);
+  const scene02QuizTriggeredRef = useRef(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const memoryVideoRef = useRef<HTMLVideoElement>(null);
@@ -115,6 +123,9 @@ function DoorScenePreview() {
       }
     });
     scene02NotificationTriggeredRef.current = false;
+    scene02QuizTriggeredRef.current = false;
+    setIsPredictionQuizOpen(false);
+    setQuizChoice(null);
   };
 
   const handleVideoEnded = () => {
@@ -139,9 +150,6 @@ function DoorScenePreview() {
       setIsCallOpen(true);
     } else if (sceneStep === "scene02") {
       setIsPlaying(false);
-    } else if (sceneStep === "scene02-replay") {
-      setIsPlaying(false);
-      setShowRevealCopy(true);
     } else if (sceneStep === "lucia-send-audio") {
       setIsPlaying(false);
       setIsMessagingOpen(true);
@@ -185,12 +193,14 @@ function DoorScenePreview() {
   const resetScene = () => {
     setSceneStep("idle");
     setShowCopy(false);
-    setShowRevealCopy(false);
     setIsPlaying(false);
     setIsCallOpen(false);
     setIsNotificationVisible(false);
     setIsMessagingOpen(false);
+    setIsPredictionQuizOpen(false);
+    setQuizChoice(null);
     scene02NotificationTriggeredRef.current = false;
+    scene02QuizTriggeredRef.current = false;
 
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
@@ -230,11 +240,22 @@ function DoorScenePreview() {
     if (activeVideo) {
       setCurrentTime(activeVideo.currentTime);
 
-      // Early notification for Scene 02 (2 seconds before end)
+      // 1. Prediction Quiz Trigger at ~19s
       if (
-        (sceneStep === "scene02" || sceneStep === "scene02-replay") && 
+        sceneStep === "scene02" && 
+        !scene02QuizTriggeredRef.current &&
+        activeVideo.currentTime >= 19.0
+      ) {
+        scene02QuizTriggeredRef.current = true;
+        activeVideo.pause();
+        setIsPlaying(false);
+        setIsPredictionQuizOpen(true);
+      }
+
+      // 2. Early notification for Scene 02 (2 seconds before end)
+      if (
+        sceneStep === "scene02" && 
         !scene02NotificationTriggeredRef.current &&
-        sceneStep !== "scene02-replay" && // Double guard
         Number.isFinite(activeVideo.duration) &&
         activeVideo.duration > 0 &&
         activeVideo.duration - activeVideo.currentTime <= 2
@@ -321,6 +342,15 @@ function DoorScenePreview() {
               )}>
                 {callState === 'idle' ? "NONE" : 
                  callState === 'incoming' ? "INCOMING_CALL" : "ACTIVE_CALL"}
+              </span>
+            </div>
+            <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
+              <span className="text-zinc-500 block mb-1">Prediction Quiz</span>
+              <span className={cn(
+                "font-mono font-bold",
+                quizChoice ? "text-green-500" : (scene02QuizTriggeredRef.current ? "text-blue-500" : "text-zinc-400")
+              )}>
+                {quizChoice ? "COMPLETED" : (scene02QuizTriggeredRef.current ? "ACTIVE" : "PENDING")}
               </span>
             </div>
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
@@ -457,9 +487,9 @@ function DoorScenePreview() {
               src={scene02DinnerAsset.url}
               playsInline
               preload="auto"
-              className={cn(
+               className={cn(
                 "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
-                sceneStep === "scene02" || sceneStep === "scene02-replay" ? "opacity-100 z-10" : "opacity-0 z-0"
+                sceneStep === "scene02" ? "opacity-100 z-10" : "opacity-0 z-0"
               )}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
@@ -588,68 +618,44 @@ function DoorScenePreview() {
             ]}
             progressiveReveal={true}
             onComplete={() => {
-              setIsMessagingOpen(false);
-              // Iniciar Replay da Cena 02
-              setSceneStep("scene02-replay");
-              if (scene02VideoRef.current) {
-                scene02VideoRef.current.currentTime = 19.0;
-                scene02VideoRef.current.play().catch(console.error);
-              }
+              // Now story stops here as per requirement
+              console.log("Narrative reached current end at WhatsApp audio.");
             }}
             onClose={() => setIsMessagingOpen(false)}
           />
 
-          {/* Pattern Reveal Copy Overlay */}
-          <AnimatePresence>
-            {showRevealCopy && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="absolute inset-0 z-[60] flex flex-col items-center justify-center p-8 text-center"
-              >
-                {/* Darken background slightly */}
-                <div className="absolute inset-0 bg-black/40 pointer-events-none" />
-                
-                <div className="relative z-10 flex flex-col items-center gap-8">
-                  <div className="space-y-4">
-                    <motion.p 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.5 }}
-                      className="text-zinc-200 text-lg md:text-xl font-light leading-relaxed"
-                    >
-                      "Ela achava que estava evitando uma discussão."
-                    </motion.p>
-                    <motion.p 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 1.2 }}
-                      className="text-white text-2xl md:text-3xl font-bold leading-tight"
-                    >
-                      Mas estava obedecendo uma <span className="text-orange-400">regra antiga</span>.
-                    </motion.p>
-                  </div>
-
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 2.2 }}
-                    className="flex flex-col items-center gap-2"
-                  >
-                    <button
-                      onClick={() => setSceneStep("pattern-reveal-complete")}
-                      className="px-8 py-3 bg-white text-black rounded-full font-bold uppercase tracking-wider hover:bg-zinc-200 transition-colors shadow-lg"
-                    >
-                      Continuar
-                    </button>
-                    <span className="text-[10px] text-zinc-400 uppercase tracking-[0.2em]">
-                      Toque para continuar
-                    </span>
-                  </motion.div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Scene 02 Prediction Quiz */}
+          <QuizOverlay
+            open={isPredictionQuizOpen}
+            definition={{
+              id: "scene-02-prediction",
+              title: "Antes de continuar...",
+              feedbackMode: "none",
+              showProgress: false,
+              questions: [
+                {
+                  id: "q-prediction-01",
+                  title: "O que você acha que Marina vai fazer agora?",
+                  options: [
+                    { id: "opt-1", label: "Perguntar de novo se ele está bravo", value: "ask_again" },
+                    { id: "opt-2", label: "Pedir desculpa sem saber por quê", value: "apologize" },
+                    { id: "opt-3", label: "Confrontar Daniel", value: "confront" },
+                    { id: "opt-4", label: "Ficar quieta e se afastar", value: "withdraw" }
+                  ]
+                }
+              ]
+            }}
+            closeBehavior="prevent"
+            onComplete={(result) => {
+              setQuizChoice(result);
+              setIsPredictionQuizOpen(false);
+              // Resume video immediately
+              if (scene02VideoRef.current) {
+                scene02VideoRef.current.play().catch(console.error);
+                setIsPlaying(true);
+              }
+            }}
+          />
           </div>
 
           {/* Player Controls */}
