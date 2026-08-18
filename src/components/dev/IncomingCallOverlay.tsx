@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 export type CallState = 'idle' | 'incoming' | 'connecting' | 'active' | 'ended' | 'declined';
 
-interface IncomingCallOverlayProps {
+export interface IncomingCallOverlayProps {
   open: boolean;
   callerName: string;
   callerSubtitle?: string;
