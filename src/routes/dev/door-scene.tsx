@@ -59,6 +59,7 @@ function DoorScenePreview() {
   const [showCopy, setShowCopy] = useState(false);
   const [isNotificationVisible, setIsNotificationVisible] = useState(false);
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
+  const scene02NotificationTriggeredRef = useRef(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const memoryVideoRef = useRef<HTMLVideoElement>(null);
@@ -102,6 +103,7 @@ function DoorScenePreview() {
     if (scene02VideoRef.current) {
       scene02VideoRef.current.currentTime = 0;
       scene02VideoRef.current.load();
+      scene02NotificationTriggeredRef.current = false;
     }
   };
 
@@ -118,9 +120,8 @@ function DoorScenePreview() {
       setShowCopy(true);
       setIsPlaying(false);
     } else if (sceneStep === "scene02") {
-      // Final da Cena 02 -> IMEDIATAMENTE notificação
+      // Final da Cena 02 -> Congelar/Parar
       setIsPlaying(false);
-      setIsNotificationVisible(true);
     }
   };
 
@@ -162,6 +163,7 @@ function DoorScenePreview() {
     setIsCallOpen(false);
     setIsNotificationVisible(false);
     setIsMessagingOpen(false);
+    scene02NotificationTriggeredRef.current = false;
 
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
@@ -185,6 +187,18 @@ function DoorScenePreview() {
       
     if (activeVideo) {
       setCurrentTime(activeVideo.currentTime);
+
+      // Early notification for Scene 02 (2 seconds before end)
+      if (
+        sceneStep === "scene02" && 
+        !scene02NotificationTriggeredRef.current &&
+        Number.isFinite(activeVideo.duration) &&
+        activeVideo.duration > 0 &&
+        activeVideo.duration - activeVideo.currentTime <= 2
+      ) {
+        scene02NotificationTriggeredRef.current = true;
+        setIsNotificationVisible(true);
+      }
     }
   };
 
