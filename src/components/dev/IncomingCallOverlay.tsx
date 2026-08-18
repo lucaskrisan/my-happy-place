@@ -311,7 +311,7 @@ export function IncomingCallOverlay({
           <div className={cn(
             "w-32 h-32 rounded-full mb-8 overflow-hidden border-2 border-white/10 shadow-2xl relative transition-all duration-500",
             callState === 'incoming' ? "animate-pulse-subtle scale-100" : "scale-110",
-            callState === 'active' && isVoicePlaying && "ring-4 ring-green-500/20"
+            callState === 'active' && isVoicePlaying && "ring-2 ring-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)] animate-pulse-green"
           )}>
             {callerAvatar ? (
               <img src={callerAvatar} alt={callerName} className="w-full h-full object-cover" />
@@ -320,54 +320,51 @@ export function IncomingCallOverlay({
                 <span className="text-4xl font-light text-white/30 tracking-widest">{callerName.charAt(0)}</span>
               </div>
             )}
-            
-            {/* Overlay if active and playing */}
-            {callState === 'active' && isVoicePlaying && (
-              <div className="absolute inset-0 bg-green-500/5 flex items-center justify-center">
-                <div className="w-full h-full animate-pulse bg-green-500/5" />
-              </div>
-            )}
           </div>
 
           <h2 className="text-3xl font-medium tracking-tight mb-2 px-6 text-center">{callerName}</h2>
           
           <div className="flex flex-col items-center gap-1">
-            <p className={cn(
+            <div className={cn(
               "text-xs font-medium tracking-widest uppercase transition-colors duration-300",
-              callState === 'active' ? "text-green-500/80" : "text-white/40"
+              callState === 'active' ? "text-emerald-500/80" : "text-white/40"
             )}>
-              {callState === 'incoming' && callerSubtitle}
+              {callState === 'incoming' && (callerSubtitle || "CELULAR")}
               {callState === 'connecting' && "conectando..."}
-              {callState === 'active' && (isVoicePlaying ? "Em reprodução" : "Mensagem de voz")}
               {callState === 'ended' && "Ligação encerrada"}
               {callState === 'declined' && "Chamada recusada"}
-            </p>
+              
+              {callState === 'active' && (
+                <div className="flex flex-col items-center gap-4 animate-fade-in mt-1">
+                  <div className="text-lg font-mono font-light tracking-tighter text-emerald-500/90">
+                    {formatDuration(duration)}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {callState === 'active' && (
-              <div className="mt-4 flex flex-col items-center gap-4 animate-fade-in">
-                <div className="text-2xl font-mono font-light tracking-tighter text-white/90">
-                  {formatDuration(duration)}
-                </div>
-
-                {/* Waveform Indicator */}
+              <div className="mt-8 flex flex-col items-center gap-4 w-full px-12">
                 <div className={cn(
-                  "flex items-end gap-[3px] h-6 transition-opacity duration-500",
+                  "flex items-center gap-3 transition-opacity duration-500",
                   isVoicePlaying ? "opacity-100" : "opacity-0"
                 )}>
-                  {[...Array(12)].map((_, i) => (
-                    <div
-                      key={i}
-                      className={cn(
-                        "w-[3px] bg-green-500 rounded-full transition-all duration-300",
-                        isVoicePlaying ? "animate-waveform" : "h-[2px]"
-                      )}
-                      style={{
-                        animationDelay: `${i * 0.1}s`,
-                        height: isVoicePlaying ? `${Math.random() * 100}%` : '2px',
-                        opacity: 0.6 + (Math.random() * 0.4)
-                      }}
-                    />
-                  ))}
+                  <Volume2 className="w-4 h-4 text-emerald-500" />
+                  <div className="flex items-end gap-[3px] h-6">
+                    {[...Array(15)].map((_, i) => (
+                      <div
+                        key={i}
+                        className={cn(
+                          "w-[3px] bg-emerald-500 rounded-full transition-all duration-300",
+                          isVoicePlaying ? "animate-waveform" : "h-[2px]"
+                        )}
+                        style={{
+                          animationDelay: `${i * 0.05}s`,
+                          height: isVoicePlaying ? `${20 + Math.random() * 80}%` : '2px',
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
