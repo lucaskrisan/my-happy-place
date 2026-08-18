@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { DevBackButton } from "@/components/dev-tools";
 import { IncomingCallOverlay, type CallState } from "@/components/dev/IncomingCallOverlay";
+import { NotificationOverlay } from "@/components/dev/NotificationOverlay";
+import { MessagingOverlay } from "@/components/dev/MessagingOverlay";
 import scene02DinnerAsset from "@/assets/scene-02/video/scene-02-dinner.mp4.asset.json";
 import { 
   PhoneCall, 
@@ -13,7 +15,9 @@ import {
   Loader2,
   Video,
   Music,
-  Info
+  Info,
+  Bell,
+  MessageSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +43,7 @@ const SCENE_ASSETS: Asset[] = [
   { path: "/assets/scene-01/audio/mother-call-01.mp3", label: "mother-call-01.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/mother-voice-once-01.mp3", label: "mother-voice-once-01.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/call-end.mp3", label: "call-end.mp3", type: 'audio' },
-  { path: "/assets/scene-01/audio/notification.mp3", label: "notification.mp3", type: 'audio' },
+  { path: "/assets/scene-02/audio/notification.mp3", label: "notification.mp3", type: 'audio' },
 ];
 
 function DoorScenePreview() {
@@ -53,6 +57,8 @@ function DoorScenePreview() {
   // New Scene Logic States
   const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "transition" | "call" | "scene02">("idle");
   const [showCopy, setShowCopy] = useState(false);
+  const [isNotificationVisible, setIsNotificationVisible] = useState(false);
+  const [isMessagingOpen, setIsMessagingOpen] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const memoryVideoRef = useRef<HTMLVideoElement>(null);
@@ -112,8 +118,9 @@ function DoorScenePreview() {
       setShowCopy(true);
       setIsPlaying(false);
     } else if (sceneStep === "scene02") {
-      // Final da Cena 02 -> PARAR
+      // Final da Cena 02 -> IMEDIATAMENTE notificação
       setIsPlaying(false);
+      setIsNotificationVisible(true);
     }
   };
 
@@ -153,6 +160,8 @@ function DoorScenePreview() {
     setShowCopy(false);
     setIsPlaying(false);
     setIsCallOpen(false);
+    setIsNotificationVisible(false);
+    setIsMessagingOpen(false);
 
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
@@ -249,6 +258,15 @@ function DoorScenePreview() {
               )}>
                 {callState === 'idle' ? "NONE" : 
                  callState === 'incoming' ? "INCOMING_CALL" : "ACTIVE_CALL"}
+              </span>
+            </div>
+            <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
+              <span className="text-zinc-500 block mb-1">Notifications</span>
+              <span className={cn(
+                "font-mono font-bold",
+                isNotificationVisible ? "text-blue-500 animate-pulse" : "text-zinc-400"
+              )}>
+                {isNotificationVisible ? "PENDING" : "NONE"}
               </span>
             </div>
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
@@ -404,6 +422,40 @@ function DoorScenePreview() {
               onStateChange={setCallState}
               onDecline={() => setIsCallOpen(false)}
               onEnd={handleCallEnd}
+            />
+
+            {/* Notification Overlay */}
+            <NotificationOverlay
+              open={isNotificationVisible}
+              appName="Mensagens"
+              senderName="Mamãe"
+              message="Preciso te mandar uma coisa."
+              soundSrc={assetStatuses["/assets/scene-02/audio/notification.mp3"] === 'ready' ? "/assets/scene-02/audio/notification.mp3" : undefined}
+              autoDismiss={false}
+              onTap={() => {
+                setIsNotificationVisible(false);
+                setIsMessagingOpen(true);
+              }}
+              onDismiss={() => setIsNotificationVisible(false)}
+            />
+
+            {/* Messaging Overlay */}
+            <MessagingOverlay
+              open={isMessagingOpen}
+              contactName="Mamãe"
+              contactSubtitle="online"
+              messages={[
+                {
+                  id: 'msg-01',
+                  type: 'text',
+                  sender: 'contact',
+                  text: 'Preciso te mandar uma coisa.',
+                  timestamp: 'agora',
+                  delay: 0
+                }
+              ]}
+              progressiveReveal={true}
+              onClose={() => setIsMessagingOpen(false)}
             />
           </div>
 
