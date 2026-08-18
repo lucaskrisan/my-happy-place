@@ -265,7 +265,7 @@ function MessageBubble({
       initial={{ opacity: 0, y: 10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       className={cn(
-        "max-w-[85%] rounded-lg px-2 py-1 relative text-[#e9edef] text-[15px] shadow-sm",
+        "max-w-[85%] rounded-xl px-3 py-1.5 relative text-[#e9edef] text-[17px] shadow-sm",
         isContact ? "self-start bg-[#202c33] rounded-tl-none" : "self-end bg-[#005c4b] rounded-tr-none"
       )}
     >
