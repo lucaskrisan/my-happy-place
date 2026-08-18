@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { DevBackButton } from "@/components/dev-tools";
 import { IncomingCallOverlay, type CallState } from "@/components/dev/IncomingCallOverlay";
+import scene02DinnerAsset from "@/assets/scene-02/video/scene-02-dinner.mp4.asset.json";
 import { 
   PhoneCall, 
   Play, 
@@ -31,6 +32,7 @@ interface Asset {
 const SCENE_ASSETS: Asset[] = [
   { path: "/assets/scene-01/video/scene-01-door.mp4", label: "scene-01-door.mp4", type: 'video' },
   { path: "/assets/scene-01/video/scene-01-memory.mp4", label: "scene-01-memory.mp4", type: 'video' },
+  { path: scene02DinnerAsset.url, label: "scene-02-dinner.mp4", type: 'video' },
   { path: "/assets/scene-01/audio/ringtone.mp3", label: "ringtone.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/phone-vibration.mp3", label: "phone-vibration.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/call-connect.mp3", label: "call-connect.mp3", type: 'audio' },
@@ -49,11 +51,12 @@ function DoorScenePreview() {
   const [duration, setDuration] = useState(0);
 
   // New Scene Logic States
-  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "transition" | "call">("idle");
+  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "transition" | "call" | "scene02">("idle");
   const [showCopy, setShowCopy] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const memoryVideoRef = useRef<HTMLVideoElement>(null);
+  const scene02VideoRef = useRef<HTMLVideoElement>(null);
 
   // Real detection of assets
   useEffect(() => {
@@ -90,6 +93,10 @@ function DoorScenePreview() {
       memoryVideoRef.current.currentTime = 0;
       memoryVideoRef.current.load();
     }
+    if (scene02VideoRef.current) {
+      scene02VideoRef.current.currentTime = 0;
+      scene02VideoRef.current.load();
+    }
   };
 
   const handleVideoEnded = () => {
@@ -104,6 +111,9 @@ function DoorScenePreview() {
       setSceneStep("transition");
       setShowCopy(true);
       setIsPlaying(false);
+    } else if (sceneStep === "scene02") {
+      // Final da Cena 02 -> PARAR
+      setIsPlaying(false);
     }
   };
 
@@ -113,8 +123,21 @@ function DoorScenePreview() {
     setIsCallOpen(true);
   };
 
+  const handleCallEnd = () => {
+    setIsCallOpen(false);
+    // Transição IMEDIATA para Cena 02
+    setSceneStep("scene02");
+    if (scene02VideoRef.current) {
+      scene02VideoRef.current.play().catch(console.error);
+    }
+  };
+
   const togglePlay = () => {
-    const activeVideo = sceneStep === "memory" ? memoryVideoRef.current : videoRef.current;
+    const activeVideo = 
+      sceneStep === "memory" ? memoryVideoRef.current : 
+      sceneStep === "scene02" ? scene02VideoRef.current : 
+      videoRef.current;
+      
     if (activeVideo) {
       if (isPlaying) {
         activeVideo.pause();
@@ -139,26 +162,41 @@ function DoorScenePreview() {
       memoryVideoRef.current.currentTime = 0;
       memoryVideoRef.current.pause();
     }
+    if (scene02VideoRef.current) {
+      scene02VideoRef.current.currentTime = 0;
+      scene02VideoRef.current.pause();
+    }
   };
 
   const handleTimeUpdate = () => {
-    const activeVideo = sceneStep === "memory" ? memoryVideoRef.current : videoRef.current;
+    const activeVideo = 
+      sceneStep === "memory" ? memoryVideoRef.current : 
+      sceneStep === "scene02" ? scene02VideoRef.current : 
+      videoRef.current;
+      
     if (activeVideo) {
       setCurrentTime(activeVideo.currentTime);
     }
   };
 
   const handleLoadedMetadata = () => {
-    if (videoRef.current && sceneStep !== "memory") {
-      setDuration(videoRef.current.duration);
-    } else if (memoryVideoRef.current && sceneStep === "memory") {
-      setDuration(memoryVideoRef.current.duration);
+    const activeVideo = 
+      sceneStep === "memory" ? memoryVideoRef.current : 
+      sceneStep === "scene02" ? scene02VideoRef.current : 
+      videoRef.current;
+      
+    if (activeVideo) {
+      setDuration(activeVideo.duration);
     }
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const time = parseFloat(e.target.value);
-    const activeVideo = sceneStep === "memory" ? memoryVideoRef.current : videoRef.current;
+    const activeVideo = 
+      sceneStep === "memory" ? memoryVideoRef.current : 
+      sceneStep === "scene02" ? scene02VideoRef.current : 
+      videoRef.current;
+      
     if (activeVideo) {
       activeVideo.currentTime = time;
       setCurrentTime(time);
@@ -178,7 +216,7 @@ function DoorScenePreview() {
       <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-zinc-800 bg-zinc-950 p-6 flex flex-col gap-8 overflow-y-auto">
         <div className="flex items-center gap-3">
           <DevBackButton />
-          <h1 className="text-sm font-bold text-white uppercase tracking-widest">Scene 01 Lab</h1>
+          <h1 className="text-sm font-bold text-white uppercase tracking-widest">Story Preview</h1>
         </div>
 
         {/* Debug Visual */}
@@ -188,12 +226,18 @@ function DoorScenePreview() {
           </h2>
           <div className="grid gap-2 text-xs">
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
-              <span className="text-zinc-500 block mb-1">Scene State</span>
+              <span className="text-zinc-500 block mb-1">Current Scene</span>
+              <span className="font-mono font-bold text-blue-400">
+                {sceneStep === "scene02" ? "SCENE_02" : "SCENE_01"}
+              </span>
+            </div>
+            <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
+              <span className="text-zinc-500 block mb-1">Video Status</span>
               <span className={cn(
                 "font-mono font-bold",
                 isPlaying ? "text-green-500" : "text-yellow-500"
               )}>
-                {isPlaying ? "VIDEO PLAYING" : "VIDEO PAUSED"}
+                {isPlaying ? "PLAYING" : "PAUSED"}
               </span>
             </div>
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
@@ -223,9 +267,18 @@ function DoorScenePreview() {
           <div className="space-y-6">
             <div className="space-y-2">
               <h3 className="text-[9px] font-bold text-zinc-600 uppercase flex items-center gap-2">
-                <Video className="w-3 h-3" /> Video
+                <Video className="w-3 h-3" /> Scene 01 Video
               </h3>
-              {SCENE_ASSETS.filter(a => a.type === 'video').map(asset => (
+              {SCENE_ASSETS.filter(a => a.type === 'video' && a.path.includes('scene-01')).map(asset => (
+                <AssetRow key={asset.path} asset={asset} status={assetStatuses[asset.path] || 'loading'} />
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-[9px] font-bold text-zinc-600 uppercase flex items-center gap-2">
+                <Video className="w-3 h-3" /> Scene 02 Video
+              </h3>
+              {SCENE_ASSETS.filter(a => a.type === 'video' && a.path.includes('scene-02')).map(asset => (
                 <AssetRow key={asset.path} asset={asset} status={assetStatuses[asset.path] || 'loading'} />
               ))}
             </div>
@@ -273,6 +326,21 @@ function DoorScenePreview() {
               className={cn(
                 "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
                 sceneStep === "memory" || sceneStep === "transition" ? "opacity-100 z-10" : "opacity-0 z-0"
+              )}
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onEnded={handleVideoEnded}
+            />
+            <video
+              ref={scene02VideoRef}
+              src={scene02DinnerAsset.url}
+              playsInline
+              preload="auto"
+              className={cn(
+                "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
+                sceneStep === "scene02" ? "opacity-100 z-10" : "opacity-0 z-0"
               )}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
@@ -335,7 +403,7 @@ function DoorScenePreview() {
               endSfxSrc={assetStatuses["/assets/scene-01/audio/call-end.mp3"] === 'ready' ? "/assets/scene-01/audio/call-end.mp3" : undefined}
               onStateChange={setCallState}
               onDecline={() => setIsCallOpen(false)}
-              onEnd={() => setIsCallOpen(false)}
+              onEnd={handleCallEnd}
             />
           </div>
 
