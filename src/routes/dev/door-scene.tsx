@@ -232,8 +232,9 @@ function DoorScenePreview() {
 
       // Early notification for Scene 02 (2 seconds before end)
       if (
-        sceneStep === "scene02" && 
+        (sceneStep === "scene02" || sceneStep === "scene02-replay") && 
         !scene02NotificationTriggeredRef.current &&
+        sceneStep !== "scene02-replay" && // Double guard
         Number.isFinite(activeVideo.duration) &&
         activeVideo.duration > 0 &&
         activeVideo.duration - activeVideo.currentTime <= 2
