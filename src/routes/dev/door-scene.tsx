@@ -20,7 +20,10 @@ import {
   MessageSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
+ 
+const LUCIA_AVATAR_URL =
+  "https://res.cloudinary.com/duht4tq1f/image/upload/v1787083754/Woman_smiling_at_camera_2K_202608181701_y39jad.jpg";
+ 
 export const Route = createFileRoute("/dev/door-scene")({
   component: DoorScenePreview,
 });
@@ -551,11 +554,12 @@ function DoorScenePreview() {
             />
 
             {/* Messaging Overlay */}
-            <MessagingOverlay
-              open={isMessagingOpen}
-              contactName="Mamãe"
-              contactSubtitle="online"
-              messages={[
+          <MessagingOverlay
+            open={isMessagingOpen}
+            contactName="Mamãe"
+            contactAvatar={LUCIA_AVATAR_URL}
+            contactSubtitle="online"
+            messages={[
                 {
                   id: 'msg-01',
                   type: 'text',
