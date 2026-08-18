@@ -146,8 +146,11 @@ export const NotificationOverlay: React.FC<NotificationOverlayProps> = ({
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.currentTime = 0;
+        audioRef.current.src = "";
         audioRef.current = null;
+      }
+      if (enteringTimerRef.current) {
+        clearTimeout(enteringTimerRef.current);
       }
       clearTimer();
     };
