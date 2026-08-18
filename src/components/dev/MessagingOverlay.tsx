@@ -411,14 +411,14 @@ function VoiceMessageBubble({
             )}
           </div>
           
-          <div className="h-1 bg-zinc-800 rounded-full overflow-hidden w-full relative">
+          <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden w-full relative">
             <motion.div 
               className="absolute inset-y-0 left-0 bg-[#53bdeb]" 
               style={{ width: `${progress}%` }}
             />
           </div>
 
-          <div className="flex justify-between text-[10px] text-[#8696a0]">
+          <div className="flex justify-between text-[11px] text-[#8696a0] font-medium">
             <span>{formatTime(currentTime)}</span>
             <span>{formatTime(duration || message.duration || 0)}</span>
           </div>
