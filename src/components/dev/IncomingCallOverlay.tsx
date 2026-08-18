@@ -149,6 +149,7 @@ export function IncomingCallOverlay({
   };
 
   const handleAccept = () => {
+    // 1. Stop incoming signals immediately
     if (ringtoneRef.current) {
       ringtoneRef.current.pause();
       ringtoneRef.current.currentTime = 0;
@@ -164,42 +165,63 @@ export function IncomingCallOverlay({
     updateState('connecting');
     onAccept?.();
 
-    const connectDelay = 100; // Revised to exact requirement (~80-150ms)
-    timerRef.current = window.setTimeout(() => {
-      if (connectSfxSrc) {
-        const audio = new Audio(connectSfxSrc);
-        audio.volume = sfxVolume;
-        connectSfxRef.current = audio;
-        audio.play().catch(e => console.warn("Connect SFX blocked:", e));
-      }
-
-      const activeDelay = 400; // Revised to exact requirement (~300-500ms)
-      timerRef.current = window.setTimeout(() => {
+    // 2. Play Connect SFX ONCE
+    if (connectSfxSrc) {
+      const audio = new Audio(connectSfxSrc);
+      audio.volume = sfxVolume;
+      connectSfxRef.current = audio;
+      
+      audio.onended = () => {
+        // 3. After Connect SFX ends, transition to ACTIVE and play Voice ONCE
         updateState('active');
         startDurationTimer();
-
-        const voiceDelay = 300; // Revised to exact requirement (~200-350ms)
-        timerRef.current = window.setTimeout(() => {
-          if (voiceAudioSrc) {
-            const audio = new Audio(voiceAudioSrc);
-            audio.volume = voiceVolume;
-            voiceAudioRef.current = audio;
-            onVoiceStart?.();
-            audio.play().catch(e => console.warn("Voice audio blocked:", e));
-            
-            audio.onended = () => {
-              onVoiceEnd?.();
-              if (autoEndAfterAudio) {
-                const autoEndDelay = 500; // Revised to exact requirement (~350-600ms)
-                timerRef.current = window.setTimeout(() => {
-                  handleEnd();
-                }, autoEndDelay);
-              }
-            };
-          }
-        }, voiceDelay);
-      }, activeDelay);
-    }, connectDelay);
+        
+        if (voiceAudioSrc) {
+          const vAudio = new Audio(voiceAudioSrc);
+          vAudio.volume = voiceVolume;
+          voiceAudioRef.current = vAudio;
+          onVoiceStart?.();
+          
+          vAudio.onended = () => {
+            onVoiceEnd?.();
+            // 4. After Voice ends, play End SFX ONCE
+            if (endSfxSrc) {
+              const eAudio = new Audio(endSfxSrc);
+              eAudio.volume = sfxVolume;
+              endSfxRef.current = eAudio;
+              
+              eAudio.onended = () => {
+                // 5. After End SFX ends, fully close call
+                handleEnd();
+              };
+              
+              eAudio.play().catch(e => {
+                console.warn("End SFX blocked:", e);
+                handleEnd();
+              });
+            } else {
+              handleEnd();
+            }
+          };
+          
+          vAudio.play().catch(e => console.warn("Voice audio blocked:", e));
+        } else {
+          // If no voice, go straight to end logic
+          handleEnd();
+        }
+      };
+      
+      audio.play().catch(e => {
+        console.warn("Connect SFX blocked:", e);
+        // Fallback if blocked
+        updateState('active');
+        startDurationTimer();
+      });
+    } else {
+      // If no connect SFX, immediate transition
+      updateState('active');
+      startDurationTimer();
+    }
   };
 
   const handleDecline = () => {
@@ -214,25 +236,20 @@ export function IncomingCallOverlay({
   };
 
   const handleEnd = () => {
-    if (voiceAudioRef.current) {
-      voiceAudioRef.current.pause();
-    }
+    // Ensure all audio is paused
+    if (voiceAudioRef.current) voiceAudioRef.current.pause();
+    if (endSfxRef.current) endSfxRef.current.pause();
+    
     if (durationTimerRef.current) clearInterval(durationTimerRef.current);
-
-    if (endSfxSrc) {
-      const audio = new Audio(endSfxSrc);
-      audio.volume = sfxVolume;
-      endSfxRef.current = audio;
-      audio.play().catch(e => console.warn("End SFX blocked:", e));
-    }
 
     updateState('ended');
     onEnd?.();
     
+    // Auto-close overlay after transition
     timerRef.current = window.setTimeout(() => {
       setIsVisible(false);
       updateState('idle');
-    }, 1200); 
+    }, 800); 
   };
 
   const formatDuration = (seconds: number) => {
