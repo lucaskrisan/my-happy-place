@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { DevBackButton } from "@/components/dev-tools";
 import { IncomingCallOverlay, type CallState } from "@/components/dev/IncomingCallOverlay";
 import { NotificationOverlay } from "@/components/dev/NotificationOverlay";
@@ -62,8 +63,9 @@ function DoorScenePreview() {
   const [duration, setDuration] = useState(0);
 
   // New Scene Logic States
-  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "memory-door" | "pre-call" | "call" | "scene02" | "lucia-send-audio">("idle");
+  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "memory-door" | "pre-call" | "call" | "scene02" | "lucia-send-audio" | "scene02-replay" | "pattern-reveal-complete">("idle");
   const [showCopy, setShowCopy] = useState(false);
+  const [showRevealCopy, setShowRevealCopy] = useState(false);
   const [isNotificationVisible, setIsNotificationVisible] = useState(false);
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
   const scene02NotificationTriggeredRef = useRef(false);
@@ -137,6 +139,9 @@ function DoorScenePreview() {
       setIsCallOpen(true);
     } else if (sceneStep === "scene02") {
       setIsPlaying(false);
+    } else if (sceneStep === "scene02-replay") {
+      setIsPlaying(false);
+      setShowRevealCopy(true);
     } else if (sceneStep === "lucia-send-audio") {
       setIsPlaying(false);
       setIsMessagingOpen(true);
@@ -180,6 +185,7 @@ function DoorScenePreview() {
   const resetScene = () => {
     setSceneStep("idle");
     setShowCopy(false);
+    setShowRevealCopy(false);
     setIsPlaying(false);
     setIsCallOpen(false);
     setIsNotificationVisible(false);
@@ -226,8 +232,9 @@ function DoorScenePreview() {
 
       // Early notification for Scene 02 (2 seconds before end)
       if (
-        sceneStep === "scene02" && 
+        (sceneStep === "scene02" || sceneStep === "scene02-replay") && 
         !scene02NotificationTriggeredRef.current &&
+        sceneStep !== "scene02-replay" && // Double guard
         Number.isFinite(activeVideo.duration) &&
         activeVideo.duration > 0 &&
         activeVideo.duration - activeVideo.currentTime <= 2
@@ -452,7 +459,7 @@ function DoorScenePreview() {
               preload="auto"
               className={cn(
                 "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
-                sceneStep === "scene02" ? "opacity-100 z-10" : "opacity-0 z-0"
+                sceneStep === "scene02" || sceneStep === "scene02-replay" ? "opacity-100 z-10" : "opacity-0 z-0"
               )}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
@@ -581,10 +588,68 @@ function DoorScenePreview() {
             ]}
             progressiveReveal={true}
             onComplete={() => {
-              console.log("Audio de reprodução única terminado. Fluxo pausado conforme solicitado.");
+              setIsMessagingOpen(false);
+              // Iniciar Replay da Cena 02
+              setSceneStep("scene02-replay");
+              if (scene02VideoRef.current) {
+                scene02VideoRef.current.currentTime = 19.0;
+                scene02VideoRef.current.play().catch(console.error);
+              }
             }}
             onClose={() => setIsMessagingOpen(false)}
           />
+
+          {/* Pattern Reveal Copy Overlay */}
+          <AnimatePresence>
+            {showRevealCopy && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="absolute inset-0 z-[60] flex flex-col items-center justify-center p-8 text-center"
+              >
+                {/* Darken background slightly */}
+                <div className="absolute inset-0 bg-black/40 pointer-events-none" />
+                
+                <div className="relative z-10 flex flex-col items-center gap-8">
+                  <div className="space-y-4">
+                    <motion.p 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 }}
+                      className="text-zinc-200 text-lg md:text-xl font-light leading-relaxed"
+                    >
+                      "Ela achava que estava evitando uma discussão."
+                    </motion.p>
+                    <motion.p 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1.2 }}
+                      className="text-white text-2xl md:text-3xl font-bold leading-tight"
+                    >
+                      Mas estava obedecendo uma <span className="text-orange-400">regra antiga</span>.
+                    </motion.p>
+                  </div>
+
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 2.2 }}
+                    className="flex flex-col items-center gap-2"
+                  >
+                    <button
+                      onClick={() => setSceneStep("pattern-reveal-complete")}
+                      className="px-8 py-3 bg-white text-black rounded-full font-bold uppercase tracking-wider hover:bg-zinc-200 transition-colors shadow-lg"
+                    >
+                      Continuar
+                    </button>
+                    <span className="text-[10px] text-zinc-400 uppercase tracking-[0.2em]">
+                      Toque para continuar
+                    </span>
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           </div>
 
           {/* Player Controls */}
