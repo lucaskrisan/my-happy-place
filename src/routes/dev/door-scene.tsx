@@ -47,6 +47,7 @@ const SCENE_ASSETS: Asset[] = [
   { path: "/assets/scene-01/audio/mother-voice-once-01.mp3", label: "mother-voice-once-01.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/call-end.mp3", label: "call-end.mp3", type: 'audio' },
   { path: "/assets/scene-02/audio/notification.mp3", label: "notification.mp3", type: 'audio' },
+  { path: "/assets/characters/lucia.webp", label: "lucia.webp", type: 'image' },
 ];
 
 function DoorScenePreview() {

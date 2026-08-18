@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { Bell } from 'lucide-react';
 
@@ -214,7 +215,9 @@ export const NotificationOverlay: React.FC<NotificationOverlayProps> = ({
     };
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div 
       className="fixed top-0 left-0 right-0 z-[9999] flex justify-center pointer-events-none p-4"
       style={{ top: 0 }}
@@ -280,6 +283,7 @@ export const NotificationOverlay: React.FC<NotificationOverlayProps> = ({
         {/* Home Indicator like bar for swipe hint */}
         <div className="w-10 h-1 bg-zinc-300/50 dark:bg-zinc-700/50 rounded-full self-center mt-1" />
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
