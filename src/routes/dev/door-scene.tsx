@@ -20,7 +20,10 @@ import {
   MessageSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
+ 
+const LUCIA_AVATAR_URL =
+  "https://res.cloudinary.com/duht4tq1f/image/upload/v1787083754/Woman_smiling_at_camera_2K_202608181701_y39jad.jpg";
+ 
 export const Route = createFileRoute("/dev/door-scene")({
   component: DoorScenePreview,
 });
@@ -519,7 +522,7 @@ function DoorScenePreview() {
             <IncomingCallOverlay
               open={isCallOpen}
               callerName="Mamãe"
-              callerAvatar="/assets/characters/lucia.webp"
+              callerAvatar={LUCIA_AVATAR_URL}
               callerSubtitle="Celular"
               ringtoneSrc={undefined} // No ringtone for Scene 01 as per requirement
               vibrationSrc={assetStatuses["/assets/scene-01/audio/phone-vibration.mp3"] === 'ready' ? "/assets/scene-01/audio/phone-vibration.mp3" : undefined}
@@ -536,7 +539,7 @@ function DoorScenePreview() {
               open={isNotificationVisible}
               appName="Mensagens"
               senderName="Mamãe"
-              avatar="/assets/characters/lucia.webp"
+              avatar={LUCIA_AVATAR_URL}
               message="Preciso te mandar uma coisa."
               soundSrc={assetStatuses["/assets/scene-02/audio/notification.mp3"] === 'ready' ? "/assets/scene-02/audio/notification.mp3" : undefined}
               autoDismiss={false}
@@ -551,11 +554,12 @@ function DoorScenePreview() {
             />
 
             {/* Messaging Overlay */}
-            <MessagingOverlay
-              open={isMessagingOpen}
-              contactName="Mamãe"
-              contactSubtitle="online"
-              messages={[
+          <MessagingOverlay
+            open={isMessagingOpen}
+            contactName="Mamãe"
+            contactAvatar={LUCIA_AVATAR_URL}
+            contactSubtitle="online"
+            messages={[
                 {
                   id: 'msg-01',
                   type: 'text',
