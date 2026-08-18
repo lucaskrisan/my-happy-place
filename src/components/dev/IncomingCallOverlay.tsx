@@ -246,13 +246,14 @@ export function IncomingCallOverlay({
 
     if (durationTimerRef.current) clearInterval(durationTimerRef.current);
 
+    // Enter ENDED state visually
     updateState("ended");
-    onEnd?.();
 
-    // Visual ENDED state for ~900ms as requested
+    // Callback onEnd is delayed until the user has seen the "Ligação encerrada" screen
     timerRef.current = window.setTimeout(() => {
       setIsVisible(false);
       updateState("idle");
+      onEnd?.();
     }, 900);
   };
 
