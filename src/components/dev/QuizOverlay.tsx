@@ -15,7 +15,7 @@ import {
 interface QuizOverlayProps {
   open: boolean;
   definition: QuizDefinition;
-  variant?: 'default' | 'cinematic';
+  variant?: 'default' | 'cinematic' | 'immersive';
   onOpen?: () => void;
   onAnswer?: (answer: QuizAnswer) => void;
   onQuestionChange?: (index: number) => void;
@@ -74,14 +74,14 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
     if (state === 'entering') {
       onOpen?.();
       onInteraction?.({ type: 'quiz_opened', quizId: definition.id });
-      const timer = setTimeout(() => setState('active'), variant === 'cinematic' ? 300 : 500);
+      const timer = setTimeout(() => setState('active'), (variant === 'cinematic' || variant === 'immersive') ? 300 : 500);
       return () => clearTimeout(timer);
     }
     if (state === 'exiting') {
       const timer = setTimeout(() => {
         setState('hidden');
         onClose?.();
-      }, variant === 'cinematic' ? 300 : 500);
+      }, (variant === 'cinematic' || variant === 'immersive') ? 300 : 500);
       return () => clearTimeout(timer);
     }
     return undefined;
@@ -208,6 +208,8 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
   }, [state, currentQuestion, handleOptionClick]);
 
   const isCinematic = variant === 'cinematic';
+  const isImmersive = variant === 'immersive';
+  const isVisualLayered = isCinematic || isImmersive;
 
   return (
     <AnimatePresence>
@@ -219,22 +221,24 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
           transition={{ duration: prefersReducedMotion ? 0 : 0.3 }}
           className={cn(
             "fixed inset-0 z-50 flex flex-col overflow-hidden font-sans",
-            isCinematic 
+            isVisualLayered
               ? "bg-transparent" 
               : "bg-zinc-950 text-zinc-100"
           )}
         >
-          {isCinematic && (
+          {isVisualLayered && (
             <div 
               className="absolute inset-0 pointer-events-none" 
               style={{
-                background: 'linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.28) 40%, rgba(0,0,0,0.82) 100%)',
-                backdropFilter: 'blur(3px)'
+                background: isImmersive 
+                  ? 'linear-gradient(to bottom, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.08) 30%, rgba(0,0,0,0.45) 60%, rgba(0,0,0,0.92) 100%)'
+                  : 'linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.28) 40%, rgba(0,0,0,0.82) 100%)',
+                backdropFilter: isImmersive ? 'none' : 'blur(3px)'
               }}
             />
           )}
 
-          {definition.showProgress && state !== 'completed' && !isCinematic && (
+          {definition.showProgress && state !== 'completed' && !isVisualLayered && (
             <div className="w-full bg-zinc-900 h-1 mt-[env(safe-area-inset-top,0px)]">
               <motion.div 
                 className="bg-zinc-100 h-full"
@@ -245,7 +249,7 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
             </div>
           )}
 
-          {!isCinematic && (
+          {!isVisualLayered && (
             <header className="flex items-center justify-between p-4 md:p-6 border-b border-zinc-900 shrink-0">
               <div className="flex flex-col">
                 {definition.showProgress && state !== 'completed' && (
@@ -277,7 +281,7 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
           <main className="flex-1 relative flex flex-col justify-end">
             <div className={cn(
               "w-full px-6 flex flex-col",
-              isCinematic 
+              isVisualLayered
                 ? "max-w-[560px] mx-auto pb-12" 
                 : "max-w-xl mx-auto py-12 flex-1"
             )}>
@@ -372,7 +376,7 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
               </AnimatePresence>
             </div>
           </main>
-          <div className={cn("shrink-0", isCinematic ? "h-6" : "h-[env(safe-area-inset-bottom,20px)] bg-zinc-950")} />
+          <div className={cn("shrink-0", isVisualLayered ? "h-6" : "h-[env(safe-area-inset-bottom,20px)] bg-zinc-950")} />
         </motion.div>
       )}
     </AnimatePresence>
