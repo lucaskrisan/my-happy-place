@@ -87,11 +87,34 @@ function IntroPage() {
 
   return (
     <div className="fixed inset-0 bg-black text-white font-sans overflow-hidden selection:bg-white/20">
-      <AnimatePresence mode="wait">
-        {/* State: Waiting Touch Overlay */}
+      {/* VIDEO PERSISTENTE — FORA DO ANIMATEPRESENCE */}
+      <div
+        className={cn(
+          "absolute inset-0 flex items-center justify-center bg-black transition-opacity duration-[400ms]",
+          state === "fade_out" || state === "copy_reveal" || state === "navigating"
+            ? "opacity-0"
+            : "opacity-100"
+        )}
+      >
+        <video
+          ref={videoRef}
+          src={introVideoAsset.url}
+          className="h-full w-full object-cover md:aspect-[9/16] md:w-auto"
+          playsInline
+          preload="auto"
+          onEnded={handleVideoEnded}
+          muted={false}
+          onPlaying={() => {
+            setState("video_playing");
+          }}
+        />
+      </div>
+
+      {/* SOMENTE O OVERLAY USA ANIMATEPRESENCE */}
+      <AnimatePresence>
         {state === "waiting_touch" && (
           <motion.div
-            key="waiting"
+            key="waiting-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -99,7 +122,7 @@ function IntroPage() {
             className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 cursor-pointer backdrop-blur-[2px]"
             onClick={handleStart}
           >
-            <motion.div 
+            <motion.div
               animate={{ opacity: [0.4, 1, 0.4] }}
               transition={{ duration: 2, repeat: Infinity }}
               className="text-white text-xs tracking-[0.3em] font-light uppercase"
@@ -108,37 +131,16 @@ function IntroPage() {
             </motion.div>
           </motion.div>
         )}
+      </AnimatePresence>
 
-        {/* State: Video Container (Mounted from start) */}
-        {(state === "waiting_touch" || state === "video_playing" || state === "fade_out") && (
-          <motion.div
-            key="video-container"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: state === "fade_out" ? 0 : 1 }}
-            transition={{ duration: state === "fade_out" ? 0.4 : 0.8 }}
-            className="absolute inset-0 flex items-center justify-center bg-black"
-          >
-            <video
-              ref={videoRef}
-              src={introVideoAsset.url}
-              className="h-full w-full object-cover md:aspect-[9/16] md:w-auto"
-              playsInline
-              preload="auto"
-              onEnded={handleVideoEnded}
-              muted={false}
-              onPlaying={() => {
-                setState("video_playing");
-              }}
-            />
-          </motion.div>
-        )}
-
-        {/* State: Copy Reveal */}
+      {/* COPY PODE TER SEU PRÓPRIO ANIMATEPRESENCE */}
+      <AnimatePresence>
         {(state === "copy_reveal" || state === "navigating") && (
           <motion.div
-            key="copy-container"
+            key="copy-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: state === "navigating" ? 0 : 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.6 }}
             className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-y-auto px-6 py-20 bg-black scrollbar-hide"
           >
@@ -247,15 +249,18 @@ function IntroPage() {
             </div>
           </motion.div>
         )}
+      </AnimatePresence>
 
-        {/* Global Fade to Black during Navigation */}
+      {/* FADE DE NAVEGAÇÃO */}
+      <AnimatePresence>
         {state === "navigating" && (
           <motion.div
             key="navigation-fade"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
+            exit={{ opacity: 1 }}
             transition={{ duration: 0.6 }}
-            className="absolute inset-0 z-[100] bg-black"
+            className="absolute inset-0 z-[100] bg-black pointer-events-none"
           />
         )}
       </AnimatePresence>
