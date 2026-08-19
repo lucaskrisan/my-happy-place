@@ -18,26 +18,20 @@ function IntroPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const navigate = useNavigate();
 
-  // Handle Autoplay and State Transitions
-  useEffect(() => {
-    if (state === "video_playing") {
-      const playVideo = async () => {
-        if (videoRef.current) {
-          try {
-            await videoRef.current.play();
-            setIsMuted(false);
-          } catch (err) {
-            console.warn("Autoplay blocked, showing touch start", err);
-            setState("waiting_touch");
-          }
-        }
-      };
-      playVideo();
-    }
-  }, [state]);
+  const handleStart = async () => {
+    if (!videoRef.current) return;
 
-  const handleStart = () => {
-    setState("video_playing");
+    try {
+      videoRef.current.currentTime = 0;
+      await videoRef.current.play();
+      setState("video_playing");
+      setIsMuted(false);
+    } catch (err) {
+      console.error("Intro video play failed:", err);
+      // Even if it fails, we transition to playing state but keep waiting touch if needed
+      // Actually, if it fails here it's likely a real blocking issue, but calling it from click should work.
+      setState("video_playing");
+    }
   };
 
   const handleVideoEnded = () => {
@@ -80,14 +74,15 @@ function IntroPage() {
   return (
     <div className="fixed inset-0 bg-black text-white font-sans overflow-hidden selection:bg-white/20">
       <AnimatePresence mode="wait">
-        {/* State: Waiting Touch */}
+        {/* State: Waiting Touch Overlay */}
         {state === "waiting_touch" && (
           <motion.div
             key="waiting"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 cursor-pointer"
+            transition={{ duration: 0.6 }}
+            className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 cursor-pointer backdrop-blur-[2px]"
             onClick={handleStart}
           >
             <motion.div 
@@ -100,14 +95,14 @@ function IntroPage() {
           </motion.div>
         )}
 
-        {/* State: Video Playing */}
-        {(state === "video_playing" || state === "fade_out") && (
+        {/* State: Video Container (Mounted from start) */}
+        {(state === "waiting_touch" || state === "video_playing" || state === "fade_out") && (
           <motion.div
             key="video-container"
             initial={{ opacity: 0 }}
             animate={{ opacity: state === "fade_out" ? 0 : 1 }}
             transition={{ duration: state === "fade_out" ? 0.4 : 0.8 }}
-            className="absolute inset-0 flex items-center justify-center"
+            className="absolute inset-0 flex items-center justify-center bg-black"
           >
             <video
               ref={videoRef}
