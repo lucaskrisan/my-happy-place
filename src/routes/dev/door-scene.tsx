@@ -677,16 +677,6 @@ function DoorScenePreview() {
                 }
               }}
             />
-                once: true
-              }
-            ]}
-            progressiveReveal={true}
-            onComplete={() => {
-              // Now story stops here as per requirement
-              console.log("Narrative reached current end at WhatsApp audio.");
-            }}
-            onClose={() => setIsMessagingOpen(false)}
-          />
 
           {/* Scene 02 Prediction Quiz */}
           <QuizOverlay
