@@ -122,7 +122,7 @@ function IntroPage() {
         )}
 
         {/* State: Copy Reveal */}
-        {state === "copy_reveal" && (
+        {(state === "copy_reveal" || state === "navigating") && (
           <motion.div
             key="copy-container"
             initial={{ opacity: 0 }}
