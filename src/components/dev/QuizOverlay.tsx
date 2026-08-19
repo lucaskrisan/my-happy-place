@@ -15,7 +15,7 @@ import {
 interface QuizOverlayProps {
   open: boolean;
   definition: QuizDefinition;
-  variant?: 'default' | 'cinematic';
+  variant?: 'default' | 'cinematic' | 'immersive';
   onOpen?: () => void;
   onAnswer?: (answer: QuizAnswer) => void;
   onQuestionChange?: (index: number) => void;
@@ -74,14 +74,14 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
     if (state === 'entering') {
       onOpen?.();
       onInteraction?.({ type: 'quiz_opened', quizId: definition.id });
-      const timer = setTimeout(() => setState('active'), variant === 'cinematic' ? 300 : 500);
+      const timer = setTimeout(() => setState('active'), (variant === 'cinematic' || variant === 'immersive') ? 300 : 500);
       return () => clearTimeout(timer);
     }
     if (state === 'exiting') {
       const timer = setTimeout(() => {
         setState('hidden');
         onClose?.();
-      }, variant === 'cinematic' ? 300 : 500);
+      }, (variant === 'cinematic' || variant === 'immersive') ? 300 : 500);
       return () => clearTimeout(timer);
     }
     return undefined;
@@ -208,6 +208,8 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
   }, [state, currentQuestion, handleOptionClick]);
 
   const isCinematic = variant === 'cinematic';
+  const isImmersive = variant === 'immersive';
+  const isVisualLayered = isCinematic || isImmersive;
 
   return (
     <AnimatePresence>
@@ -219,22 +221,24 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
           transition={{ duration: prefersReducedMotion ? 0 : 0.3 }}
           className={cn(
             "fixed inset-0 z-50 flex flex-col overflow-hidden font-sans",
-            isCinematic 
+            isVisualLayered
               ? "bg-transparent" 
               : "bg-zinc-950 text-zinc-100"
           )}
         >
-          {isCinematic && (
+          {isVisualLayered && (
             <div 
               className="absolute inset-0 pointer-events-none" 
               style={{
-                background: 'linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.28) 40%, rgba(0,0,0,0.82) 100%)',
-                backdropFilter: 'blur(3px)'
+                background: isImmersive 
+                  ? 'linear-gradient(to bottom, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.08) 30%, rgba(0,0,0,0.45) 60%, rgba(0,0,0,0.92) 100%)'
+                  : 'linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.28) 40%, rgba(0,0,0,0.82) 100%)',
+                backdropFilter: isImmersive ? 'none' : 'blur(3px)'
               }}
             />
           )}
 
-          {definition.showProgress && state !== 'completed' && !isCinematic && (
+          {definition.showProgress && state !== 'completed' && !isVisualLayered && (
             <div className="w-full bg-zinc-900 h-1 mt-[env(safe-area-inset-top,0px)]">
               <motion.div 
                 className="bg-zinc-100 h-full"
@@ -245,7 +249,7 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
             </div>
           )}
 
-          {!isCinematic && (
+          {!isVisualLayered && (
             <header className="flex items-center justify-between p-4 md:p-6 border-b border-zinc-900 shrink-0">
               <div className="flex flex-col">
                 {definition.showProgress && state !== 'completed' && (
@@ -277,12 +281,12 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
           <main className="flex-1 relative flex flex-col justify-end">
             <div className={cn(
               "w-full px-6 flex flex-col",
-              isCinematic 
+              isVisualLayered
                 ? "max-w-[560px] mx-auto pb-12" 
                 : "max-w-xl mx-auto py-12 flex-1"
             )}>
               <AnimatePresence mode="wait">
-                {state === 'completed' && !isCinematic ? (
+                {state === 'completed' && !isVisualLayered ? (
                   <motion.div 
                     key="completed"
                     initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 20 }} 
@@ -294,61 +298,95 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
                     </div>
                     <h2 className="text-3xl font-bold mb-4">{definition.completionLabel || 'Concluído'}</h2>
                   </motion.div>
+                ) : state === 'completed' && isImmersive ? (
+                  <motion.div
+                    key="completed-immersive"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col items-center justify-center py-12 text-center"
+                  >
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                      className="text-white/80 text-[15px] md:text-lg font-medium italic"
+                    >
+                      "Guarda essa resposta. Ela vai voltar mais tarde."
+                    </motion.p>
+                  </motion.div>
                 ) : currentQuestion ? (
                   <motion.div 
                     key={currentQuestion.id} 
-                    initial={isCinematic ? { opacity: 0, y: 18 } : { opacity: 0, x: 20 }} 
+                    initial={isVisualLayered ? { opacity: 0, y: 18 } : { opacity: 0, x: 20 }} 
                     animate={{ opacity: 1, x: 0, y: 0 }} 
-                    exit={isCinematic ? { opacity: 0, y: 10 } : { opacity: 0, x: -20 }}
+                    exit={isVisualLayered ? { opacity: 0, y: 10 } : { opacity: 0, x: -20 }}
                     transition={{ duration: 0.25 }}
                     className={cn(
                       "flex flex-col",
-                      isCinematic 
-                        ? "bg-[rgba(15,15,18,0.84)] backdrop-blur-[18px] border border-white/10 rounded-[24px] p-6 shadow-2xl overflow-hidden" 
+                      isVisualLayered
+                        ? isImmersive ? "bg-transparent" : "bg-[rgba(15,15,18,0.84)] backdrop-blur-[18px] border border-white/10 rounded-[24px] p-6 shadow-2xl overflow-hidden" 
                         : "flex-1"
                     )}
                   >
-                    <div className={isCinematic ? "mb-6" : "mb-10"}>
-                      {isCinematic && definition.title && (
-                        <span className="text-[10px] font-medium tracking-[0.15em] text-zinc-400 uppercase block mb-2">
-                          {definition.title}
+                    <div className={isVisualLayered ? "mb-6" : "mb-10"}>
+                      {isVisualLayered && (definition.title || isImmersive) && (
+                        <span className="text-[10px] font-medium tracking-[0.4em] text-white/50 uppercase block mb-3">
+                          {isImmersive ? "AGORA É SOBRE VOCÊ" : (definition.title || 'QUIZ')}
                         </span>
                       )}
                       <h2 className={cn(
                         "font-bold leading-tight tracking-tight text-white",
-                        isCinematic ? "text-lg md:text-xl" : "text-2xl md:text-3xl"
+                        isVisualLayered ? "text-xl md:text-2xl" : "text-2xl md:text-3xl"
                       )}>
                         {currentQuestion.title}
                       </h2>
                     </div>
 
-                    <div className={cn("space-y-2.5", isCinematic ? "mb-0" : "mb-12")}>
+                    <div className={cn("space-y-3", isVisualLayered ? "mb-0" : "mb-12")}>
                       {currentQuestion.options.map((option, idx) => (
-                        <button
+                        <motion.div
                           key={option.id}
-                          ref={el => { if (optionRefs.current) optionRefs.current[idx] = el; }}
-                          onClick={() => handleOptionClick(option)}
-                          className={cn(
-                            "w-full text-left p-4 rounded-2xl border transition-all duration-200 group relative",
-                            isCinematic 
-                              ? "bg-white/5 border-white/10 hover:bg-white/10" 
-                              : "bg-zinc-900/50 border-white/5 hover:border-white/10",
-                            currentAnswer?.optionId === option.id && (
-                              isCinematic 
-                                ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-100" 
-                                : "bg-zinc-100 border-white ring-2 ring-white/20 text-zinc-950"
-                            )
-                          )}
+                          initial={isImmersive ? { opacity: 0, x: -10 } : {}}
+                          animate={isImmersive ? { 
+                            opacity: currentAnswer && currentAnswer.optionId !== option.id ? 0.5 : 1, 
+                            x: 0 
+                          } : {}}
+                          transition={{ delay: isImmersive ? idx * 0.08 : 0 }}
                         >
-                          <span className={cn(
-                            "block font-medium",
-                            isCinematic ? "text-sm md:text-base" : "text-lg"
-                          )}>{option.label}</span>
-                        </button>
+                          <button
+                            ref={el => { if (optionRefs.current) optionRefs.current[idx] = el; }}
+                            onClick={() => {
+                              if (navigator.vibrate) {
+                                try { navigator.vibrate(25); } catch(e) {}
+                              }
+                              handleOptionClick(option);
+                            }}
+                            className={cn(
+                              "w-full text-left p-5 rounded-2xl border transition-all duration-200 group relative active:scale-[0.98]",
+                              isImmersive
+                                ? "bg-white/5 border-white/10 hover:bg-white/10 text-white"
+                                : isCinematic 
+                                  ? "bg-white/5 border-white/10 hover:bg-white/10" 
+                                  : "bg-zinc-900/50 border-white/5 hover:border-white/10",
+                              currentAnswer?.optionId === option.id && (
+                                isImmersive
+                                  ? "bg-white/20 border-white/40 ring-1 ring-white/20"
+                                  : isCinematic 
+                                    ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-100" 
+                                    : "bg-zinc-100 border-white ring-2 ring-white/20 text-zinc-950"
+                              )
+                            )}
+                          >
+                            <span className={cn(
+                              "block font-medium",
+                              isVisualLayered ? "text-[15px] md:text-base" : "text-lg"
+                            )}>{option.label}</span>
+                          </button>
+                        </motion.div>
                       ))}
                     </div>
 
-                    {state === 'feedback' && currentAnswer && !isCinematic && (
+                    {state === 'feedback' && currentAnswer && !isVisualLayered && (
                       <motion.div
                         initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -372,7 +410,7 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
               </AnimatePresence>
             </div>
           </main>
-          <div className={cn("shrink-0", isCinematic ? "h-6" : "h-[env(safe-area-inset-bottom,20px)] bg-zinc-950")} />
+          <div className={cn("shrink-0", isVisualLayered ? "h-6" : "h-[env(safe-area-inset-bottom,20px)] bg-zinc-950")} />
         </motion.div>
       )}
     </AnimatePresence>
