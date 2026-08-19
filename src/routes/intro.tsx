@@ -124,67 +124,74 @@ function IntroPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: state === "navigating" ? 0 : 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-10 flex flex-col items-center justify-end px-4 pb-[safe-area-inset-bottom] md:pb-12 pointer-events-none"
+            transition={{ duration: 0.8 }}
+            className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center px-6 pb-[calc(2rem+safe-area-inset-bottom)] md:pb-16 pointer-events-none"
           >
             <motion.div
-              initial={{ opacity: 0, y: 18 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.28, ease: "easeOut" }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
               className={cn(
-                "w-[92%] max-w-[560px] pointer-events-auto",
-                "bg-[rgba(12,12,15,0.76)] backdrop-blur-[16px]",
-                "border border-white/5 rounded-[24px]",
-                "shadow-[0_8px_32px_rgba(0,0,0,0.5)]",
-                "p-6 md:p-8 mb-4 md:mb-0 space-y-6"
+                "w-full max-w-[480px] pointer-events-auto",
+                "space-y-8"
               )}
             >
               {/* Hierarquia de Copy */}
-              <div className="space-y-4">
-                <span className="text-[10px] tracking-[0.3em] text-zinc-400 uppercase font-medium block">
+              <div className="space-y-6">
+                <motion.span 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-[10px] tracking-[0.4em] text-white/50 uppercase font-medium block text-center"
+                >
                   Antes de entrar
-                </span>
+                </motion.span>
                 
-                <h1 className="text-2xl md:text-3xl font-semibold leading-tight tracking-tight text-white">
+                <h1 className="text-2xl md:text-3xl font-semibold leading-tight tracking-tight text-white text-center">
                   "Talvez você chame de personalidade o que um dia foi sobrevivência."
                 </h1>
 
-                <div className="space-y-1">
-                  <p className="text-sm md:text-base text-zinc-300 font-light">
-                    Você vai assistir Marina.
-                  </p>
-                  <p className="text-sm md:text-base text-zinc-300 font-light">
+                <div className="space-y-2 text-center">
+                  <p className="text-sm md:text-base text-white/70 font-light leading-relaxed">
+                    Você vai assistir Marina. <br/>
                     Em alguns momentos, vai responder por você.
                   </p>
                 </div>
 
-                <div className="pt-2">
-                  <p className="text-sm md:text-base text-white font-medium border-l-2 border-white/20 pl-3">
+                <div className="flex justify-center">
+                  <p className="text-xs md:text-sm text-white/80 font-medium border-l border-white/30 pl-4 py-1 max-w-[280px]">
                     Não tente acertar. <br />
-                    <span className="opacity-90">Responda com sinceridade.</span>
+                    <span className="text-white/60 font-light italic">Responda com sinceridade.</span>
                   </p>
                 </div>
               </div>
 
               {/* CTA Section */}
-              <div className="space-y-4 pt-2">
-                <button
+              <div className="space-y-6 pt-2 flex flex-col items-center">
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.4, duration: 0.5 }}
                   onClick={handleEnterExperience}
                   disabled={state === "navigating"}
                   className={cn(
-                    "w-full py-5 px-8 bg-white text-black text-sm tracking-[0.15em] font-bold uppercase",
-                    "flex items-center justify-between group rounded-xl transition-all duration-300 active:scale-[0.98]",
+                    "w-full max-w-[320px] py-4 px-8 bg-white/95 text-black text-[13px] tracking-[0.2em] font-bold uppercase",
+                    "flex items-center justify-center gap-3 group rounded-full transition-all duration-300 active:scale-[0.97] hover:bg-white shadow-xl shadow-black/20",
                     state === "navigating" && "opacity-50 cursor-not-allowed"
                   )}
                 >
                   <span>Entrar na Experiência</span>
-                  <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </button>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </motion.button>
                 
-                <div className="flex flex-col items-center gap-1">
-                  <p className="text-[10px] text-zinc-500 tracking-wider uppercase font-medium">
-                    Use fones. Não pule.
-                  </p>
-                </div>
+                <motion.p 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.6 }}
+                  className="text-[9px] text-white/40 tracking-[0.25em] uppercase font-medium"
+                >
+                  Use fones. Não pule.
+                </motion.p>
               </div>
             </motion.div>
           </motion.div>
