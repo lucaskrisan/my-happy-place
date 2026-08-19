@@ -160,9 +160,10 @@ export function MessagingOverlay({
   if (!open && conversationState === 'closed' && !closing) return null;
 
   return (
-    <AnimatePresence onExitComplete={onExitComplete ? onExitComplete : undefined}>
+    <AnimatePresence>
       {(open || closing) && (
         <motion.div
+          key="messaging-overlay"
           initial={{ opacity: 0, scale: 1, y: 0 }}
           animate={closing ? { 
             opacity: 0, 
@@ -181,6 +182,13 @@ export function MessagingOverlay({
           transition={{ 
             duration: 0.32, 
             ease: [0.32, 0, 0.67, 0] // Cinematic ease-in
+          }}
+          onAnimationComplete={(definition) => {
+            // Only trigger exit completion if we are in the closing state
+            // and the animation being completed is the one that matches our closing target
+            if (closing && typeof definition === 'object' && 'opacity' in definition && definition.opacity === 0) {
+              onExitComplete?.();
+            }
           }}
           className="fixed inset-0 z-[100] bg-black flex flex-col font-sans overflow-hidden"
           style={{ height: '100dvh' }}
