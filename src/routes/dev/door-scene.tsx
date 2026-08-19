@@ -34,12 +34,14 @@ import { z } from "zod";
 
 const sceneSearchSchema = z.object({
   autostart: z.string().optional(),
+  checkpoint: z.string().optional(),
 });
 
 export const Route = createFileRoute("/dev/door-scene")({
   validateSearch: (search) => sceneSearchSchema.parse(search),
   component: DoorScenePreview,
 });
+
 
 type AssetStatus = 'loading' | 'ready' | 'missing';
 
