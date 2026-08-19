@@ -626,28 +626,57 @@ function DoorScenePreview() {
             />
 
             {/* Messaging Overlay */}
-          <MessagingOverlay
-            open={isMessagingOpen}
-            contactName="Mamãe"
-            contactAvatar={LUCIA_AVATAR_URL}
-            contactSubtitle="online"
-            messages={[
-              {
-                id: 'msg-01',
-                type: 'text',
-                sender: 'contact',
-                text: 'Preciso te mandar uma coisa.',
-                timestamp: '22:15',
-                delay: 0
-              },
-              {
-                id: 'msg-voice-01',
-                type: 'voice_once',
-                sender: 'contact',
-                audioSrc: '/assets/scene-02/audio/mother-voice-once-01.mp3',
-                duration: 6,
-                timestamp: '22:15',
-                delay: 1000,
+            <MessagingOverlay
+              open={isMessagingOpen}
+              closing={isMessagingClosing}
+              contactName="Mamãe"
+              contactAvatar={LUCIA_AVATAR_URL}
+              contactSubtitle="online"
+              messages={[
+                {
+                  id: 'msg-01',
+                  type: 'text',
+                  sender: 'contact',
+                  text: 'Preciso te mandar uma coisa.',
+                  timestamp: '22:15',
+                  delay: 0
+                },
+                {
+                  id: 'msg-voice-01',
+                  type: 'voice_once',
+                  sender: 'contact',
+                  audioSrc: '/assets/scene-02/audio/mother-voice-once-01.mp3',
+                  duration: 6,
+                  timestamp: '22:15',
+                  delay: 1000,
+                }
+              ]}
+              onClose={() => {
+                setIsMessagingOpen(false);
+                setIsMessagingClosing(false);
+              }}
+              onComplete={() => {
+                if (scene03TriggeredRef.current) return;
+                scene03TriggeredRef.current = true;
+                
+                const timer1 = window.setTimeout(() => {
+                  setIsMessagingClosing(true);
+                }, 600);
+                
+                narrativeTimersRef.current.push(timer1);
+              }}
+              onExitComplete={() => {
+                setIsMessagingOpen(false);
+                setIsMessagingClosing(false);
+                
+                setSceneStep("scene03");
+                if (scene03VideoRef.current) {
+                  scene03VideoRef.current.currentTime = 0;
+                  scene03VideoRef.current.play().catch(console.error);
+                  setIsPlaying(true);
+                }
+              }}
+            />
                 once: true
               }
             ]}

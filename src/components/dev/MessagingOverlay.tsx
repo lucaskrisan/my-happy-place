@@ -157,7 +157,7 @@ export function MessagingOverlay({
     checkCompletion(visibleMessageIds, newStates);
   };
 
-  if (!open && conversationState === 'closed') return null;
+  if (!open && conversationState === 'closed' && !closing) return null;
 
   return (
     <AnimatePresence onExitComplete={onExitComplete}>
@@ -253,7 +253,7 @@ export function MessagingOverlay({
           <Mic size={28} />
         </button>
       </div>
-        </div>
+        </motion.div>
       )}
     </AnimatePresence>
   );
