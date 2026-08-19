@@ -769,60 +769,61 @@ function DoorScenePreview() {
           />
           </div>
 
-          {/* Player Controls */}
-          <div className="w-full bg-zinc-900/80 backdrop-blur-md p-4 rounded-3xl border border-zinc-800 flex flex-col gap-4 shadow-xl">
-            {/* Progress Bar */}
-            <div className="flex flex-col gap-1">
-              <input 
-                type="range" 
-                min={0} 
-                max={duration || 0} 
-                step={0.01}
-                value={currentTime} 
-                onChange={handleSeek}
-                className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white"
-              />
-              <div className="flex justify-between text-[10px] font-mono text-zinc-500">
-                <span>{formatTime(currentTime)}</span>
-                <span>{formatTime(duration)}</span>
-              </div>
-            </div>
-
-            {/* Buttons */}
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex gap-2">
-                <button
-                  onClick={togglePlay}
-                  className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform active:scale-95"
-                >
-                  {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
-                </button>
-                <button
-                  onClick={resetScene}
-                  className="w-10 h-10 rounded-full bg-zinc-800 text-white flex items-center justify-center hover:bg-zinc-700 transition-colors active:scale-95"
-                  title="Reset Scene"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                </button>
+          {/* Player Controls - Hidden in Public Mode */}
+          {!isPublicMode && (
+            <div className="w-full bg-zinc-900/80 backdrop-blur-md p-4 rounded-3xl border border-zinc-800 flex flex-col gap-4 shadow-xl">
+              {/* Progress Bar */}
+              <div className="flex flex-col gap-1">
+                <input 
+                  type="range" 
+                  min={0} 
+                  max={duration || 0} 
+                  step={0.01}
+                  value={currentTime} 
+                  onChange={handleSeek}
+                  className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white"
+                />
+                <div className="flex justify-between text-[10px] font-mono text-zinc-500">
+                  <span>{formatTime(currentTime)}</span>
+                  <span>{formatTime(duration)}</span>
+                </div>
               </div>
 
-              <div className="flex-1 flex gap-2">
-                <button
-                  onClick={playFullScene}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 h-10 bg-white text-black hover:bg-zinc-200 rounded-full font-bold text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-lg"
-                >
-                  <Play className="w-4 h-4 fill-current" />
-                  Reproduzir Cena 01
-                </button>
-                <button
-                  onClick={() => setIsCallOpen(true)}
-                  className="w-12 h-10 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 text-white rounded-full transition-all active:scale-95 shadow-lg"
-                  title="Testar Ligação (Debug)"
-                >
-                  <PhoneCall className="w-4 h-4" />
-                </button>
+              {/* Buttons */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex gap-2">
+                  <button
+                    onClick={togglePlay}
+                    className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform active:scale-95"
+                  >
+                    {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
+                  </button>
+                  <button
+                    onClick={resetScene}
+                    className="w-10 h-10 rounded-full bg-zinc-800 text-white flex items-center justify-center hover:bg-zinc-700 transition-colors active:scale-95"
+                    title="Reset Scene"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="flex-1 flex gap-2">
+                  <button
+                    onClick={playFullScene}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 h-10 bg-white text-black hover:bg-zinc-200 rounded-full font-bold text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-lg"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    Reproduzir Cena 01
+                  </button>
+                  <button
+                    onClick={() => setIsCallOpen(true)}
+                    className="w-12 h-10 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 text-white rounded-full transition-all active:scale-95 shadow-lg"
+                    title="Testar Ligação (Debug)"
+                  >
+                    <PhoneCall className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-            </div>
             </div>
           )}
         </div>
