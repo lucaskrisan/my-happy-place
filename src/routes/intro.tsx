@@ -49,30 +49,8 @@ function IntroPage() {
   };
 
   const handleVideoEnded = () => {
-    // Hold final frame for 250ms
-    setTimeout(() => {
-      setState("fade_out");
-      // Fade to black (400ms transition)
-      setTimeout(() => {
-        setState("copy_reveal");
-        startCopySequence();
-      }, 400);
-    }, 250);
-  };
-
-  const startCopySequence = () => {
-    // Sequence timing
-    const sequence = [
-      { step: 1, delay: 0 },    // Headline
-      { step: 2, delay: 3000 }, // Bloco de comportamentos
-      { step: 3, delay: 6000 }, // Frase de impacto
-      { step: 4, delay: 9000 }, // Preparação
-      { step: 5, delay: 12000 } // CTA
-    ];
-
-    sequence.forEach(({ step, delay }) => {
-      setTimeout(() => setCopyStep(step), delay);
-    });
+    // Keep last frame frozen, just change state to show overlay
+    setState("copy_reveal");
   };
 
   const handleEnterExperience = () => {
