@@ -52,8 +52,7 @@ function DevMenu() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 p-4 md:p-8 font-sans">
       <div className="max-w-2xl mx-auto">
-        <header className="mb-12 border-b border-zinc-800 pb-8 flex flex-col items-start gap-4">
-          <img src="https://res.cloudinary.com/duht4tq1f/image/upload/v1787165489/AR_VENT_CLEAN_d9cmil.png" alt="Logo" className="h-8 w-auto mb-2" />
+        <header className="mb-12 border-b border-zinc-800 pb-8">
           <h1 className="text-3xl font-bold tracking-tight text-white">Narrative Experience — Dev Menu</h1>
           <p className="mt-2 text-zinc-400">Escolha um módulo para desenvolver ou testar isoladamente.</p>
         </header>

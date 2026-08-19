@@ -490,10 +490,7 @@ function SceneLab() {
     <div className="min-h-screen bg-zinc-950 text-zinc-100 p-4 md:p-8 font-sans pb-24">
       <div className="max-w-6xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img src="https://res.cloudinary.com/duht4tq1f/image/upload/v1787165489/AR_VENT_CLEAN_d9cmil.png" alt="Logo" className="h-6 w-auto" />
-            <DevBackButton />
-          </div>
+          <DevBackButton />
           <h1 className="text-2xl font-black tracking-tighter text-white uppercase italic">SCENE ENGINE LAB</h1>
           <div className="flex gap-2">
             <button 
