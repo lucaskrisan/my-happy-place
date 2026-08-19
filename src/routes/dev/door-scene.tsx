@@ -823,8 +823,8 @@ function DoorScenePreview() {
                 </button>
               </div>
             </div>
+            </div>
           )}
-        </div>
         </div>
       </main>
     </div>
