@@ -67,12 +67,7 @@ function IntroPage() {
     <div className="fixed inset-0 bg-black text-white font-sans overflow-hidden selection:bg-white/20">
       {/* VIDEO PERSISTENTE — FORA DO ANIMATEPRESENCE */}
       <div
-        className={cn(
-          "absolute inset-0 flex items-center justify-center bg-black transition-opacity duration-[400ms]",
-          state === "fade_out" || state === "copy_reveal" || state === "navigating"
-            ? "opacity-0"
-            : "opacity-100"
-        )}
+        className="absolute inset-0 flex items-center justify-center bg-black"
       >
         <video
           ref={videoRef}
@@ -84,6 +79,17 @@ function IntroPage() {
           muted={false}
           onPlaying={() => {
             setState("video_playing");
+          }}
+        />
+
+        {/* Cinematic Gradient Overlay */}
+        <div 
+          className={cn(
+            "absolute inset-0 transition-opacity duration-700 pointer-events-none",
+            state === "copy_reveal" || state === "navigating" ? "opacity-100" : "opacity-0"
+          )}
+          style={{
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.18) 35%, rgba(0,0,0,0.78) 75%, rgba(0,0,0,0.94) 100%)"
           }}
         />
       </div>
