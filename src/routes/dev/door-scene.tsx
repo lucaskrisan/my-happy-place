@@ -400,7 +400,7 @@ function DoorScenePreview() {
       {!isPublicMode && (
         <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-zinc-800 bg-zinc-950 p-6 flex flex-col gap-8 overflow-y-auto">
         <div className="flex items-center gap-3">
-          <img src="https://res.cloudinary.com/duht4tq1f/image/upload/v1787165489/AR_VENT_CLEAN_d9cmil.png" alt="Logo" className="h-6 w-auto" />
+          <DevBackButton />
           <h1 className="text-sm font-bold text-white uppercase tracking-widest">Story Preview</h1>
         </div>
 
