@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DevBackButton } from "@/components/dev-tools";
@@ -10,6 +10,7 @@ import scene03Asset from "@/assets/scene-03/video/scene-03.mp4.asset.json";
 import scene03ConsequenceAsset from "@/assets/scene-03/video/scene-03-consequence-reaction.mp4.asset.json";
 import { QuizOverlay } from "@/components/dev/QuizOverlay";
 import { QuizDefinition, QuizResult } from "@/types/quiz";
+import { STORY_MAP } from "@/dev/story-checkpoints";
 import { 
   PhoneCall, 
   Play, 
@@ -26,6 +27,7 @@ import {
   HelpCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
  
 const LUCIA_AVATAR_URL =
   "https://res.cloudinary.com/duht4tq1f/image/upload/v1787083754/Woman_smiling_at_camera_2K_202608181701_y39jad.jpg";
