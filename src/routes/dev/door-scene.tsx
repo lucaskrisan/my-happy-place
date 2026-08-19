@@ -1102,16 +1102,17 @@ function AssetRow({ asset, status }: { asset: Asset, status: AssetStatus }) {
         {status === 'loading' && <Loader2 className="w-3 h-3 text-zinc-600 animate-spin" />}
         {status === 'ready' && (
           <>
-            <span className="text-[9px] font-bold text-green-500/80 uppercase">Ready</span>
+            <span className="text-[9px] font-bold text-green-500/80 uppercase">PRONTO</span>
             <CheckCircle2 className="w-3 h-3 text-green-500" />
           </>
         )}
         {status === 'missing' && (
           <>
-            <span className="text-[9px] font-bold text-red-500/80 uppercase">Missing</span>
+            <span className="text-[9px] font-bold text-red-500/80 uppercase">AUSENTE</span>
             <XCircle className="w-3 h-3 text-red-500" />
           </>
         )}
+
       </div>
     </div>
   );
