@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 
 interface MessagingOverlayProps {
   open: boolean;
+  closing?: boolean;
   contactName: string;
   contactSubtitle?: string;
   contactAvatar?: string;
@@ -30,10 +31,12 @@ interface MessagingOverlayProps {
   onVoiceEnd?: (messageId: string) => void;
   onInteraction?: (event: { type: string; messageId?: string; data?: any }) => void;
   onComplete?: () => void;
+  onExitComplete?: () => void;
 }
 
 export function MessagingOverlay({
   open,
+  closing = false,
   contactName,
   contactSubtitle = 'online',
   contactAvatar,
@@ -46,7 +49,8 @@ export function MessagingOverlay({
   onVoiceStart,
   onVoiceEnd,
   onInteraction,
-  onComplete
+  onComplete,
+  onExitComplete
 }: MessagingOverlayProps) {
   const [visibleMessageIds, setVisibleMessageIds] = useState<Set<string>>(new Set());
   const [isTyping, setIsTyping] = useState(false);
@@ -153,16 +157,42 @@ export function MessagingOverlay({
     checkCompletion(visibleMessageIds, newStates);
   };
 
-  if (!open && conversationState === 'closed') return null;
+  if (!open && conversationState === 'closed' && !closing) return null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] bg-black flex flex-col font-sans overflow-hidden"
-      style={{ height: '100dvh' }}
-    >
+    <AnimatePresence>
+      {(open || closing) && (
+        <motion.div
+          key="messaging-overlay"
+          initial={{ opacity: 0, scale: 1, y: 0 }}
+          animate={closing ? { 
+            opacity: 0, 
+            scale: 0.94, 
+            y: 18,
+            borderRadius: "24px",
+            filter: "blur(4px)"
+          } : { 
+            opacity: 1, 
+            scale: 1, 
+            y: 0,
+            borderRadius: "0px",
+            filter: "blur(0px)"
+          }}
+          exit={{ opacity: 0, scale: 0.94, y: 18 }}
+          transition={{ 
+            duration: 0.32, 
+            ease: [0.32, 0, 0.67, 0] // Cinematic ease-in
+          }}
+          onAnimationComplete={(definition) => {
+            // Only trigger exit completion if we are in the closing state
+            // and the animation being completed is the one that matches our closing target
+            if (closing && typeof definition === 'object' && 'opacity' in definition && definition.opacity === 0) {
+              onExitComplete?.();
+            }
+          }}
+          className="fixed inset-0 z-[100] bg-black flex flex-col font-sans overflow-hidden"
+          style={{ height: '100dvh' }}
+        >
       {/* Header */}
       <div className="bg-[#202c33] text-[#e9edef] px-5 py-4 flex items-center gap-4 pt-[calc(env(safe-area-inset-top)+1rem)] border-b border-[#313d45]">
         <button onClick={onClose} className="p-1 -ml-2 text-[#8696a0]">
@@ -231,7 +261,9 @@ export function MessagingOverlay({
           <Mic size={28} />
         </button>
       </div>
-    </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
