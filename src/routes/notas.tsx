@@ -70,7 +70,7 @@ function NotasPage() {
         <section className="space-y-4">
           <Textarea
             placeholder="O que você está fazendo agora? Digite aqui..."
-            className="min-h-[150px] bg-zinc-900/50 border-white/10 focus:border-blue-500/50 transition-all text-lg resize-none"
+            className="min-h-[150px] bg-zinc-900/50 border-white/10 focus:border-blue-500/50 transition-all text-lg resize-y scrollbar-thin scrollbar-thumb-zinc-700"
             value={currentNote}
             onChange={(e) => setCurrentNote(e.target.value)}
           />
