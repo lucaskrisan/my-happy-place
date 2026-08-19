@@ -826,6 +826,7 @@ function DoorScenePreview() {
                 setIsPlaying(true);
               }
             }}
+          />
           {/* Scene 03 Pattern Quiz */}
           <QuizOverlay
             open={isScene03QuizOpen}
