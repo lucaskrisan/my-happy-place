@@ -587,51 +587,52 @@ function DoorScenePreview() {
               </span>
             </div>
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
-              <span className="text-zinc-500 block mb-1">Video Status</span>
+              <span className="text-zinc-500 block mb-1">Status do Vídeo</span>
               <span className={cn(
                 "font-mono font-bold",
                 isPlaying ? "text-green-500" : "text-yellow-500"
               )}>
-                {isPlaying ? "PLAYING" : "PAUSED"}
+                {isPlaying ? "REPRODUZINDO" : "PAUSADO"}
               </span>
             </div>
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
-              <span className="text-zinc-500 block mb-1">Interaction</span>
+              <span className="text-zinc-500 block mb-1">Interação</span>
               <span className={cn(
                 "font-mono font-bold",
                 callState === 'idle' ? "text-zinc-400" : 
                 callState === 'incoming' ? "text-blue-500 animate-pulse" : "text-green-500"
               )}>
-                {callState === 'idle' ? "NONE" : 
-                 callState === 'incoming' ? "INCOMING_CALL" : "ACTIVE_CALL"}
+                {callState === 'idle' ? "NENHUMA" : 
+                 callState === 'incoming' ? "LIGAÇÃO_RECEBIDA" : "LIGAÇÃO_ATIVA"}
               </span>
             </div>
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
-              <span className="text-zinc-500 block mb-1">Prediction Quiz</span>
+              <span className="text-zinc-500 block mb-1">Quiz de Previsão</span>
               <span className={cn(
                 "font-mono font-bold",
                 quizChoice ? "text-green-500" : (scene02QuizTriggeredRef.current ? "text-blue-500" : "text-zinc-400")
               )}>
-                {quizChoice ? "COMPLETED" : (scene02QuizTriggeredRef.current ? "ACTIVE" : "PENDING")}
+                {quizChoice ? "CONCLUÍDO" : (scene02QuizTriggeredRef.current ? "ATIVO" : "PENDENTE")}
               </span>
             </div>
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
-              <span className="text-zinc-500 block mb-1">Notifications</span>
+              <span className="text-zinc-500 block mb-1">Notificações</span>
               <span className={cn(
                 "font-mono font-bold",
                 isNotificationVisible ? "text-blue-500 animate-pulse" : "text-zinc-400"
               )}>
-                {isNotificationVisible ? "PENDING" : "NONE"}
+                {isNotificationVisible ? "PENDENTE" : "NENHUMA"}
               </span>
             </div>
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
-              <span className="text-zinc-500 block mb-1">Current Time</span>
+              <span className="text-zinc-500 block mb-1">Tempo Atual</span>
               <span className="font-mono font-bold text-white">
                 {formatTime(currentTime)}
               </span>
             </div>
           </div>
         </section>
+
 
         {/* Assets Checklist */}
         <section className="space-y-4">
