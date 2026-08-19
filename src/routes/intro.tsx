@@ -152,14 +152,14 @@ function IntroPage() {
                 </h1>
 
                 <div className="space-y-2 text-center">
-                  <p className="text-sm md:text-base text-white/70 font-light leading-relaxed">
+                  <p className="text-[15px] md:text-lg text-white/70 font-light leading-relaxed">
                     Você vai assistir Marina. <br/>
                     Em alguns momentos, vai responder por você.
                   </p>
                 </div>
 
                 <div className="flex justify-center">
-                  <p className="text-xs md:text-sm text-white/80 font-medium border-l border-white/30 pl-4 py-1 max-w-[280px]">
+                  <p className="text-[14px] md:text-[17px] text-white/80 font-medium border-l border-white/30 pl-5 py-2 max-w-[320px]">
                     Não tente acertar. <br />
                     <span className="text-white/60 font-light italic">Responda com sinceridade.</span>
                   </p>
