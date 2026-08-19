@@ -6,6 +6,7 @@ import { IncomingCallOverlay, type CallState } from "@/components/dev/IncomingCa
 import { NotificationOverlay } from "@/components/dev/NotificationOverlay";
 import { MessagingOverlay } from "@/components/dev/MessagingOverlay";
 import scene02DinnerAsset from "@/assets/scene-02/video/scene-02-dinner.mp4.asset.json";
+import scene03Asset from "@/assets/scene-03/video/scene-03.mp4.asset.json";
 import { QuizOverlay } from "@/components/dev/QuizOverlay";
 import { QuizDefinition, QuizResult } from "@/types/quiz";
 import { 
@@ -47,6 +48,7 @@ const SCENE_ASSETS: Asset[] = [
   { path: "/assets/scene-01/video/scene-01-mother-precall.mp4", label: "scene-01-mother-precall.mp4", type: 'video' },
   { path: scene02DinnerAsset.url, label: "scene-02-dinner.mp4", type: 'video' },
   { path: "/assets/scene-02/video/scene-02-lucia-send-audio.mp4", label: "scene-02-lucia-send-audio.mp4", type: 'video' },
+  { path: scene03Asset.url, label: "scene-03-time-passage-first-pattern.mp4", type: 'video' },
   { path: "/assets/scene-01/audio/ringtone.mp3", label: "ringtone.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/phone-vibration.mp3", label: "phone-vibration.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/call-connect.mp3", label: "call-connect.mp3", type: 'audio' },
@@ -66,7 +68,8 @@ function DoorScenePreview() {
   const [duration, setDuration] = useState(0);
 
   // New Scene Logic States
-  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "memory-door" | "pre-call" | "call" | "scene02" | "lucia-send-audio" | "pattern-reveal-complete">("idle");
+  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "memory-door" | "pre-call" | "call" | "scene02" | "lucia-send-audio" | "scene03" | "pattern-reveal-complete">("idle");
+  const [isMessagingClosing, setIsMessagingClosing] = useState(false);
   const [showCopy, setShowCopy] = useState(false);
   const [isNotificationVisible, setIsNotificationVisible] = useState(false);
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
@@ -77,6 +80,8 @@ function DoorScenePreview() {
   
   const scene02NotificationTriggeredRef = useRef(false);
   const scene02QuizTriggeredRef = useRef(false);
+  const scene03TriggeredRef = useRef(false);
+  const narrativeTimersRef = useRef<number[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const memoryVideoRef = useRef<HTMLVideoElement>(null);
@@ -84,6 +89,7 @@ function DoorScenePreview() {
   const preCallVideoRef = useRef<HTMLVideoElement>(null);
   const scene02VideoRef = useRef<HTMLVideoElement>(null);
   const luciaSendAudioVideoRef = useRef<HTMLVideoElement>(null);
+  const scene03VideoRef = useRef<HTMLVideoElement>(null);
 
   // Real detection of assets
   useEffect(() => {
@@ -153,6 +159,8 @@ function DoorScenePreview() {
     } else if (sceneStep === "lucia-send-audio") {
       setIsPlaying(false);
       setIsMessagingOpen(true);
+    } else if (sceneStep === "scene03") {
+      setIsPlaying(false);
     }
   };
 
@@ -178,6 +186,7 @@ function DoorScenePreview() {
       sceneStep === "pre-call" ? preCallVideoRef.current :
       sceneStep === "scene02" ? scene02VideoRef.current : 
       sceneStep === "lucia-send-audio" ? luciaSendAudioVideoRef.current :
+      sceneStep === "scene03" ? scene03VideoRef.current :
       videoRef.current;
       
     if (activeVideo) {
@@ -321,7 +330,8 @@ function DoorScenePreview() {
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
               <span className="text-zinc-500 block mb-1">Current Scene</span>
               <span className="font-mono font-bold text-blue-400">
-                {sceneStep === "scene02" || sceneStep === "lucia-send-audio" ? "SCENE_02" : "SCENE_01"}
+                {sceneStep === "scene02" || sceneStep === "lucia-send-audio" ? "SCENE_02" : 
+                 sceneStep === "scene03" ? "SCENE_03" : "SCENE_01"}
               </span>
             </div>
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
