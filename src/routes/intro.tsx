@@ -120,7 +120,7 @@ function IntroPage() {
           >
             <video
               ref={videoRef}
-              src="/assets/intro/video/intro-marina-renascida-final.mp4"
+              src={introVideoAsset.url}
               className="h-full w-full object-cover md:aspect-[9/16] md:w-auto"
               playsInline
               preload="auto"
