@@ -71,15 +71,17 @@ const SCENE_ASSETS: Asset[] = [
 ];
 
 function DoorScenePreview() {
-  const { autostart } = Route.useSearch();
+  const { autostart, checkpoint } = Route.useSearch();
   const isPublicMode = autostart === "1";
   const [showAutoplayFallback, setShowAutoplayFallback] = useState(false);
   const autostartGuardRef = useRef(false);
+  const checkpointAppliedRef = useRef(false);
 
   const [isCallOpen, setIsCallOpen] = useState(false);
   const [callState, setCallState] = useState<CallState>("idle");
   const [assetStatuses, setAssetStatuses] = useState<Record<string, AssetStatus>>({});
   const [isPlaying, setIsPlaying] = useState(false);
+
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
