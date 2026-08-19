@@ -13,7 +13,6 @@ type IntroState = "waiting_touch" | "video_playing" | "fade_out" | "copy_reveal"
 
 function IntroPage() {
   const [state, setState] = useState<IntroState>("waiting_touch");
-  const [copyStep, setCopyStep] = useState(0);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const navigate = useNavigate();
