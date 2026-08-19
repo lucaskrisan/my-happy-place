@@ -160,7 +160,7 @@ export function MessagingOverlay({
   if (!open && conversationState === 'closed' && !closing) return null;
 
   return (
-    <AnimatePresence onExitComplete={onExitComplete}>
+    <AnimatePresence onExitComplete={onExitComplete || undefined}>
       {(open || closing) && (
         <motion.div
           initial={{ opacity: 0, scale: 1, y: 0 }}
