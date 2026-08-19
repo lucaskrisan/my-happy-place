@@ -18,26 +18,20 @@ function IntroPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const navigate = useNavigate();
 
-  // Handle Autoplay and State Transitions
-  useEffect(() => {
-    if (state === "video_playing") {
-      const playVideo = async () => {
-        if (videoRef.current) {
-          try {
-            await videoRef.current.play();
-            setIsMuted(false);
-          } catch (err) {
-            console.warn("Autoplay blocked, showing touch start", err);
-            setState("waiting_touch");
-          }
-        }
-      };
-      playVideo();
-    }
-  }, [state]);
+  const handleStart = async () => {
+    if (!videoRef.current) return;
 
-  const handleStart = () => {
-    setState("video_playing");
+    try {
+      videoRef.current.currentTime = 0;
+      await videoRef.current.play();
+      setState("video_playing");
+      setIsMuted(false);
+    } catch (err) {
+      console.error("Intro video play failed:", err);
+      // Even if it fails, we transition to playing state but keep waiting touch if needed
+      // Actually, if it fails here it's likely a real blocking issue, but calling it from click should work.
+      setState("video_playing");
+    }
   };
 
   const handleVideoEnded = () => {
