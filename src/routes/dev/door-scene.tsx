@@ -496,9 +496,6 @@ function DoorScenePreview() {
                 <AssetRow key={asset.path} asset={asset} status={assetStatuses[asset.path] || 'loading'} />
               ))}
             </div>
-                <AssetRow key={asset.path} asset={asset} status={assetStatuses[asset.path] || 'loading'} />
-              ))}
-            </div>
 
             <div className="space-y-2">
               <h3 className="text-[9px] font-bold text-zinc-600 uppercase flex items-center gap-2">
@@ -624,6 +621,21 @@ function DoorScenePreview() {
               className={cn(
                 "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
                 sceneStep === "lucia-send-audio" ? "opacity-100 z-10" : "opacity-0 z-0"
+              )}
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onEnded={handleVideoEnded}
+            />
+            <video
+              ref={scene03ConsequenceVideoRef}
+              src={scene03ConsequenceAsset.url}
+              playsInline
+              preload="auto"
+              className={cn(
+                "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
+                sceneStep === "scene03-consequence" ? "opacity-100 z-10" : "opacity-0 z-0"
               )}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
@@ -785,7 +797,7 @@ function DoorScenePreview() {
           {/* Scene 02 Prediction Quiz */}
           <QuizOverlay
             open={isPredictionQuizOpen}
-            variant="cinematic"
+            variant="immersive"
             definition={{
               id: "scene-02-prediction",
               title: "Antes de continuar...",
@@ -813,6 +825,35 @@ function DoorScenePreview() {
                 scene02VideoRef.current.play().catch(console.error);
                 setIsPlaying(true);
               }
+            }}
+          {/* Scene 03 Pattern Quiz */}
+          <QuizOverlay
+            open={isScene03QuizOpen}
+            variant="immersive"
+            definition={{
+              id: "scene-03-pattern",
+              feedbackMode: "none",
+              showProgress: false,
+              questions: [
+                {
+                  id: "q-pattern-01",
+                  title: "Quando você sente que alguém pode não gostar do que você vai dizer, o que costuma acontecer?",
+                  options: [
+                    { id: "opt-1", label: "Eu diminuo o que ia dizer.", value: "self_erasure", tags: ["self_erasure"] },
+                    { id: "opt-2", label: "Mudo de assunto ou deixo pra depois.", value: "avoidance", tags: ["avoidance"] },
+                    { id: "opt-3", label: "Tento perceber primeiro se é seguro falar.", value: "hypervigilance", tags: ["hypervigilance"] },
+                    { id: "opt-4", label: "Eu digo o que penso mesmo com desconforto.", value: "assertive", tags: ["assertive"] }
+                  ]
+                }
+              ]
+            }}
+            closeBehavior="prevent"
+            onComplete={(result) => {
+              setScene03QuizResult(result);
+              // Wait 900ms for microfeedback then close
+              setTimeout(() => {
+                setIsScene03QuizOpen(false);
+              }, 900);
             }}
           />
           </div>
