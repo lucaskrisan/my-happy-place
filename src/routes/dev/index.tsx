@@ -27,6 +27,7 @@ function DevCentral() {
   ];
 
   const technicalTools = [
+    { path: "/notas", label: "Bloco de Notas 📝" },
     { path: "/dev/timeline", label: "Timeline Engine" },
     { path: "/dev/scene", label: "Scene Engine" },
     { path: "/dev/debug", label: "Debug Visual" },
