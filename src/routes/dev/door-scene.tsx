@@ -29,7 +29,14 @@ import { cn } from "@/lib/utils";
 const LUCIA_AVATAR_URL =
   "https://res.cloudinary.com/duht4tq1f/image/upload/v1787083754/Woman_smiling_at_camera_2K_202608181701_y39jad.jpg";
  
+import { z } from "zod";
+
+const sceneSearchSchema = z.object({
+  autostart: z.string().optional(),
+});
+
 export const Route = createFileRoute("/dev/door-scene")({
+  validateSearch: (search) => sceneSearchSchema.parse(search),
   component: DoorScenePreview,
 });
 
@@ -60,6 +67,11 @@ const SCENE_ASSETS: Asset[] = [
 ];
 
 function DoorScenePreview() {
+  const { autostart } = Route.useSearch();
+  const isPublicMode = autostart === "1";
+  const [showAutoplayFallback, setShowAutoplayFallback] = useState(false);
+  const autostartGuardRef = useRef(false);
+
   const [isCallOpen, setIsCallOpen] = useState(false);
   const [callState, setCallState] = useState<CallState>("idle");
   const [assetStatuses, setAssetStatuses] = useState<Record<string, AssetStatus>>({});
@@ -113,14 +125,21 @@ function DoorScenePreview() {
     });
   }, []);
 
-  const playFullScene = () => {
+  const playFullScene = useCallback(() => {
     setSceneStep("present");
     setShowCopy(false);
     setIsCallOpen(false);
+    setShowAutoplayFallback(false);
 
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
-      videoRef.current.play().catch(console.error);
+      videoRef.current.play().catch((err) => {
+        console.warn("Autoplay blocked in Scene 01", err);
+        if (isPublicMode) {
+          setShowAutoplayFallback(true);
+        }
+      });
+      setIsPlaying(true);
     }
     [memoryVideoRef, memoryDoorVideoRef, preCallVideoRef, scene02VideoRef, luciaSendAudioVideoRef, scene03VideoRef].forEach(ref => {
       if (ref.current) {
@@ -136,7 +155,19 @@ function DoorScenePreview() {
     setIsMessagingClosing(false);
     narrativeTimersRef.current.forEach(clearTimeout);
     narrativeTimersRef.current = [];
-  };
+  }, [isPublicMode]);
+
+  // Autostart Trigger
+  useEffect(() => {
+    if (isPublicMode && !autostartGuardRef.current) {
+      autostartGuardRef.current = true;
+      // Wait for refs to be stable
+      const timer = window.setTimeout(() => {
+        playFullScene();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isPublicMode, playFullScene]);
 
   const handleVideoEnded = () => {
     if (sceneStep === "present") {
@@ -326,9 +357,13 @@ function DoorScenePreview() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex flex-col md:flex-row font-sans text-zinc-300">
-      {/* Sidebar Debug / Assets */}
-      <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-zinc-800 bg-zinc-950 p-6 flex flex-col gap-8 overflow-y-auto">
+    <div className={cn(
+      "min-h-screen bg-black flex flex-col md:flex-row font-sans text-zinc-300",
+      isPublicMode && "md:flex-col" // Reset layout for public mode
+    )}>
+      {/* Sidebar Debug / Assets - Hidden in Public Mode */}
+      {!isPublicMode && (
+        <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-zinc-800 bg-zinc-950 p-6 flex flex-col gap-8 overflow-y-auto">
         <div className="flex items-center gap-3">
           <DevBackButton />
           <h1 className="text-sm font-bold text-white uppercase tracking-widest">Story Preview</h1>
@@ -435,7 +470,8 @@ function DoorScenePreview() {
             </div>
           </div>
         </section>
-      </div>
+        </div>
+      )}
 
       {/* Main Preview Area */}
       <main className="flex-1 flex flex-col items-center justify-center p-8 bg-black relative overflow-hidden">
@@ -585,10 +621,30 @@ function DoorScenePreview() {
               </div>
             )}
 
-            {/* In-Video Controls (Overlay on Hover) */}
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-               {!isPlaying && <Play className="w-16 h-16 text-white/50" />}
-            </div>
+            {/* In-Video Controls (Overlay on Hover) - Hidden in Public Mode */}
+            {!isPublicMode && (
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                 {!isPlaying && <Play className="w-16 h-16 text-white/50" />}
+              </div>
+            )}
+
+            {/* Autoplay Fallback for Public Mode */}
+            {showAutoplayFallback && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 cursor-pointer"
+                onClick={playFullScene}
+              >
+                <motion.div 
+                  animate={{ opacity: [0.4, 1, 0.4] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="text-white text-[10px] tracking-[0.3em] font-light uppercase"
+                >
+                  Toque para continuar
+                </motion.div>
+              </motion.div>
+            )}
 
             {/* Interaction Overlay */}
             <IncomingCallOverlay
@@ -767,7 +823,8 @@ function DoorScenePreview() {
                 </button>
               </div>
             </div>
-          </div>
+            </div>
+          )}
         </div>
       </main>
     </div>

@@ -73,7 +73,7 @@ function IntroPage() {
     
     // Fade for navigation
     setTimeout(() => {
-      navigate({ to: "/dev/door-scene" });
+      navigate({ to: "/dev/door-scene", search: { autostart: "1" } });
     }, 600);
   };
 
