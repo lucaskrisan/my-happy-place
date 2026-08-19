@@ -183,6 +183,140 @@ function DoorScenePreview() {
     return undefined;
   }, [isPublicMode, playFullScene]);
 
+  // Checkpoint Trigger
+  useEffect(() => {
+    if (!checkpoint || checkpointAppliedRef.current || isPublicMode) return;
+
+    const applyCheckpoint = async () => {
+      checkpointAppliedRef.current = true;
+      
+      const resetForCheckpoint = () => {
+        setIsPlaying(false);
+        setIsCallOpen(false);
+        setIsNotificationVisible(false);
+        setIsMessagingOpen(false);
+        setIsPredictionQuizOpen(false);
+        setIsScene03QuizOpen(false);
+        scene02NotificationTriggeredRef.current = false;
+        scene02QuizTriggeredRef.current = false;
+        scene03TriggeredRef.current = false;
+        scene03QuizTriggeredRef.current = false;
+        narrativeTimersRef.current.forEach(clearTimeout);
+        narrativeTimersRef.current = [];
+      };
+
+      const waitForMetadata = (video: HTMLVideoElement) => {
+        if (video.readyState >= 1) return Promise.resolve();
+        return new Promise<void>((resolve) => {
+          video.addEventListener('loadedmetadata', () => resolve(), { once: true });
+        });
+      };
+
+      const seekToTime = (video: HTMLVideoElement, time: number) => {
+        return new Promise<void>((resolve) => {
+          video.currentTime = time;
+          video.addEventListener('seeked', () => resolve(), { once: true });
+        });
+      };
+
+      resetForCheckpoint();
+
+      switch (checkpoint) {
+        case 'scene01-start':
+          playFullScene();
+          break;
+
+        case 'scene01-call':
+          setSceneStep("pre-call");
+          if (preCallVideoRef.current) {
+            await waitForMetadata(preCallVideoRef.current);
+            await seekToTime(preCallVideoRef.current, Math.max(0, preCallVideoRef.current.duration - 0.5));
+            preCallVideoRef.current.play();
+            setIsPlaying(true);
+          }
+          break;
+
+        case 'scene02-start':
+          setSceneStep("scene02");
+          if (scene02VideoRef.current) {
+            await waitForMetadata(scene02VideoRef.current);
+            scene02VideoRef.current.currentTime = 0;
+            scene02VideoRef.current.play();
+            setIsPlaying(true);
+          }
+          break;
+
+        case 'scene02-quiz':
+          setSceneStep("scene02");
+          scene02QuizTriggeredRef.current = true;
+          if (scene02VideoRef.current) {
+            await waitForMetadata(scene02VideoRef.current);
+            await seekToTime(scene02VideoRef.current, 19.0);
+            setIsPredictionQuizOpen(true);
+          }
+          break;
+
+        case 'scene02-notification':
+          setSceneStep("scene02");
+          if (scene02VideoRef.current) {
+            await waitForMetadata(scene02VideoRef.current);
+            await seekToTime(scene02VideoRef.current, Math.max(0, scene02VideoRef.current.duration - 2.1));
+            scene02VideoRef.current.play();
+            setIsPlaying(true);
+          }
+          break;
+
+        case 'lucia-send-audio':
+          setSceneStep("lucia-send-audio");
+          if (luciaSendAudioVideoRef.current) {
+            await waitForMetadata(luciaSendAudioVideoRef.current);
+            luciaSendAudioVideoRef.current.currentTime = 0;
+            luciaSendAudioVideoRef.current.play();
+            setIsPlaying(true);
+          }
+          break;
+
+        case 'whatsapp':
+          setSceneStep("lucia-send-audio"); // Technical requirement for the transition
+          setIsMessagingOpen(true);
+          break;
+
+        case 'scene03-start':
+          setSceneStep("scene03");
+          if (scene03VideoRef.current) {
+            await waitForMetadata(scene03VideoRef.current);
+            scene03VideoRef.current.currentTime = 0;
+            scene03VideoRef.current.play();
+            setIsPlaying(true);
+          }
+          break;
+
+        case 'scene03-consequence':
+          setSceneStep("scene03-consequence");
+          if (scene03ConsequenceVideoRef.current) {
+            await waitForMetadata(scene03ConsequenceVideoRef.current);
+            scene03ConsequenceVideoRef.current.currentTime = 0;
+            scene03ConsequenceVideoRef.current.play();
+            setIsPlaying(true);
+          }
+          break;
+
+        case 'scene03-quiz':
+          setSceneStep("scene03-consequence");
+          scene03QuizTriggeredRef.current = true;
+          if (scene03ConsequenceVideoRef.current) {
+            await waitForMetadata(scene03ConsequenceVideoRef.current);
+            await seekToTime(scene03ConsequenceVideoRef.current, Math.max(0, scene03ConsequenceVideoRef.current.duration - 0.1));
+            setIsScene03QuizOpen(true);
+          }
+          break;
+      }
+    };
+
+    applyCheckpoint();
+  }, [checkpoint, isPublicMode, playFullScene]);
+
+
   const handleVideoEnded = () => {
     if (sceneStep === "present") {
       setSceneStep("memory");
