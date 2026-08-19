@@ -529,31 +529,59 @@ function DoorScenePreview() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
   };
 
+  const activeCheckpointData = STORY_MAP.find(s => s.id === checkpoint);
+
   return (
     <div className={cn(
       "min-h-screen bg-black flex flex-col md:flex-row font-sans text-zinc-300",
       isPublicMode && "md:flex-col" // Reset layout for public mode
     )}>
+      {/* Checkpoint Banner */}
+      {checkpoint && !isPublicMode && (
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-blue-600 text-white px-4 py-2 flex items-center justify-between shadow-2xl">
+          <div className="flex items-center gap-3">
+            <Link to="/dev" className="text-[10px] font-black hover:underline flex items-center gap-1 uppercase tracking-tighter">
+              ← VOLTAR PARA CENTRAL
+            </Link>
+            <div className="w-px h-4 bg-white/20" />
+            <div className="text-[11px] font-bold flex items-center gap-2">
+              <span className="opacity-50 uppercase tracking-widest text-[9px]">Produção</span>
+              <span>/</span>
+              <span className="uppercase tracking-widest text-[10px]">
+                {activeCheckpointData ? `${activeCheckpointData.number} — ${activeCheckpointData.title}` : checkpoint}
+              </span>
+            </div>
+          </div>
+          <div className="hidden sm:block text-[9px] font-black uppercase tracking-[0.2em] bg-black/20 px-2 py-0.5 rounded">
+            Checkpoint Ativo
+          </div>
+        </div>
+      )}
+
       {/* Sidebar Debug / Assets - Hidden in Public Mode */}
       {!isPublicMode && (
-        <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-zinc-800 bg-zinc-950 p-6 flex flex-col gap-8 overflow-y-auto">
+        <div className={cn(
+          "w-full md:w-80 border-b md:border-b-0 md:border-r border-zinc-800 bg-zinc-950 p-6 flex flex-col gap-8 overflow-y-auto transition-all",
+          checkpoint && "pt-16" // Adjust for banner
+        )}>
         <div className="flex items-center gap-3">
           <DevBackButton />
-          <h1 className="text-sm font-bold text-white uppercase tracking-widest">Story Preview</h1>
+          <h1 className="text-sm font-bold text-white uppercase tracking-widest">Prévia da História</h1>
         </div>
 
         {/* Debug Visual */}
         <section className="space-y-4">
           <h2 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
-            <Info className="w-3 h-3" /> Debug Visual
+            <Info className="w-3 h-3" /> Estado Atual
           </h2>
           <div className="grid gap-2 text-xs">
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
-              <span className="text-zinc-500 block mb-1">Current Scene</span>
+              <span className="text-zinc-500 block mb-1">Cena Atual</span>
               <span className="font-mono font-bold text-blue-400">
                 {sceneStep === "scene02" || sceneStep === "lucia-send-audio" ? "SCENE_02" : 
                  sceneStep === "scene03" ? "SCENE_03" : 
                  sceneStep === "scene03-consequence" ? "SCENE_03_CONSEQUENCE" : "SCENE_01"}
+
               </span>
             </div>
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
