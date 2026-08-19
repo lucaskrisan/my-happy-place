@@ -122,7 +122,7 @@ function DoorScenePreview() {
       videoRef.current.currentTime = 0;
       videoRef.current.play().catch(console.error);
     }
-    [memoryVideoRef, memoryDoorVideoRef, preCallVideoRef, scene02VideoRef, luciaSendAudioVideoRef].forEach(ref => {
+    [memoryVideoRef, memoryDoorVideoRef, preCallVideoRef, scene02VideoRef, luciaSendAudioVideoRef, scene03VideoRef].forEach(ref => {
       if (ref.current) {
         ref.current.currentTime = 0;
         ref.current.load();
@@ -130,8 +130,12 @@ function DoorScenePreview() {
     });
     scene02NotificationTriggeredRef.current = false;
     scene02QuizTriggeredRef.current = false;
+    scene03TriggeredRef.current = false;
     setIsPredictionQuizOpen(false);
     setQuizChoice(null);
+    setIsMessagingClosing(false);
+    narrativeTimersRef.current.forEach(clearTimeout);
+    narrativeTimersRef.current = [];
   };
 
   const handleVideoEnded = () => {
@@ -206,10 +210,15 @@ function DoorScenePreview() {
     setIsCallOpen(false);
     setIsNotificationVisible(false);
     setIsMessagingOpen(false);
+    setIsMessagingClosing(false);
     setIsPredictionQuizOpen(false);
     setQuizChoice(null);
     scene02NotificationTriggeredRef.current = false;
     scene02QuizTriggeredRef.current = false;
+    scene03TriggeredRef.current = false;
+
+    narrativeTimersRef.current.forEach(clearTimeout);
+    narrativeTimersRef.current = [];
 
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
@@ -234,6 +243,10 @@ function DoorScenePreview() {
     if (luciaSendAudioVideoRef.current) {
       luciaSendAudioVideoRef.current.currentTime = 0;
       luciaSendAudioVideoRef.current.pause();
+    }
+    if (scene03VideoRef.current) {
+      scene03VideoRef.current.currentTime = 0;
+      scene03VideoRef.current.pause();
     }
   };
 
@@ -440,6 +453,18 @@ function DoorScenePreview() {
               className={cn(
                 "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
                 sceneStep === "present" || sceneStep === "idle" ? "opacity-100 z-10" : "opacity-0 z-0"
+              )}
+              onPause={() => setIsPlaying(false)}
+              onEnded={handleVideoEnded}
+            />
+            <video
+              ref={scene03VideoRef}
+              src={scene03Asset.url}
+              playsInline
+              preload="auto"
+              className={cn(
+                "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
+                sceneStep === "scene03" ? "opacity-100 z-10" : "opacity-0 z-0"
               )}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
