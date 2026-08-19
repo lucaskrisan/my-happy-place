@@ -121,116 +121,73 @@ function IntroPage() {
       <AnimatePresence>
         {(state === "copy_reveal" || state === "navigating") && (
           <motion.div
-            key="copy-overlay"
+            key="copy-panel-container"
             initial={{ opacity: 0 }}
             animate={{ opacity: state === "navigating" ? 0 : 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.6 }}
-            className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-y-auto px-6 py-20 bg-black scrollbar-hide"
+            className="absolute inset-0 z-10 flex flex-col items-center justify-end px-4 pb-[safe-area-inset-bottom] md:pb-12 pointer-events-none"
           >
-            <div className="w-full max-w-lg space-y-16">
-              {/* Eyebrow + Headline */}
-              {copyStep >= 1 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 1.2, ease: "easeOut" }}
-                  className="space-y-4"
-                >
-                  <span className="text-[10px] tracking-[0.4em] text-zinc-500 uppercase font-medium block">
-                    Antes de entrar
-                  </span>
-                  <h1 className="text-3xl md:text-4xl font-light leading-tight tracking-tight text-zinc-100">
-                    "Você pode passar anos chamando de personalidade aquilo que começou como sobrevivência."
-                  </h1>
-                </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.28, ease: "easeOut" }}
+              className={cn(
+                "w-[92%] max-w-[560px] pointer-events-auto",
+                "bg-[rgba(12,12,15,0.76)] backdrop-blur-[16px]",
+                "border border-white/5 rounded-[24px]",
+                "shadow-[0_8px_32px_rgba(0,0,0,0.5)]",
+                "p-6 md:p-8 mb-4 md:mb-0 space-y-6"
               )}
+            >
+              {/* Hierarquia de Copy */}
+              <div className="space-y-4">
+                <span className="text-[10px] tracking-[0.3em] text-zinc-400 uppercase font-medium block">
+                  Antes de entrar
+                </span>
+                
+                <h1 className="text-2xl md:text-3xl font-semibold leading-tight tracking-tight text-white">
+                  "Talvez você chame de personalidade o que um dia foi sobrevivência."
+                </h1>
 
-              {/* Second Block */}
-              {copyStep >= 2 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 1.2, ease: "easeOut" }}
-                  className="space-y-6 text-lg md:text-xl text-zinc-400 font-light leading-relaxed"
-                >
-                  <p>Você pede desculpa antes mesmo de saber o que fez.</p>
-                  <p>Percebe quando alguém muda o tom antes de perceber o que você mesma está sentindo.</p>
-                  <p>Se cala para evitar uma briga que talvez nem fosse acontecer.</p>
-                  <p>E quando alguma coisa começa a dar certo...</p>
-                  <p>às vezes é você mesma quem encontra um jeito de estragar primeiro.</p>
-                </motion.div>
-              )}
-
-              {/* Impact Sentence */}
-              {copyStep >= 3 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 1.5, ease: "easeOut" }}
-                  className="space-y-8 py-8"
-                >
-                  <p className="text-zinc-500 text-lg font-light">Separadas, essas coisas parecem pequenas.</p>
-                  <p className="text-2xl md:text-3xl text-white font-light leading-tight">
-                    Dentro da mesma mulher, elas podem custar uma vida inteira.
+                <div className="space-y-1">
+                  <p className="text-sm md:text-base text-zinc-300 font-light">
+                    Você vai assistir Marina.
                   </p>
-                </motion.div>
-              )}
+                  <p className="text-sm md:text-base text-zinc-300 font-light">
+                    Em alguns momentos, vai responder por você.
+                  </p>
+                </div>
 
-              {/* Preparation */}
-              {copyStep >= 4 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 1.2, ease: "easeOut" }}
-                  className="space-y-8 border-t border-zinc-900 pt-16"
+                <div className="pt-2">
+                  <p className="text-sm md:text-base text-white font-medium border-l-2 border-white/20 pl-3">
+                    Não tente acertar. <br />
+                    <span className="opacity-90">Responda com sinceridade.</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* CTA Section */}
+              <div className="space-y-4 pt-2">
+                <button
+                  onClick={handleEnterExperience}
+                  disabled={state === "navigating"}
+                  className={cn(
+                    "w-full py-5 px-8 bg-white text-black text-sm tracking-[0.15em] font-bold uppercase",
+                    "flex items-center justify-between group rounded-xl transition-all duration-300 active:scale-[0.98]",
+                    state === "navigating" && "opacity-50 cursor-not-allowed"
+                  )}
                 >
-                  <p className="text-zinc-400 font-light">
-                    Nos próximos minutos você não vai responder sobre quem gostaria de ser.
+                  <span>Entrar na Experiência</span>
+                  <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+                
+                <div className="flex flex-col items-center gap-1">
+                  <p className="text-[10px] text-zinc-500 tracking-wider uppercase font-medium">
+                    Use fones. Não pule.
                   </p>
-                  <p className="text-xl text-zinc-200 font-light">
-                    Vai responder sobre quem você se tornou quando aprendeu que era mais seguro se adaptar.
-                  </p>
-                  
-                  <div className="space-y-2 pt-4">
-                    <p className="text-zinc-500 text-sm font-light">Você vai assistir Marina.</p>
-                    <p className="text-zinc-500 text-sm font-light">Vai escolher por ela.</p>
-                    <p className="text-zinc-500 text-sm font-light">Vai responder por você.</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="text-zinc-300 font-light italic">Não tente acertar.</p>
-                    <p className="text-zinc-300 font-light italic text-lg">Responda com sinceridade.</p>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* CTA */}
-              {copyStep >= 5 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 1.2, ease: "easeOut" }}
-                  className="space-y-6 pt-8 pb-20"
-                >
-                  <button
-                    onClick={handleEnterExperience}
-                    disabled={state === "navigating"}
-                    className={cn(
-                      "w-full py-6 px-8 bg-white text-black text-sm tracking-[0.2em] font-bold uppercase",
-                      "flex items-center justify-between group transition-all duration-500 active:scale-95",
-                      state === "navigating" && "opacity-50 cursor-not-allowed"
-                    )}
-                  >
-                    <span>Entrar na Experiência</span>
-                    <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </button>
-                  <p className="text-[10px] text-zinc-500 tracking-wider text-center leading-relaxed">
-                    Use fones. Não pule. Responda antes de racionalizar.
-                  </p>
-                </motion.div>
-              )}
-            </div>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
