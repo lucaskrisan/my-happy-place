@@ -125,14 +125,21 @@ function DoorScenePreview() {
     });
   }, []);
 
-  const playFullScene = () => {
+  const playFullScene = useCallback(() => {
     setSceneStep("present");
     setShowCopy(false);
     setIsCallOpen(false);
+    setShowAutoplayFallback(false);
 
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
-      videoRef.current.play().catch(console.error);
+      videoRef.current.play().catch((err) => {
+        console.warn("Autoplay blocked in Scene 01", err);
+        if (isPublicMode) {
+          setShowAutoplayFallback(true);
+        }
+      });
+      setIsPlaying(true);
     }
     [memoryVideoRef, memoryDoorVideoRef, preCallVideoRef, scene02VideoRef, luciaSendAudioVideoRef, scene03VideoRef].forEach(ref => {
       if (ref.current) {
@@ -148,7 +155,19 @@ function DoorScenePreview() {
     setIsMessagingClosing(false);
     narrativeTimersRef.current.forEach(clearTimeout);
     narrativeTimersRef.current = [];
-  };
+  }, [isPublicMode]);
+
+  // Autostart Trigger
+  useEffect(() => {
+    if (isPublicMode && !autostartGuardRef.current) {
+      autostartGuardRef.current = true;
+      // Wait for refs to be stable
+      const timer = window.setTimeout(() => {
+        playFullScene();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isPublicMode, playFullScene]);
 
   const handleVideoEnded = () => {
     if (sceneStep === "present") {
