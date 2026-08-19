@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DevBackButton } from "@/components/dev-tools";
@@ -10,6 +10,7 @@ import scene03Asset from "@/assets/scene-03/video/scene-03.mp4.asset.json";
 import scene03ConsequenceAsset from "@/assets/scene-03/video/scene-03-consequence-reaction.mp4.asset.json";
 import { QuizOverlay } from "@/components/dev/QuizOverlay";
 import { QuizDefinition, QuizResult } from "@/types/quiz";
+import { STORY_MAP } from "@/dev/story-checkpoints";
 import { 
   PhoneCall, 
   Play, 
@@ -26,6 +27,7 @@ import {
   HelpCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
  
 const LUCIA_AVATAR_URL =
   "https://res.cloudinary.com/duht4tq1f/image/upload/v1787083754/Woman_smiling_at_camera_2K_202608181701_y39jad.jpg";
@@ -34,12 +36,14 @@ import { z } from "zod";
 
 const sceneSearchSchema = z.object({
   autostart: z.string().optional(),
+  checkpoint: z.string().optional(),
 });
 
 export const Route = createFileRoute("/dev/door-scene")({
   validateSearch: (search) => sceneSearchSchema.parse(search),
   component: DoorScenePreview,
 });
+
 
 type AssetStatus = 'loading' | 'ready' | 'missing';
 
@@ -69,15 +73,17 @@ const SCENE_ASSETS: Asset[] = [
 ];
 
 function DoorScenePreview() {
-  const { autostart } = Route.useSearch();
+  const { autostart, checkpoint } = Route.useSearch();
   const isPublicMode = autostart === "1";
   const [showAutoplayFallback, setShowAutoplayFallback] = useState(false);
   const autostartGuardRef = useRef(false);
+  const checkpointAppliedRef = useRef(false);
 
   const [isCallOpen, setIsCallOpen] = useState(false);
   const [callState, setCallState] = useState<CallState>("idle");
   const [assetStatuses, setAssetStatuses] = useState<Record<string, AssetStatus>>({});
   const [isPlaying, setIsPlaying] = useState(false);
+
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
@@ -178,6 +184,140 @@ function DoorScenePreview() {
     }
     return undefined;
   }, [isPublicMode, playFullScene]);
+
+  // Checkpoint Trigger
+  useEffect(() => {
+    if (!checkpoint || checkpointAppliedRef.current || isPublicMode) return;
+
+    const applyCheckpoint = async () => {
+      checkpointAppliedRef.current = true;
+      
+      const resetForCheckpoint = () => {
+        setIsPlaying(false);
+        setIsCallOpen(false);
+        setIsNotificationVisible(false);
+        setIsMessagingOpen(false);
+        setIsPredictionQuizOpen(false);
+        setIsScene03QuizOpen(false);
+        scene02NotificationTriggeredRef.current = false;
+        scene02QuizTriggeredRef.current = false;
+        scene03TriggeredRef.current = false;
+        scene03QuizTriggeredRef.current = false;
+        narrativeTimersRef.current.forEach(clearTimeout);
+        narrativeTimersRef.current = [];
+      };
+
+      const waitForMetadata = (video: HTMLVideoElement) => {
+        if (video.readyState >= 1) return Promise.resolve();
+        return new Promise<void>((resolve) => {
+          video.addEventListener('loadedmetadata', () => resolve(), { once: true });
+        });
+      };
+
+      const seekToTime = (video: HTMLVideoElement, time: number) => {
+        return new Promise<void>((resolve) => {
+          video.currentTime = time;
+          video.addEventListener('seeked', () => resolve(), { once: true });
+        });
+      };
+
+      resetForCheckpoint();
+
+      switch (checkpoint) {
+        case 'scene01-start':
+          playFullScene();
+          break;
+
+        case 'scene01-call':
+          setSceneStep("pre-call");
+          if (preCallVideoRef.current) {
+            await waitForMetadata(preCallVideoRef.current);
+            await seekToTime(preCallVideoRef.current, Math.max(0, preCallVideoRef.current.duration - 0.5));
+            preCallVideoRef.current.play();
+            setIsPlaying(true);
+          }
+          break;
+
+        case 'scene02-start':
+          setSceneStep("scene02");
+          if (scene02VideoRef.current) {
+            await waitForMetadata(scene02VideoRef.current);
+            scene02VideoRef.current.currentTime = 0;
+            scene02VideoRef.current.play();
+            setIsPlaying(true);
+          }
+          break;
+
+        case 'scene02-quiz':
+          setSceneStep("scene02");
+          scene02QuizTriggeredRef.current = true;
+          if (scene02VideoRef.current) {
+            await waitForMetadata(scene02VideoRef.current);
+            await seekToTime(scene02VideoRef.current, 19.0);
+            setIsPredictionQuizOpen(true);
+          }
+          break;
+
+        case 'scene02-notification':
+          setSceneStep("scene02");
+          if (scene02VideoRef.current) {
+            await waitForMetadata(scene02VideoRef.current);
+            await seekToTime(scene02VideoRef.current, Math.max(0, scene02VideoRef.current.duration - 2.1));
+            scene02VideoRef.current.play();
+            setIsPlaying(true);
+          }
+          break;
+
+        case 'lucia-send-audio':
+          setSceneStep("lucia-send-audio");
+          if (luciaSendAudioVideoRef.current) {
+            await waitForMetadata(luciaSendAudioVideoRef.current);
+            luciaSendAudioVideoRef.current.currentTime = 0;
+            luciaSendAudioVideoRef.current.play();
+            setIsPlaying(true);
+          }
+          break;
+
+        case 'whatsapp':
+          setSceneStep("lucia-send-audio"); // Technical requirement for the transition
+          setIsMessagingOpen(true);
+          break;
+
+        case 'scene03-start':
+          setSceneStep("scene03");
+          if (scene03VideoRef.current) {
+            await waitForMetadata(scene03VideoRef.current);
+            scene03VideoRef.current.currentTime = 0;
+            scene03VideoRef.current.play();
+            setIsPlaying(true);
+          }
+          break;
+
+        case 'scene03-consequence':
+          setSceneStep("scene03-consequence");
+          if (scene03ConsequenceVideoRef.current) {
+            await waitForMetadata(scene03ConsequenceVideoRef.current);
+            scene03ConsequenceVideoRef.current.currentTime = 0;
+            scene03ConsequenceVideoRef.current.play();
+            setIsPlaying(true);
+          }
+          break;
+
+        case 'scene03-quiz':
+          setSceneStep("scene03-consequence");
+          scene03QuizTriggeredRef.current = true;
+          if (scene03ConsequenceVideoRef.current) {
+            await waitForMetadata(scene03ConsequenceVideoRef.current);
+            await seekToTime(scene03ConsequenceVideoRef.current, Math.max(0, scene03ConsequenceVideoRef.current.duration - 0.1));
+            setIsScene03QuizOpen(true);
+          }
+          break;
+      }
+    };
+
+    applyCheckpoint();
+  }, [checkpoint, isPublicMode, playFullScene]);
+
 
   const handleVideoEnded = () => {
     if (sceneStep === "present") {
@@ -391,79 +531,108 @@ function DoorScenePreview() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
   };
 
+  const activeCheckpointData = STORY_MAP.find(s => s.id === checkpoint);
+
   return (
     <div className={cn(
       "min-h-screen bg-black flex flex-col md:flex-row font-sans text-zinc-300",
       isPublicMode && "md:flex-col" // Reset layout for public mode
     )}>
+      {/* Checkpoint Banner */}
+      {checkpoint && !isPublicMode && (
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-blue-600 text-white px-4 py-2 flex items-center justify-between shadow-2xl">
+          <div className="flex items-center gap-3">
+            <Link to="/dev" className="text-[10px] font-black hover:underline flex items-center gap-1 uppercase tracking-tighter">
+              ← VOLTAR PARA CENTRAL
+            </Link>
+            <div className="w-px h-4 bg-white/20" />
+            <div className="text-[11px] font-bold flex items-center gap-2">
+              <span className="opacity-50 uppercase tracking-widest text-[9px]">Produção</span>
+              <span>/</span>
+              <span className="uppercase tracking-widest text-[10px]">
+                {activeCheckpointData ? `${activeCheckpointData.number} — ${activeCheckpointData.title}` : checkpoint}
+              </span>
+            </div>
+          </div>
+          <div className="hidden sm:block text-[9px] font-black uppercase tracking-[0.2em] bg-black/20 px-2 py-0.5 rounded">
+            Checkpoint Ativo
+          </div>
+        </div>
+      )}
+
       {/* Sidebar Debug / Assets - Hidden in Public Mode */}
       {!isPublicMode && (
-        <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-zinc-800 bg-zinc-950 p-6 flex flex-col gap-8 overflow-y-auto">
+        <div className={cn(
+          "w-full md:w-80 border-b md:border-b-0 md:border-r border-zinc-800 bg-zinc-950 p-6 flex flex-col gap-8 overflow-y-auto transition-all",
+          checkpoint && "pt-16" // Adjust for banner
+        )}>
         <div className="flex items-center gap-3">
           <DevBackButton />
-          <h1 className="text-sm font-bold text-white uppercase tracking-widest">Story Preview</h1>
+          <h1 className="text-sm font-bold text-white uppercase tracking-widest">Prévia da História</h1>
         </div>
 
         {/* Debug Visual */}
         <section className="space-y-4">
           <h2 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
-            <Info className="w-3 h-3" /> Debug Visual
+            <Info className="w-3 h-3" /> Estado Atual
           </h2>
           <div className="grid gap-2 text-xs">
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
-              <span className="text-zinc-500 block mb-1">Current Scene</span>
+              <span className="text-zinc-500 block mb-1">Cena Atual</span>
               <span className="font-mono font-bold text-blue-400">
                 {sceneStep === "scene02" || sceneStep === "lucia-send-audio" ? "SCENE_02" : 
                  sceneStep === "scene03" ? "SCENE_03" : 
                  sceneStep === "scene03-consequence" ? "SCENE_03_CONSEQUENCE" : "SCENE_01"}
+
               </span>
             </div>
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
-              <span className="text-zinc-500 block mb-1">Video Status</span>
+              <span className="text-zinc-500 block mb-1">Status do Vídeo</span>
               <span className={cn(
                 "font-mono font-bold",
                 isPlaying ? "text-green-500" : "text-yellow-500"
               )}>
-                {isPlaying ? "PLAYING" : "PAUSED"}
+                {isPlaying ? "REPRODUZINDO" : "PAUSADO"}
               </span>
             </div>
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
-              <span className="text-zinc-500 block mb-1">Interaction</span>
+              <span className="text-zinc-500 block mb-1">Interação</span>
               <span className={cn(
                 "font-mono font-bold",
                 callState === 'idle' ? "text-zinc-400" : 
                 callState === 'incoming' ? "text-blue-500 animate-pulse" : "text-green-500"
               )}>
-                {callState === 'idle' ? "NONE" : 
-                 callState === 'incoming' ? "INCOMING_CALL" : "ACTIVE_CALL"}
+                {callState === 'idle' ? "NENHUMA" : 
+                 callState === 'incoming' ? "LIGAÇÃO_RECEBIDA" : "LIGAÇÃO_ATIVA"}
               </span>
             </div>
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
-              <span className="text-zinc-500 block mb-1">Prediction Quiz</span>
+              <span className="text-zinc-500 block mb-1">Quiz de Previsão</span>
               <span className={cn(
                 "font-mono font-bold",
                 quizChoice ? "text-green-500" : (scene02QuizTriggeredRef.current ? "text-blue-500" : "text-zinc-400")
               )}>
-                {quizChoice ? "COMPLETED" : (scene02QuizTriggeredRef.current ? "ACTIVE" : "PENDING")}
+                {quizChoice ? "CONCLUÍDO" : (scene02QuizTriggeredRef.current ? "ATIVO" : "PENDENTE")}
               </span>
             </div>
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
-              <span className="text-zinc-500 block mb-1">Notifications</span>
+              <span className="text-zinc-500 block mb-1">Notificações</span>
               <span className={cn(
                 "font-mono font-bold",
                 isNotificationVisible ? "text-blue-500 animate-pulse" : "text-zinc-400"
               )}>
-                {isNotificationVisible ? "PENDING" : "NONE"}
+                {isNotificationVisible ? "PENDENTE" : "NENHUMA"}
               </span>
             </div>
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
-              <span className="text-zinc-500 block mb-1">Current Time</span>
+              <span className="text-zinc-500 block mb-1">Tempo Atual</span>
               <span className="font-mono font-bold text-white">
                 {formatTime(currentTime)}
               </span>
             </div>
           </div>
         </section>
+
 
         {/* Assets Checklist */}
         <section className="space-y-4">
@@ -891,10 +1060,11 @@ function DoorScenePreview() {
                   <button
                     onClick={resetScene}
                     className="w-10 h-10 rounded-full bg-zinc-800 text-white flex items-center justify-center hover:bg-zinc-700 transition-colors active:scale-95"
-                    title="Reset Scene"
+                    title="Reiniciar Cena"
                   >
                     <RotateCcw className="w-4 h-4" />
                   </button>
+
                 </div>
 
                 <div className="flex-1 flex gap-2">
@@ -932,16 +1102,17 @@ function AssetRow({ asset, status }: { asset: Asset, status: AssetStatus }) {
         {status === 'loading' && <Loader2 className="w-3 h-3 text-zinc-600 animate-spin" />}
         {status === 'ready' && (
           <>
-            <span className="text-[9px] font-bold text-green-500/80 uppercase">Ready</span>
+            <span className="text-[9px] font-bold text-green-500/80 uppercase">PRONTO</span>
             <CheckCircle2 className="w-3 h-3 text-green-500" />
           </>
         )}
         {status === 'missing' && (
           <>
-            <span className="text-[9px] font-bold text-red-500/80 uppercase">Missing</span>
+            <span className="text-[9px] font-bold text-red-500/80 uppercase">AUSENTE</span>
             <XCircle className="w-3 h-3 text-red-500" />
           </>
         )}
+
       </div>
     </div>
   );
