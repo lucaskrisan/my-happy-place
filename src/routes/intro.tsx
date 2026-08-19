@@ -84,11 +84,11 @@ function IntroPage() {
         {/* Cinematic Gradient Overlay */}
         <div 
           className={cn(
-            "absolute inset-0 transition-opacity duration-700 pointer-events-none",
+            "absolute inset-0 transition-opacity duration-1000 pointer-events-none z-0",
             state === "copy_reveal" || state === "navigating" ? "opacity-100" : "opacity-0"
           )}
           style={{
-            background: "linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.18) 35%, rgba(0,0,0,0.78) 75%, rgba(0,0,0,0.94) 100%)"
+            background: "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.02) 20%, rgba(0,0,0,0.15) 45%, rgba(0,0,0,0.65) 75%, rgba(0,0,0,0.95) 100%)"
           }}
         />
       </div>
