@@ -167,6 +167,7 @@ function DoorScenePreview() {
       }, 100);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [isPublicMode, playFullScene]);
 
   const handleVideoEnded = () => {
