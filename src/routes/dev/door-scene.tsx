@@ -1060,10 +1060,11 @@ function DoorScenePreview() {
                   <button
                     onClick={resetScene}
                     className="w-10 h-10 rounded-full bg-zinc-800 text-white flex items-center justify-center hover:bg-zinc-700 transition-colors active:scale-95"
-                    title="Reset Scene"
+                    title="Reiniciar Cena"
                   >
                     <RotateCcw className="w-4 h-4" />
                   </button>
+
                 </div>
 
                 <div className="flex-1 flex gap-2">
