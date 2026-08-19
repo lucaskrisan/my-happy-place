@@ -14,23 +14,37 @@ type IntroState = "waiting_touch" | "video_playing" | "fade_out" | "copy_reveal"
 function IntroPage() {
   const [state, setState] = useState<IntroState>("waiting_touch");
   const [copyStep, setCopyStep] = useState(0);
-  const [isMuted, setIsMuted] = useState(false);
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const navigate = useNavigate();
 
-  const handleStart = async () => {
-    if (!videoRef.current) return;
+  const handleStart = () => {
+    const video = videoRef.current;
 
-    try {
-      videoRef.current.currentTime = 0;
-      await videoRef.current.play();
-      setState("video_playing");
-      setIsMuted(false);
-    } catch (err) {
-      console.error("Intro video play failed:", err);
-      // Even if it fails, we transition to playing state but keep waiting touch if needed
-      // Actually, if it fails here it's likely a real blocking issue, but calling it from click should work.
-      setState("video_playing");
+    if (!video) {
+      console.error("Intro video ref is missing");
+      return;
+    }
+
+    video.muted = false;
+    video.volume = 1;
+
+    const playPromise = video.play();
+
+    if (playPromise) {
+      playPromise.catch((err) => {
+        console.error("Intro video play failed", {
+          name: err?.name,
+          message: err?.message,
+          readyState: video.readyState,
+          networkState: video.networkState,
+          currentSrc: video.currentSrc,
+        });
+
+        // MUITO IMPORTANTE:
+        // manter o overlay disponível para tentar novamente
+        setState("waiting_touch");
+      });
     }
   };
 
@@ -111,7 +125,10 @@ function IntroPage() {
               playsInline
               preload="auto"
               onEnded={handleVideoEnded}
-              muted={isMuted}
+              muted={false}
+              onPlaying={() => {
+                setState("video_playing");
+              }}
             />
           </motion.div>
         )}
