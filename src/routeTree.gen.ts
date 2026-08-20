@@ -20,6 +20,7 @@ import { Route as DevChoiceRouteImport } from './routes/dev/choice'
 import { Route as DevDebugRouteImport } from './routes/dev/debug'
 import { Route as DevDoorSceneRouteImport } from './routes/dev/door-scene'
 import { Route as DevFunnelRuntimeProofRouteImport } from './routes/dev/funnel-runtime-proof'
+import { Route as DevFunnelStudioRouteImport } from './routes/dev/funnel-studio'
 import { Route as DevHusbandTalkRouteImport } from './routes/dev/husband-talk'
 import { Route as DevIncomingCallRouteImport } from './routes/dev/incoming-call'
 import { Route as DevMilkSceneRouteImport } from './routes/dev/milk-scene'
@@ -90,6 +91,11 @@ const DevDoorSceneRoute = DevDoorSceneRouteImport.update({
 const DevFunnelRuntimeProofRoute = DevFunnelRuntimeProofRouteImport.update({
   id: '/funnel-runtime-proof',
   path: '/funnel-runtime-proof',
+  getParentRoute: () => DevRoute,
+} as any)
+const DevFunnelStudioRoute = DevFunnelStudioRouteImport.update({
+  id: '/funnel-studio',
+  path: '/funnel-studio',
   getParentRoute: () => DevRoute,
 } as any)
 const DevHusbandTalkRoute = DevHusbandTalkRouteImport.update({
@@ -184,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/dev/debug': typeof DevDebugRoute
   '/dev/door-scene': typeof DevDoorSceneRoute
   '/dev/funnel-runtime-proof': typeof DevFunnelRuntimeProofRoute
+  '/dev/funnel-studio': typeof DevFunnelStudioRoute
   '/dev/husband-talk': typeof DevHusbandTalkRoute
   '/dev/incoming-call': typeof DevIncomingCallRoute
   '/dev/milk-scene': typeof DevMilkSceneRoute
@@ -212,6 +219,7 @@ export interface FileRoutesByTo {
   '/dev/debug': typeof DevDebugRoute
   '/dev/door-scene': typeof DevDoorSceneRoute
   '/dev/funnel-runtime-proof': typeof DevFunnelRuntimeProofRoute
+  '/dev/funnel-studio': typeof DevFunnelStudioRoute
   '/dev/husband-talk': typeof DevHusbandTalkRoute
   '/dev/incoming-call': typeof DevIncomingCallRoute
   '/dev/milk-scene': typeof DevMilkSceneRoute
@@ -242,6 +250,7 @@ export interface FileRoutesById {
   '/dev/debug': typeof DevDebugRoute
   '/dev/door-scene': typeof DevDoorSceneRoute
   '/dev/funnel-runtime-proof': typeof DevFunnelRuntimeProofRoute
+  '/dev/funnel-studio': typeof DevFunnelStudioRoute
   '/dev/husband-talk': typeof DevHusbandTalkRoute
   '/dev/incoming-call': typeof DevIncomingCallRoute
   '/dev/milk-scene': typeof DevMilkSceneRoute
@@ -273,6 +282,7 @@ export interface FileRouteTypes {
     | '/dev/debug'
     | '/dev/door-scene'
     | '/dev/funnel-runtime-proof'
+    | '/dev/funnel-studio'
     | '/dev/husband-talk'
     | '/dev/incoming-call'
     | '/dev/milk-scene'
@@ -301,6 +311,7 @@ export interface FileRouteTypes {
     | '/dev/debug'
     | '/dev/door-scene'
     | '/dev/funnel-runtime-proof'
+    | '/dev/funnel-studio'
     | '/dev/husband-talk'
     | '/dev/incoming-call'
     | '/dev/milk-scene'
@@ -330,6 +341,7 @@ export interface FileRouteTypes {
     | '/dev/debug'
     | '/dev/door-scene'
     | '/dev/funnel-runtime-proof'
+    | '/dev/funnel-studio'
     | '/dev/husband-talk'
     | '/dev/incoming-call'
     | '/dev/milk-scene'
@@ -433,6 +445,13 @@ declare module '@tanstack/react-router' {
       path: '/funnel-runtime-proof'
       fullPath: '/dev/funnel-runtime-proof'
       preLoaderRoute: typeof DevFunnelRuntimeProofRouteImport
+      parentRoute: typeof DevRoute
+    }
+    '/dev/funnel-studio': {
+      id: '/dev/funnel-studio'
+      path: '/funnel-studio'
+      fullPath: '/dev/funnel-studio'
+      preLoaderRoute: typeof DevFunnelStudioRouteImport
       parentRoute: typeof DevRoute
     }
     '/dev/husband-talk': {
@@ -557,6 +576,7 @@ interface DevRouteChildren {
   DevDebugRoute: typeof DevDebugRoute
   DevDoorSceneRoute: typeof DevDoorSceneRoute
   DevFunnelRuntimeProofRoute: typeof DevFunnelRuntimeProofRoute
+  DevFunnelStudioRoute: typeof DevFunnelStudioRoute
   DevHusbandTalkRoute: typeof DevHusbandTalkRoute
   DevIncomingCallRoute: typeof DevIncomingCallRoute
   DevMilkSceneRoute: typeof DevMilkSceneRoute
@@ -583,6 +603,7 @@ const DevRouteChildren: DevRouteChildren = {
   DevDebugRoute: DevDebugRoute,
   DevDoorSceneRoute: DevDoorSceneRoute,
   DevFunnelRuntimeProofRoute: DevFunnelRuntimeProofRoute,
+  DevFunnelStudioRoute: DevFunnelStudioRoute,
   DevHusbandTalkRoute: DevHusbandTalkRoute,
   DevIncomingCallRoute: DevIncomingCallRoute,
   DevMilkSceneRoute: DevMilkSceneRoute,

@@ -28,6 +28,7 @@ function DevCentral() {
   ];
 
   const technicalTools = [
+    { path: "/dev/funnel-studio", label: "FUNNEL STUDIO — Construa cenas, eventos e interações visualmente." },
     { path: "/notas", label: "Bloco de Notas 📝" },
     { path: "/dev/timeline", label: "Timeline Engine" },
     { path: "/dev/scene", label: "Scene Engine" },
