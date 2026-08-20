@@ -8,7 +8,7 @@ export interface IncomingCallOverlayProps {
   open: boolean;
   callerName: string;
   callerSubtitle?: string;
-  callerAvatar?: string;
+  callerAvatar?: string | undefined;
   
   // Audio sources
   ringtoneSrc?: string | undefined;
