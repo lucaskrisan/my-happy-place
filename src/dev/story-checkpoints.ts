@@ -9,7 +9,8 @@ export type StoryCheckpoint =
   | 'scene03-start'
   | 'scene03-consequence'
   | 'scene03-quiz'
-  | 'future-marina-call-01';
+  | 'future-marina-call-01'
+  | 'scene05-mirror';
 
 export interface StoryStepMetadata {
   id: StoryCheckpoint;
@@ -99,6 +100,14 @@ export const STORY_MAP: StoryStepMetadata[] = [
     number: '11',
     title: 'MARINA DO FUTURO',
     description: 'Depois de responder sobre si mesma, a espectadora recebe a primeira ligação da Marina Renascida.',
+    status: 'PRONTO',
+    badges: ['NOVO', 'INTERAÇÃO'],
+  },
+  {
+    id: 'scene05-mirror',
+    number: '12',
+    title: 'O ESPELHO',
+    description: 'Marina recebe um elogio, se olha de novo e transforma o próprio reflexo numa inspeção.',
     status: 'PRONTO',
     badges: ['NOVO', 'INTERAÇÃO'],
   },

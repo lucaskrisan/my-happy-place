@@ -655,11 +655,16 @@ function DoorScenePreview() {
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
               <span className="text-zinc-500 block mb-1">Cena Atual</span>
               <span className="font-mono font-bold text-blue-400">
-                {sceneStep === "scene02" || sceneStep === "lucia-send-audio" ? "SCENE_02" : 
+                {sceneStep === "present" || sceneStep === "idle" ? "SCENE_01" : 
+                 sceneStep === "memory" ? "SCENE_01_B" : 
+                 sceneStep === "memory-door" ? "SCENE_01_C" :
+                 sceneStep === "pre-call" ? "SCENE_01_D" :
+                 sceneStep === "scene02" ? "SCENE_02" :
+                 sceneStep === "lucia-send-audio" ? "SCENE_02_LUCIA" :
                  sceneStep === "scene03" ? "SCENE_03" : 
-                  sceneStep === "scene03-consequence" ? "SCENE_03_CONSEQUENCE" : 
-                  sceneStep === "future-marina-precall" || sceneStep === "future-marina-call" ? "FUTURE_MARINA" : "SCENE_01"}
-
+                 sceneStep === "scene03-consequence" ? "SCENE_03_CONSEQUENCE" : 
+                 sceneStep === "future-marina-precall" || sceneStep === "future-marina-call" ? "FUTURE_MARINA" : 
+                 sceneStep === "scene05-mirror" ? "SCENE_05" : sceneStep}
               </span>
             </div>
             <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
