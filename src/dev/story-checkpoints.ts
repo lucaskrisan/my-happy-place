@@ -8,7 +8,8 @@ export type StoryCheckpoint =
   | 'whatsapp'
   | 'scene03-start'
   | 'scene03-consequence'
-  | 'scene03-quiz';
+  | 'scene03-quiz'
+  | 'future-marina-call-01';
 
 export interface StoryStepMetadata {
   id: StoryCheckpoint;
@@ -90,6 +91,14 @@ export const STORY_MAP: StoryStepMetadata[] = [
     number: '10',
     title: 'AGORA É SOBRE VOCÊ',
     description: 'A história para de perguntar apenas sobre Marina e começa a perguntar sobre a própria espectadora.',
+    status: 'PRONTO',
+    badges: ['NOVO', 'INTERAÇÃO'],
+  },
+  {
+    id: 'future-marina-call-01',
+    number: '11',
+    title: 'MARINA DO FUTURO',
+    description: 'Depois de responder sobre si mesma, a espectadora recebe a primeira ligação da Marina Renascida.',
     status: 'PRONTO',
     badges: ['NOVO', 'INTERAÇÃO'],
   },

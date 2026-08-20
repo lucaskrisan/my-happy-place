@@ -62,11 +62,13 @@ const SCENE_ASSETS: Asset[] = [
   { path: "/assets/scene-02/video/scene-02-lucia-send-audio.mp4", label: "scene-02-lucia-send-audio.mp4", type: 'video' },
   { path: scene03Asset.url, label: "scene-03-time-passage-first-pattern.mp4", type: 'video' },
   { path: scene03ConsequenceAsset.url, label: "scene-03-consequence-reaction.mp4", type: 'video' },
+  { path: "/assets/scene-04/video/scene-04-marina-future-call-intro-01.mp4", label: "scene-04-marina-future-call-intro-01.mp4", type: 'video' },
   { path: "/assets/scene-01/audio/ringtone.mp3", label: "ringtone.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/phone-vibration.mp3", label: "phone-vibration.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/call-connect.mp3", label: "call-connect.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/mother-call-01.mp3", label: "mother-call-01.mp3", type: 'audio' },
   { path: "/assets/scene-02/audio/mother-voice-once-01.mp3", label: "mother-voice-once-01.mp3", type: 'audio' },
+  { path: "/assets/scene-04/audio/marina-future-call-01.mp3", label: "marina-future-call-01.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/call-end.mp3", label: "call-end.mp3", type: 'audio' },
   { path: "/assets/scene-02/audio/notification.mp3", label: "notification.mp3", type: 'audio' },
   { path: "/assets/characters/lucia.webp", label: "lucia.webp", type: 'image' },
@@ -88,7 +90,7 @@ function DoorScenePreview() {
   const [duration, setDuration] = useState(0);
 
   // New Scene Logic States
-  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "memory-door" | "pre-call" | "call" | "scene02" | "lucia-send-audio" | "scene03" | "scene03-consequence" | "pattern-reveal-complete">("idle");
+  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "memory-door" | "pre-call" | "call" | "scene02" | "lucia-send-audio" | "scene03" | "scene03-consequence" | "future-marina-precall" | "future-marina-call" | "pattern-reveal-complete">("idle");
   const [isMessagingClosing, setIsMessagingClosing] = useState(false);
   const [showCopy, setShowCopy] = useState(false);
   const [isNotificationVisible, setIsNotificationVisible] = useState(false);
@@ -114,6 +116,7 @@ function DoorScenePreview() {
   const luciaSendAudioVideoRef = useRef<HTMLVideoElement>(null);
   const scene03VideoRef = useRef<HTMLVideoElement>(null);
   const scene03ConsequenceVideoRef = useRef<HTMLVideoElement>(null);
+  const futureMarinaPreCallVideoRef = useRef<HTMLVideoElement>(null);
 
   // Real detection of assets
   useEffect(() => {
@@ -153,7 +156,7 @@ function DoorScenePreview() {
       });
       setIsPlaying(true);
     }
-    [memoryVideoRef, memoryDoorVideoRef, preCallVideoRef, scene02VideoRef, luciaSendAudioVideoRef, scene03VideoRef, scene03ConsequenceVideoRef].forEach(ref => {
+    [memoryVideoRef, memoryDoorVideoRef, preCallVideoRef, scene02VideoRef, luciaSendAudioVideoRef, scene03VideoRef, scene03ConsequenceVideoRef, futureMarinaPreCallVideoRef].forEach(ref => {
       if (ref.current) {
         ref.current.currentTime = 0;
         ref.current.load();
@@ -312,6 +315,16 @@ function DoorScenePreview() {
             setIsScene03QuizOpen(true);
           }
           break;
+        
+        case 'future-marina-call-01':
+          setSceneStep("future-marina-precall");
+          if (futureMarinaPreCallVideoRef.current) {
+            await waitForMetadata(futureMarinaPreCallVideoRef.current);
+            futureMarinaPreCallVideoRef.current.currentTime = 0;
+            futureMarinaPreCallVideoRef.current.play();
+            setIsPlaying(true);
+          }
+          break;
       }
     };
 
@@ -357,6 +370,10 @@ function DoorScenePreview() {
         scene03QuizTriggeredRef.current = true;
         setIsScene03QuizOpen(true);
       }
+    } else if (sceneStep === "future-marina-precall") {
+      // Step Pre-call ended -> Open Call Overlay IMMEDIATELY
+      setSceneStep("future-marina-call");
+      setIsCallOpen(true);
     }
   };
 
@@ -368,6 +385,13 @@ function DoorScenePreview() {
 
   const handleCallEnd = () => {
     setIsCallOpen(false);
+    
+    if (sceneStep === "future-marina-call") {
+      // End of experience for now
+      setIsPlaying(false);
+      return;
+    }
+
     // Transição IMEDIATA para Cena 02
     setSceneStep("scene02");
     if (scene02VideoRef.current) {
@@ -384,6 +408,7 @@ function DoorScenePreview() {
       sceneStep === "lucia-send-audio" ? luciaSendAudioVideoRef.current :
       sceneStep === "scene03" ? scene03VideoRef.current :
       sceneStep === "scene03-consequence" ? scene03ConsequenceVideoRef.current :
+      sceneStep === "future-marina-precall" ? futureMarinaPreCallVideoRef.current :
       videoRef.current;
       
     if (activeVideo) {
@@ -448,6 +473,10 @@ function DoorScenePreview() {
       scene03ConsequenceVideoRef.current.currentTime = 0;
       scene03ConsequenceVideoRef.current.pause();
     }
+    if (futureMarinaPreCallVideoRef.current) {
+      futureMarinaPreCallVideoRef.current.currentTime = 0;
+      futureMarinaPreCallVideoRef.current.pause();
+    }
   };
 
   const handleTimeUpdate = () => {
@@ -459,6 +488,7 @@ function DoorScenePreview() {
       sceneStep === "lucia-send-audio" ? luciaSendAudioVideoRef.current :
       sceneStep === "scene03" ? scene03VideoRef.current :
       sceneStep === "scene03-consequence" ? scene03ConsequenceVideoRef.current :
+      sceneStep === "future-marina-precall" ? futureMarinaPreCallVideoRef.current :
       videoRef.current;
       
     if (activeVideo) {
@@ -499,6 +529,7 @@ function DoorScenePreview() {
       sceneStep === "lucia-send-audio" ? luciaSendAudioVideoRef.current :
       sceneStep === "scene03" ? scene03VideoRef.current :
       sceneStep === "scene03-consequence" ? scene03ConsequenceVideoRef.current :
+      sceneStep === "future-marina-precall" ? futureMarinaPreCallVideoRef.current :
       videoRef.current;
       
     if (activeVideo) {
@@ -516,6 +547,7 @@ function DoorScenePreview() {
       sceneStep === "lucia-send-audio" ? luciaSendAudioVideoRef.current :
       sceneStep === "scene03" ? scene03VideoRef.current :
       sceneStep === "scene03-consequence" ? scene03ConsequenceVideoRef.current :
+      sceneStep === "future-marina-precall" ? futureMarinaPreCallVideoRef.current :
       videoRef.current;
       
     if (activeVideo) {
@@ -582,7 +614,8 @@ function DoorScenePreview() {
               <span className="font-mono font-bold text-blue-400">
                 {sceneStep === "scene02" || sceneStep === "lucia-send-audio" ? "SCENE_02" : 
                  sceneStep === "scene03" ? "SCENE_03" : 
-                 sceneStep === "scene03-consequence" ? "SCENE_03_CONSEQUENCE" : "SCENE_01"}
+                  sceneStep === "scene03-consequence" ? "SCENE_03_CONSEQUENCE" : 
+                  sceneStep === "future-marina-precall" || sceneStep === "future-marina-call" ? "FUTURE_MARINA" : "SCENE_01"}
 
               </span>
             </div>
@@ -662,6 +695,15 @@ function DoorScenePreview() {
                 <Video className="w-3 h-3" /> Scene 03 Video
               </h3>
               {SCENE_ASSETS.filter(a => a.type === 'video' && a.path.includes('scene-03')).map(asset => (
+                <AssetRow key={asset.path} asset={asset} status={assetStatuses[asset.path] || 'loading'} />
+              ))}
+            </div>
+ 
+            <div className="space-y-2">
+              <h3 className="text-[9px] font-bold text-zinc-600 uppercase flex items-center gap-2">
+                <Video className="w-3 h-3" /> Scene 04 Video
+              </h3>
+              {SCENE_ASSETS.filter(a => a.type === 'video' && a.path.includes('scene-04')).map(asset => (
                 <AssetRow key={asset.path} asset={asset} status={assetStatuses[asset.path] || 'loading'} />
               ))}
             </div>
