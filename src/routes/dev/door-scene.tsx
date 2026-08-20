@@ -1077,9 +1077,15 @@ function DoorScenePreview() {
             closeBehavior="prevent"
             onComplete={(result) => {
               setScene03QuizResult(result);
-              // Wait 900ms for microfeedback then close
+              // Wait 900ms for microfeedback then close and start next video
               setTimeout(() => {
                 setIsScene03QuizOpen(false);
+                setSceneStep("future-marina-precall");
+                if (futureMarinaPreCallVideoRef.current) {
+                  futureMarinaPreCallVideoRef.current.currentTime = 0;
+                  futureMarinaPreCallVideoRef.current.play().catch(console.error);
+                  setIsPlaying(true);
+                }
               }, 900);
             }}
           />
