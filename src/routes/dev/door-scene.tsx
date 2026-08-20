@@ -853,6 +853,20 @@ function DoorScenePreview() {
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
               onEnded={handleVideoEnded}
+            <video
+              ref={futureMarinaPreCallVideoRef}
+              src="/assets/scene-04/video/scene-04-marina-future-call-intro-01.mp4"
+              playsInline
+              preload="auto"
+              className={cn(
+                "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
+                sceneStep === "future-marina-precall" ? "opacity-100 z-10" : "opacity-0 z-0"
+              )}
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onEnded={handleVideoEnded}
             />
 
             {/* Transition Copy Overlay */}
