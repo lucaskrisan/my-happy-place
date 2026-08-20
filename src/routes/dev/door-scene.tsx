@@ -31,6 +31,10 @@ import { cn } from "@/lib/utils";
  
 const LUCIA_AVATAR_URL =
   "https://res.cloudinary.com/duht4tq1f/image/upload/v1787083754/Woman_smiling_at_camera_2K_202608181701_y39jad.jpg";
+const FUTURE_MARINA_AVATAR_URL = 
+  "https://res.cloudinary.com/duht4tq1f/image/upload/v1787185689/marina_empres%C3%A1ria_kbotns.png";
+ 
+
  
 import { z } from "zod";
 
@@ -936,7 +940,8 @@ function DoorScenePreview() {
             <IncomingCallOverlay
               open={isCallOpen}
               callerName={sceneStep === "future-marina-call" ? "Marina" : "Mamãe"}
-              callerAvatar={sceneStep === "future-marina-call" ? undefined : LUCIA_AVATAR_URL}
+              callerAvatar={sceneStep === "future-marina-call" ? FUTURE_MARINA_AVATAR_URL : LUCIA_AVATAR_URL}
+
               callerSubtitle="Celular"
               ringtoneSrc={undefined} // No ringtone for Scene 01 as per requirement
               vibrationSrc={assetStatuses["/assets/scene-01/audio/phone-vibration.mp3"] === 'ready' ? "/assets/scene-01/audio/phone-vibration.mp3" : undefined}
