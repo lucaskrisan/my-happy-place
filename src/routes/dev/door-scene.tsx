@@ -408,6 +408,82 @@ function DoorScenePreview() {
     }
   };
 
+  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = e.currentTarget;
+    const activeVideo = 
+      sceneStep === "memory" ? memoryVideoRef.current : 
+      sceneStep === "memory-door" ? memoryDoorVideoRef.current :
+      sceneStep === "pre-call" ? preCallVideoRef.current :
+      sceneStep === "scene02" ? scene02VideoRef.current : 
+      sceneStep === "lucia-send-audio" ? luciaSendAudioVideoRef.current :
+      sceneStep === "scene03" ? scene03VideoRef.current :
+      sceneStep === "scene03-consequence" ? scene03ConsequenceVideoRef.current :
+      sceneStep === "future-marina-precall" ? futureMarinaPreCallVideoRef.current :
+      sceneStep === "scene05-mirror" ? scene05MirrorVideoRef.current :
+      videoRef.current;
+      
+    if (video === activeVideo) {
+      setCurrentTime(video.currentTime);
+      
+      // Trigger scene 02 notification at 2 seconds before end
+      if (sceneStep === "scene02" && !scene02NotificationTriggeredRef.current) {
+        if (video.duration > 0 && video.currentTime >= video.duration - 2) {
+          scene02NotificationTriggeredRef.current = true;
+          setIsNotificationVisible(true);
+        }
+      }
+
+      // Trigger scene 02 quiz at 19 seconds
+      if (sceneStep === "scene02" && !scene02QuizTriggeredRef.current) {
+        if (video.currentTime >= 19.0) {
+          scene02QuizTriggeredRef.current = true;
+          video.pause();
+          setIsPlaying(false);
+          setIsPredictionQuizOpen(true);
+        }
+      }
+    }
+  };
+
+  const handleLoadedMetadata = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = e.currentTarget;
+    const activeVideo = 
+      sceneStep === "memory" ? memoryVideoRef.current : 
+      sceneStep === "memory-door" ? memoryDoorVideoRef.current :
+      sceneStep === "pre-call" ? preCallVideoRef.current :
+      sceneStep === "scene02" ? scene02VideoRef.current : 
+      sceneStep === "lucia-send-audio" ? luciaSendAudioVideoRef.current :
+      sceneStep === "scene03" ? scene03VideoRef.current :
+      sceneStep === "scene03-consequence" ? scene03ConsequenceVideoRef.current :
+      sceneStep === "future-marina-precall" ? futureMarinaPreCallVideoRef.current :
+      sceneStep === "scene05-mirror" ? scene05MirrorVideoRef.current :
+      videoRef.current;
+
+    if (video === activeVideo) {
+      setDuration(video.duration);
+    }
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = parseFloat(e.target.value);
+    const activeVideo = 
+      sceneStep === "memory" ? memoryVideoRef.current : 
+      sceneStep === "memory-door" ? memoryDoorVideoRef.current :
+      sceneStep === "pre-call" ? preCallVideoRef.current :
+      sceneStep === "scene02" ? scene02VideoRef.current : 
+      sceneStep === "lucia-send-audio" ? luciaSendAudioVideoRef.current :
+      sceneStep === "scene03" ? scene03VideoRef.current :
+      sceneStep === "scene03-consequence" ? scene03ConsequenceVideoRef.current :
+      sceneStep === "future-marina-precall" ? futureMarinaPreCallVideoRef.current :
+      sceneStep === "scene05-mirror" ? scene05MirrorVideoRef.current :
+      videoRef.current;
+      
+    if (activeVideo) {
+      activeVideo.currentTime = time;
+      setCurrentTime(time);
+    }
+  };
+
   const handleContinue = () => {
     setShowCopy(false);
     setSceneStep("call");
@@ -1160,12 +1236,15 @@ function DoorScenePreview() {
                 }
               }, 900);
             }}
+          />
+
           <QuizOverlay
             open={isScene05QuizOpen}
             variant="immersive"
             definition={{
               id: "scene-05-mirror-quiz",
               title: "AGORA OLHA PRA VOCÊ",
+              completionLabel: "Você não respondeu sobre beleza. Respondeu sobre como você se olha.",
               feedbackMode: "none",
               showProgress: false,
               questions: [
@@ -1173,10 +1252,10 @@ function DoorScenePreview() {
                   id: "q-mirror-01",
                   title: "Quando você se vê numa foto ou no espelho, o que seu olho procura primeiro?",
                   options: [
-                    { id: "opt-1", label: "\"Vai direto pro que eu queria mudar.\"", value: "appearance_criticism", tags: ["appearance_criticism"] },
-                    { id: "opt-2", label: "\"Eu comparo com uma versão de mim que parece sempre melhor.\"", value: "comparison", tags: ["comparison"] },
-                    { id: "opt-3", label: "\"Se alguém diz que eu tô bonita, uma parte de mim acha que a pessoa não tá vendo direito.\"", value: "compliment_rejection", tags: ["compliment_rejection"] },
-                    { id: "opt-4", label: "\"Consigo me olhar sem transformar meu corpo numa lista de correções.\"", value: "neutral_self_view", tags: ["neutral_self_view"] }
+                    { id: "opt-1", label: "Vai direto pro que eu queria mudar.", value: "appearance_criticism", tags: ["appearance_criticism"] },
+                    { id: "opt-2", label: "Eu comparo com uma versão de mim que parece sempre melhor.", value: "comparison", tags: ["comparison"] },
+                    { id: "opt-3", label: "Se alguém diz que eu tô bonita, uma parte de mim acha que a pessoa não tá vendo direito.", value: "compliment_rejection", tags: ["compliment_rejection"] },
+                    { id: "opt-4", label: "Consigo me olhar sem transformar meu corpo numa lista de correções.", value: "neutral_self_view", tags: ["neutral_self_view"] }
                   ]
                 }
               ]
