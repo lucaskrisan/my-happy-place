@@ -853,6 +853,7 @@ function DoorScenePreview() {
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
               onEnded={handleVideoEnded}
+            />
             <video
               ref={futureMarinaPreCallVideoRef}
               src="/assets/scene-04/video/scene-04-marina-future-call-intro-01.mp4"
