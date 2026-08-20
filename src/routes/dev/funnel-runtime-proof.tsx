@@ -1,0 +1,23 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { VideoStage } from '@/components/dev/VideoStage';
+import { QuizOverlay } from '@/components/dev/QuizOverlay';
+import { NotificationOverlay } from '@/components/dev/NotificationOverlay';
+import { MessagingOverlay } from '@/components/dev/MessagingOverlay';
+import { IncomingCallOverlay } from '@/components/dev/IncomingCallOverlay';
+import { marinaProofFunnel } from '@/funnel/definitions/marinaProofs';
+import { FunnelRuntime, type RuntimeSnapshot } from '@/funnel/runtime/funnelRuntime';
+export const Route = createFileRoute('/dev/funnel-runtime-proof')({ component: FunnelRuntimeProof });
+function FunnelRuntimeProof() {
+ const [proof,setProof]=useState<'dinner'|'future'>('dinner'); const runtime=useMemo(()=>new FunnelRuntime(marinaProofFunnel),[]); const [snapshot,setSnapshot]=useState<RuntimeSnapshot>(()=>runtime.snapshot()); const videoRef=useRef<HTMLVideoElement>(null);
+ useEffect(()=>runtime.subscribe(setSnapshot),[runtime]); useEffect(()=>{ runtime.enterScene(proof==='dinner'?'scene-02-dinner':'scene-04-future'); },[proof,runtime]);
+ const scene=marinaProofFunnel.scenes.find(s=>s.id===snapshot.sceneId)!; const asset=marinaProofFunnel.assets.find(a=>a.id===scene.videoAssetId); const active=snapshot.activeInteraction?.sourceEventId;
+ const complete=(id:string)=>runtime.completeInteraction(id,snapshot.runId); const videoPlay=()=>videoRef.current?.play().catch(()=>runtime.reportMediaError('scene-video','autoplay',scene.videoAssetId,snapshot.runId));
+ useEffect(()=>{ if(snapshot.mediaState==='playing') videoPlay(); if(snapshot.mediaState==='paused') videoRef.current?.pause(); },[snapshot.mediaState]);
+ return <main className="min-h-screen bg-zinc-950 text-white p-5 md:p-8"><div className="mx-auto max-w-5xl grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]"><section><div className="flex gap-2 mb-4"><button className="px-3 py-2 bg-zinc-800 rounded" onClick={()=>setProof('dinner')}>PROVA JANTAR</button><button className="px-3 py-2 bg-zinc-800 rounded" onClick={()=>setProof('future')}>PROVA MARINA FUTURA</button><button className="px-3 py-2 bg-blue-600 rounded" onClick={()=>runtime.reset()}>REPLAY</button></div><div className="relative aspect-[9/16] max-h-[75vh] bg-black mx-auto overflow-hidden"><VideoStage ref={videoRef} src={asset?.source==='permanent'?asset.url:''} autoPlay onReady={v=>runtime.setDuration(v.duration,snapshot.runId)} onTimeUpdate={t=>runtime.updateTime(t,snapshot.runId)} onEnded={()=>runtime.mediaEnded(snapshot.runId)} /></div></section><aside className="bg-zinc-900 rounded p-4 overflow-auto max-h-[75vh]"><h1 className="font-bold mb-3">Funnel Runtime Proof</h1><pre className="text-[10px] whitespace-pre-wrap">{JSON.stringify(snapshot,null,2)}</pre></aside></div>
+ <QuizOverlay open={active==='dinner-quiz-event'} variant="immersive" definition={{id:'dinner-quiz-event',title:'O que Marina faz agora?',questions:[{id:'prediction',title:'Escolha',options:[{id:'ask',label:'Perguntar de novo'},{id:'apologize',label:'Pedir desculpa'}]}]}} onComplete={()=>complete('dinner-quiz-event')} closeBehavior="prevent" />
+ <NotificationOverlay open={snapshot.events['dinner-notification-event']==='completed' && !active} appName="Mensagens" senderName="Mamãe" message="Preciso te mandar uma coisa." autoDismiss={false} onTap={()=>runtime.execute([{type:'OPEN_EVENT',eventId:'dinner-messaging-event'}],'dinner-notification-event',snapshot.runId)} onDismiss={()=>runtime.execute([{type:'RESUME_VIDEO'}],'dinner-notification-event-dismiss',snapshot.runId)} />
+ <MessagingOverlay open={active==='dinner-messaging-event'} contactName="Mamãe" messages={[{id:'lucia-audio',type:'voice_once',sender:'contact',audioSrc:'/assets/scene-02/audio/mother-voice-once-01.mp3'}]} onComplete={()=>complete('dinner-messaging-event')} onClose={()=>complete('dinner-messaging-event')} />
+ <IncomingCallOverlay open={active==='future-call-event'} callerName="Marina" callerSubtitle="Marina do futuro" connectSfxSrc="/assets/scene-01/audio/call-connect.mp3" voiceAudioSrc="/assets/scene-04/audio/marina-future-call-01.mp3" endSfxSrc="/assets/scene-01/audio/call-end.mp3" onAccept={()=>runtime.execute([{type:'PAUSE_VIDEO'}],'future-call-accept',snapshot.runId)} onDecline={()=>{runtime.execute([{type:'GO_TO_SCENE',sceneId:'scene-05-mirror'}],'future-call-decline',snapshot.runId);complete('future-call-event')}} onEnd={()=>{complete('future-call-event');runtime.execute([{type:'GO_TO_SCENE',sceneId:'scene-05-mirror'}],'future-call-end',snapshot.runId)}} />
+ </main>;
+}

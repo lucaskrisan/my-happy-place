@@ -50,7 +50,8 @@ export const NotificationOverlay: React.FC<NotificationOverlayProps> = ({
   const enteringTimerRef = useRef<NodeJS.Timeout | null>(null);
   const dragStartY = useRef<number | null>(null);
   const isDragging = useRef(false);
-  const previousOpenRef = useRef(open);
+  // Start closed so an initial mount with open=true follows the same lifecycle.
+  const previousOpenRef = useRef(false);
 
   const updateState = useCallback((newState: NotificationState) => {
     setState(newState);
