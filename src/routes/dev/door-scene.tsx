@@ -940,7 +940,8 @@ function DoorScenePreview() {
             <IncomingCallOverlay
               open={isCallOpen}
               callerName={sceneStep === "future-marina-call" ? "Marina" : "Mamãe"}
-              callerAvatar={sceneStep === "future-marina-call" ? undefined : LUCIA_AVATAR_URL}
+              callerAvatar={sceneStep === "future-marina-call" ? FUTURE_MARINA_AVATAR_URL : LUCIA_AVATAR_URL}
+
               callerSubtitle="Celular"
               ringtoneSrc={undefined} // No ringtone for Scene 01 as per requirement
               vibrationSrc={assetStatuses["/assets/scene-01/audio/phone-vibration.mp3"] === 'ready' ? "/assets/scene-01/audio/phone-vibration.mp3" : undefined}
