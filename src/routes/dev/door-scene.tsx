@@ -935,13 +935,17 @@ function DoorScenePreview() {
             {/* Interaction Overlay */}
             <IncomingCallOverlay
               open={isCallOpen}
-              callerName="Mamãe"
-              callerAvatar={LUCIA_AVATAR_URL}
+              callerName={sceneStep === "future-marina-call" ? "Marina" : "Mamãe"}
+              callerAvatar={sceneStep === "future-marina-call" ? undefined : LUCIA_AVATAR_URL}
               callerSubtitle="Celular"
               ringtoneSrc={undefined} // No ringtone for Scene 01 as per requirement
               vibrationSrc={assetStatuses["/assets/scene-01/audio/phone-vibration.mp3"] === 'ready' ? "/assets/scene-01/audio/phone-vibration.mp3" : undefined}
               connectSfxSrc={assetStatuses["/assets/scene-01/audio/call-connect.mp3"] === 'ready' ? "/assets/scene-01/audio/call-connect.mp3" : undefined}
-              voiceAudioSrc={assetStatuses["/assets/scene-01/audio/mother-call-01.mp3"] === 'ready' ? "/assets/scene-01/audio/mother-call-01.mp3" : undefined}
+              voiceAudioSrc={
+                sceneStep === "future-marina-call" 
+                  ? (assetStatuses["/assets/scene-04/audio/marina-future-call-01.mp3"] === 'ready' ? "/assets/scene-04/audio/marina-future-call-01.mp3" : undefined)
+                  : (assetStatuses["/assets/scene-01/audio/mother-call-01.mp3"] === 'ready' ? "/assets/scene-01/audio/mother-call-01.mp3" : undefined)
+              }
               endSfxSrc={assetStatuses["/assets/scene-01/audio/call-end.mp3"] === 'ready' ? "/assets/scene-01/audio/call-end.mp3" : undefined}
               onStateChange={setCallState}
               onDecline={() => setIsCallOpen(false)}
