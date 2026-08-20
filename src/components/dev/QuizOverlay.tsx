@@ -311,7 +311,7 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
                       transition={{ delay: 0.2 }}
                       className="text-white/80 text-[15px] md:text-lg font-medium italic"
                     >
-                      "Guarda essa resposta. Ela vai voltar mais tarde."
+                      {definition.completionLabel || "Guarda essa resposta. Ela vai voltar mais tarde."}
                     </motion.p>
                   </motion.div>
                 ) : currentQuestion ? (
@@ -331,7 +331,7 @@ export const QuizOverlay: React.FC<QuizOverlayProps> = ({
                     <div className={isVisualLayered ? "mb-6" : "mb-10"}>
                       {isVisualLayered && (definition.title || isImmersive) && (
                         <span className="text-[10px] font-medium tracking-[0.4em] text-white/50 uppercase block mb-3">
-                          {isImmersive ? "AGORA É SOBRE VOCÊ" : (definition.title || 'QUIZ')}
+                          {isImmersive ? (definition.title || "AGORA É SOBRE VOCÊ") : (definition.title || 'QUIZ')}
                         </span>
                       )}
                       <h2 className={cn(
