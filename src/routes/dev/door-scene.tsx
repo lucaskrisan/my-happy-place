@@ -8,6 +8,7 @@ import { MessagingOverlay } from "@/components/dev/MessagingOverlay";
 import scene02DinnerAsset from "@/assets/scene-02/video/scene-02-dinner.mp4.asset.json";
 import scene03Asset from "@/assets/scene-03/video/scene-03.mp4.asset.json";
 import scene03ConsequenceAsset from "@/assets/scene-03/video/scene-03-consequence-reaction.mp4.asset.json";
+import scene05MirrorAsset from "@/assets/scene-05/video/scene-05-mirror-self-criticism.mp4.asset.json";
 import { QuizOverlay } from "@/components/dev/QuizOverlay";
 import { QuizDefinition, QuizResult } from "@/types/quiz";
 import { STORY_MAP } from "@/dev/story-checkpoints";
@@ -67,6 +68,7 @@ const SCENE_ASSETS: Asset[] = [
   { path: scene03Asset.url, label: "scene-03-time-passage-first-pattern.mp4", type: 'video' },
   { path: scene03ConsequenceAsset.url, label: "scene-03-consequence-reaction.mp4", type: 'video' },
   { path: "/assets/scene-04/video/scene-04-marina-future-call-intro-01.mp4", label: "scene-04-marina-future-call-intro-01.mp4", type: 'video' },
+  { path: scene05MirrorAsset.url, label: "scene-05-mirror-self-criticism.mp4", type: 'video' },
   { path: "/assets/scene-01/audio/ringtone.mp3", label: "ringtone.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/phone-vibration.mp3", label: "phone-vibration.mp3", type: 'audio' },
   { path: "/assets/scene-01/audio/call-connect.mp3", label: "call-connect.mp3", type: 'audio' },
@@ -94,7 +96,7 @@ function DoorScenePreview() {
   const [duration, setDuration] = useState(0);
 
   // New Scene Logic States
-  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "memory-door" | "pre-call" | "call" | "scene02" | "lucia-send-audio" | "scene03" | "scene03-consequence" | "future-marina-precall" | "future-marina-call" | "pattern-reveal-complete">("idle");
+  const [sceneStep, setSceneStep] = useState<"idle" | "present" | "memory" | "memory-door" | "pre-call" | "call" | "scene02" | "lucia-send-audio" | "scene03" | "scene03-consequence" | "future-marina-precall" | "future-marina-call" | "scene05-mirror" | "pattern-reveal-complete">("idle");
   const [isMessagingClosing, setIsMessagingClosing] = useState(false);
   const [showCopy, setShowCopy] = useState(false);
   const [isNotificationVisible, setIsNotificationVisible] = useState(false);
@@ -103,13 +105,16 @@ function DoorScenePreview() {
   // Quiz States
   const [isPredictionQuizOpen, setIsPredictionQuizOpen] = useState(false);
   const [isScene03QuizOpen, setIsScene03QuizOpen] = useState(false);
+  const [isScene05QuizOpen, setIsScene05QuizOpen] = useState(false);
   const [quizChoice, setQuizChoice] = useState<QuizResult | null>(null);
   const [scene03QuizResult, setScene03QuizResult] = useState<QuizResult | null>(null);
+  const [scene05MirrorQuizResult, setScene05MirrorQuizResult] = useState<QuizResult | null>(null);
   
   const scene02NotificationTriggeredRef = useRef(false);
   const scene02QuizTriggeredRef = useRef(false);
   const scene03TriggeredRef = useRef(false);
   const scene03QuizTriggeredRef = useRef(false);
+  const scene05MirrorQuizTriggeredRef = useRef(false);
   const narrativeTimersRef = useRef<number[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -121,6 +126,7 @@ function DoorScenePreview() {
   const scene03VideoRef = useRef<HTMLVideoElement>(null);
   const scene03ConsequenceVideoRef = useRef<HTMLVideoElement>(null);
   const futureMarinaPreCallVideoRef = useRef<HTMLVideoElement>(null);
+  const scene05MirrorVideoRef = useRef<HTMLVideoElement>(null);
 
   // Real detection of assets
   useEffect(() => {
@@ -160,7 +166,7 @@ function DoorScenePreview() {
       });
       setIsPlaying(true);
     }
-    [memoryVideoRef, memoryDoorVideoRef, preCallVideoRef, scene02VideoRef, luciaSendAudioVideoRef, scene03VideoRef, scene03ConsequenceVideoRef, futureMarinaPreCallVideoRef].forEach(ref => {
+    [memoryVideoRef, memoryDoorVideoRef, preCallVideoRef, scene02VideoRef, luciaSendAudioVideoRef, scene03VideoRef, scene03ConsequenceVideoRef, futureMarinaPreCallVideoRef, scene05MirrorVideoRef].forEach(ref => {
       if (ref.current) {
         ref.current.currentTime = 0;
         ref.current.load();
@@ -170,10 +176,13 @@ function DoorScenePreview() {
     scene02QuizTriggeredRef.current = false;
     scene03TriggeredRef.current = false;
     scene03QuizTriggeredRef.current = false;
+    scene05MirrorQuizTriggeredRef.current = false;
     setIsPredictionQuizOpen(false);
     setIsScene03QuizOpen(false);
+    setIsScene05QuizOpen(false);
     setQuizChoice(null);
     setScene03QuizResult(null);
+    setScene05MirrorQuizResult(null);
     setIsMessagingClosing(false);
     narrativeTimersRef.current.forEach(clearTimeout);
     narrativeTimersRef.current = [];
@@ -206,10 +215,12 @@ function DoorScenePreview() {
         setIsMessagingOpen(false);
         setIsPredictionQuizOpen(false);
         setIsScene03QuizOpen(false);
+        setIsScene05QuizOpen(false);
         scene02NotificationTriggeredRef.current = false;
         scene02QuizTriggeredRef.current = false;
         scene03TriggeredRef.current = false;
         scene03QuizTriggeredRef.current = false;
+        scene05MirrorQuizTriggeredRef.current = false;
         narrativeTimersRef.current.forEach(clearTimeout);
         narrativeTimersRef.current = [];
       };
@@ -329,6 +340,16 @@ function DoorScenePreview() {
             setIsPlaying(true);
           }
           break;
+
+        case 'scene05-mirror':
+          setSceneStep("scene05-mirror");
+          if (scene05MirrorVideoRef.current) {
+            await waitForMetadata(scene05MirrorVideoRef.current);
+            scene05MirrorVideoRef.current.currentTime = 0;
+            scene05MirrorVideoRef.current.play();
+            setIsPlaying(true);
+          }
+          break;
       }
     };
 
@@ -378,6 +399,12 @@ function DoorScenePreview() {
       // Step Pre-call ended -> Open Call Overlay IMMEDIATELY
       setSceneStep("future-marina-call");
       setIsCallOpen(true);
+    } else if (sceneStep === "scene05-mirror") {
+      setIsPlaying(false);
+      if (!scene05MirrorQuizTriggeredRef.current) {
+        scene05MirrorQuizTriggeredRef.current = true;
+        setIsScene05QuizOpen(true);
+      }
     }
   };
 
@@ -391,8 +418,13 @@ function DoorScenePreview() {
     setIsCallOpen(false);
     
     if (sceneStep === "future-marina-call") {
-      // End of experience for now
-      setIsPlaying(false);
+      // Start Scene 05 mirror video
+      setSceneStep("scene05-mirror");
+      if (scene05MirrorVideoRef.current) {
+        scene05MirrorVideoRef.current.currentTime = 0;
+        scene05MirrorVideoRef.current.play().catch(console.error);
+        setIsPlaying(true);
+      }
       return;
     }
 
@@ -435,12 +467,15 @@ function DoorScenePreview() {
     setIsMessagingClosing(false);
     setIsPredictionQuizOpen(false);
     setIsScene03QuizOpen(false);
+    setIsScene05QuizOpen(false);
     setQuizChoice(null);
     setScene03QuizResult(null);
+    setScene05MirrorQuizResult(null);
     scene02NotificationTriggeredRef.current = false;
     scene02QuizTriggeredRef.current = false;
     scene03TriggeredRef.current = false;
     scene03QuizTriggeredRef.current = false;
+    scene05MirrorQuizTriggeredRef.current = false;
 
     narrativeTimersRef.current.forEach(clearTimeout);
     narrativeTimersRef.current = [];
@@ -464,6 +499,10 @@ function DoorScenePreview() {
     if (scene02VideoRef.current) {
       scene02VideoRef.current.currentTime = 0;
       scene02VideoRef.current.pause();
+    }
+    if (scene05MirrorVideoRef.current) {
+      scene05MirrorVideoRef.current.currentTime = 0;
+      scene05MirrorVideoRef.current.pause();
     }
     if (luciaSendAudioVideoRef.current) {
       luciaSendAudioVideoRef.current.currentTime = 0;
@@ -711,6 +750,15 @@ function DoorScenePreview() {
                 <AssetRow key={asset.path} asset={asset} status={assetStatuses[asset.path] || 'loading'} />
               ))}
             </div>
+ 
+            <div className="space-y-2">
+              <h3 className="text-[9px] font-bold text-zinc-600 uppercase flex items-center gap-2">
+                <Video className="w-3 h-3" /> Scene 05 Video
+              </h3>
+              {SCENE_ASSETS.filter(a => a.type === 'video' && a.path.includes('scene-05')).map(asset => (
+                <AssetRow key={asset.path} asset={asset} status={assetStatuses[asset.path] || 'loading'} />
+              ))}
+            </div>
 
             <div className="space-y-2">
               <h3 className="text-[9px] font-bold text-zinc-600 uppercase flex items-center gap-2">
@@ -866,6 +914,21 @@ function DoorScenePreview() {
               className={cn(
                 "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
                 sceneStep === "future-marina-precall" ? "opacity-100 z-10" : "opacity-0 z-0"
+              )}
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onEnded={handleVideoEnded}
+            />
+            <video
+              ref={scene05MirrorVideoRef}
+              src={scene05MirrorAsset.url}
+              playsInline
+              preload="auto"
+              className={cn(
+                "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
+                sceneStep === "scene05-mirror" ? "opacity-100 z-10" : "opacity-0 z-0"
               )}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
@@ -1095,6 +1158,35 @@ function DoorScenePreview() {
                   futureMarinaPreCallVideoRef.current.play().catch(console.error);
                   setIsPlaying(true);
                 }
+              }, 900);
+            }}
+          <QuizOverlay
+            open={isScene05QuizOpen}
+            variant="immersive"
+            definition={{
+              id: "scene-05-mirror-quiz",
+              title: "AGORA OLHA PRA VOCÊ",
+              feedbackMode: "none",
+              showProgress: false,
+              questions: [
+                {
+                  id: "q-mirror-01",
+                  title: "Quando você se vê numa foto ou no espelho, o que seu olho procura primeiro?",
+                  options: [
+                    { id: "opt-1", label: "\"Vai direto pro que eu queria mudar.\"", value: "appearance_criticism", tags: ["appearance_criticism"] },
+                    { id: "opt-2", label: "\"Eu comparo com uma versão de mim que parece sempre melhor.\"", value: "comparison", tags: ["comparison"] },
+                    { id: "opt-3", label: "\"Se alguém diz que eu tô bonita, uma parte de mim acha que a pessoa não tá vendo direito.\"", value: "compliment_rejection", tags: ["compliment_rejection"] },
+                    { id: "opt-4", label: "\"Consigo me olhar sem transformar meu corpo numa lista de correções.\"", value: "neutral_self_view", tags: ["neutral_self_view"] }
+                  ]
+                }
+              ]
+            }}
+            closeBehavior="prevent"
+            onComplete={(result) => {
+              setScene05MirrorQuizResult(result);
+              // Wait 900ms for microfeedback then close
+              setTimeout(() => {
+                setIsScene05QuizOpen(false);
               }, 900);
             }}
           />
