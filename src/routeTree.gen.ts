@@ -29,6 +29,7 @@ import { Route as DevNotesRouteImport } from './routes/dev/notes'
 import { Route as DevNotificationRouteImport } from './routes/dev/notification'
 import { Route as DevPreloaderRouteImport } from './routes/dev/preloader'
 import { Route as DevQuizRouteImport } from './routes/dev/quiz'
+import { Route as DevR2UploadProofRouteImport } from './routes/dev/r2-upload-proof'
 import { Route as DevRecordRouteImport } from './routes/dev/record'
 import { Route as DevSceneRouteImport } from './routes/dev/scene'
 import { Route as DevSecretWhatsappRouteImport } from './routes/dev/secret-whatsapp'
@@ -138,6 +139,11 @@ const DevQuizRoute = DevQuizRouteImport.update({
   path: '/quiz',
   getParentRoute: () => DevRoute,
 } as any)
+const DevR2UploadProofRoute = DevR2UploadProofRouteImport.update({
+  id: '/r2-upload-proof',
+  path: '/r2-upload-proof',
+  getParentRoute: () => DevRoute,
+} as any)
 const DevRecordRoute = DevRecordRouteImport.update({
   id: '/record',
   path: '/record',
@@ -199,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/dev/notification': typeof DevNotificationRoute
   '/dev/preloader': typeof DevPreloaderRoute
   '/dev/quiz': typeof DevQuizRoute
+  '/dev/r2-upload-proof': typeof DevR2UploadProofRoute
   '/dev/record': typeof DevRecordRoute
   '/dev/scene': typeof DevSceneRoute
   '/dev/secret-whatsapp': typeof DevSecretWhatsappRoute
@@ -228,6 +235,7 @@ export interface FileRoutesByTo {
   '/dev/notification': typeof DevNotificationRoute
   '/dev/preloader': typeof DevPreloaderRoute
   '/dev/quiz': typeof DevQuizRoute
+  '/dev/r2-upload-proof': typeof DevR2UploadProofRoute
   '/dev/record': typeof DevRecordRoute
   '/dev/scene': typeof DevSceneRoute
   '/dev/secret-whatsapp': typeof DevSecretWhatsappRoute
@@ -259,6 +267,7 @@ export interface FileRoutesById {
   '/dev/notification': typeof DevNotificationRoute
   '/dev/preloader': typeof DevPreloaderRoute
   '/dev/quiz': typeof DevQuizRoute
+  '/dev/r2-upload-proof': typeof DevR2UploadProofRoute
   '/dev/record': typeof DevRecordRoute
   '/dev/scene': typeof DevSceneRoute
   '/dev/secret-whatsapp': typeof DevSecretWhatsappRoute
@@ -291,6 +300,7 @@ export interface FileRouteTypes {
     | '/dev/notification'
     | '/dev/preloader'
     | '/dev/quiz'
+    | '/dev/r2-upload-proof'
     | '/dev/record'
     | '/dev/scene'
     | '/dev/secret-whatsapp'
@@ -320,6 +330,7 @@ export interface FileRouteTypes {
     | '/dev/notification'
     | '/dev/preloader'
     | '/dev/quiz'
+    | '/dev/r2-upload-proof'
     | '/dev/record'
     | '/dev/scene'
     | '/dev/secret-whatsapp'
@@ -350,6 +361,7 @@ export interface FileRouteTypes {
     | '/dev/notification'
     | '/dev/preloader'
     | '/dev/quiz'
+    | '/dev/r2-upload-proof'
     | '/dev/record'
     | '/dev/scene'
     | '/dev/secret-whatsapp'
@@ -510,6 +522,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevQuizRouteImport
       parentRoute: typeof DevRoute
     }
+    '/dev/r2-upload-proof': {
+      id: '/dev/r2-upload-proof'
+      path: '/r2-upload-proof'
+      fullPath: '/dev/r2-upload-proof'
+      preLoaderRoute: typeof DevR2UploadProofRouteImport
+      parentRoute: typeof DevRoute
+    }
     '/dev/record': {
       id: '/dev/record'
       path: '/record'
@@ -585,6 +604,7 @@ interface DevRouteChildren {
   DevNotificationRoute: typeof DevNotificationRoute
   DevPreloaderRoute: typeof DevPreloaderRoute
   DevQuizRoute: typeof DevQuizRoute
+  DevR2UploadProofRoute: typeof DevR2UploadProofRoute
   DevRecordRoute: typeof DevRecordRoute
   DevSceneRoute: typeof DevSceneRoute
   DevSecretWhatsappRoute: typeof DevSecretWhatsappRoute
@@ -612,6 +632,7 @@ const DevRouteChildren: DevRouteChildren = {
   DevNotificationRoute: DevNotificationRoute,
   DevPreloaderRoute: DevPreloaderRoute,
   DevQuizRoute: DevQuizRoute,
+  DevR2UploadProofRoute: DevR2UploadProofRoute,
   DevRecordRoute: DevRecordRoute,
   DevSceneRoute: DevSceneRoute,
   DevSecretWhatsappRoute: DevSecretWhatsappRoute,

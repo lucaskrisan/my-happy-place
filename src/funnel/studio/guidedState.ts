@@ -46,11 +46,32 @@ export function markSceneTested(funnel: FunnelDefinition, sceneId: string): Funn
   };
 }
 export function invalidateStructuralTests(previous: FunnelDefinition, next: FunnelDefinition): FunnelDefinition {
+  const runtimeAsset = (asset: FunnelDefinition["assets"][number] | undefined) =>
+    asset?.source === "permanent"
+      ? `${asset.source}:${asset.url}`
+      : `${asset?.source}:${asset?.objectUrl ?? asset?.status ?? ""}`;
+  const changedAssetIds = new Set(
+    next.assets
+      .filter((asset) => runtimeAsset(asset) !== runtimeAsset(previous.assets.find((item) => item.id === asset.id)))
+      .map((asset) => asset.id),
+  );
+  const sceneAssetIds = (scene: SceneDefinition) => [
+    scene.videoAssetId,
+    scene.posterAssetId,
+    ...scene.events.flatMap((event) => {
+      if (event.block === "audio" || event.block === "video") return [event.assetId];
+      if (event.block === "incoming_call") return [event.avatarAssetId, event.ringtoneAssetId, event.vibrationAssetId, event.connectSfxAssetId, event.voiceAssetId, event.endSfxAssetId];
+      if (event.block === "notification") return [event.avatarAssetId, event.soundAssetId];
+      if (event.block === "messaging") return [event.avatarAssetId, ...event.messages.map((message) => message.audioAssetId)];
+      return [];
+    }),
+  ];
   return {
     ...next,
     scenes: next.scenes.map((scene) => {
       const before = previous.scenes.find((item) => item.id === scene.id);
-      if (!before || sceneStructuralFingerprint(before) === sceneStructuralFingerprint(scene)) return scene;
+      const assetChanged = sceneAssetIds(scene).some((assetId) => assetId && changedAssetIds.has(assetId));
+      if (!before || (!assetChanged && sceneStructuralFingerprint(before) === sceneStructuralFingerprint(scene))) return scene;
       return { ...scene, guided: { ...scene.guided, tested: false, testedAt: undefined, testedFingerprint: undefined } };
     }),
   };

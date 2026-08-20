@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { isStudioMediaType, STUDIO_MEDIA_TYPES } from "./funnel/assets/mediaPolicy";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -28,10 +29,34 @@ type FunnelMediaBucket = {
     options?: { range: { offset: number; length?: number } },
   ) => Promise<R2Object | null>;
   head: (key: string) => Promise<R2ObjectHead | null>;
+  put: (
+    key: string,
+    body: ReadableStream,
+    options: {
+      httpMetadata: { contentType: string; cacheControl: string };
+      customMetadata: Record<string, string>;
+    },
+  ) => Promise<(R2ObjectHead & { key: string; uploaded: Date }) | null>;
 };
 
-type WorkerEnv = {
+export type WorkerEnv = {
   FUNNEL_MEDIA?: FunnelMediaBucket;
+  STUDIO_UPLOAD_TOKEN?: string;
+};
+
+export const STUDIO_UPLOAD_PATH = "/api/studio/assets/upload";
+export const STUDIO_UPLOAD_LIMIT_BYTES = 90 * 1024 * 1024;
+export const STUDIO_UPLOAD_MIME_TYPES = STUDIO_MEDIA_TYPES;
+
+type StudioUploadResponse = {
+  assetId: string;
+  key: string;
+  src: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  etag: string;
+  uploadedAt: string;
 };
 
 type ByteRange = {
@@ -125,6 +150,104 @@ function getMediaKey(pathname: string): string | undefined {
   }
 }
 
+export function sanitizeStudioSegment(value: string, fallback: string): string {
+  const sanitized = value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^[.-]+|[.-]+$/g, "")
+    .slice(0, 120);
+  return sanitized || fallback;
+}
+
+export function sanitizeStudioFilename(value: string): string {
+  const name = value.replace(/\\/g, "/").split("/").at(-1) ?? "upload";
+  return sanitizeStudioSegment(name, "upload");
+}
+
+export function buildStudioAssetKey(
+  funnelId: string,
+  assetId: string,
+  filename: string,
+  version = `${Date.now().toString(36)}-${crypto.randomUUID().replaceAll("-", "").slice(0, 10)}`,
+): string {
+  return `funnels/${sanitizeStudioSegment(funnelId, "funnel")}/assets/${sanitizeStudioSegment(assetId, "asset")}/${version}-${sanitizeStudioFilename(filename)}`;
+}
+
+function studioUploadError(status: number, message: string): Response {
+  return Response.json({ error: message }, { status });
+}
+
+function decodeUploadFilename(value: string | null): string | undefined {
+  if (!value) return undefined;
+  try {
+    const decoded = decodeURIComponent(value);
+    return decoded && decoded.length <= 512 ? decoded : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function handleStudioAssetUpload(
+  request: Request,
+  env: WorkerEnv,
+): Promise<Response> {
+  if (request.method !== "PUT")
+    return new Response("Method not allowed", { status: 405, headers: { Allow: "PUT" } });
+
+  const secret = env.STUDIO_UPLOAD_TOKEN;
+  const authorized = secret && request.headers.get("Authorization") === `Bearer ${secret}`;
+  if (!authorized) return studioUploadError(secret ? 401 : 503, secret ? "Upload unauthorized" : "Upload unavailable");
+  if (!env.FUNNEL_MEDIA) return studioUploadError(503, "Upload unavailable");
+
+  const funnelId = request.headers.get("X-Studio-Funnel-Id")?.trim();
+  const assetId = request.headers.get("X-Studio-Asset-Id")?.trim();
+  const filename = decodeUploadFilename(request.headers.get("X-Studio-Filename"));
+  if (!funnelId || !assetId || !filename || !request.body)
+    return studioUploadError(400, "Invalid upload request");
+
+  const contentType = (request.headers.get("Content-Type") ?? "").split(";", 1)[0]!.trim().toLowerCase();
+  if (!isStudioMediaType(contentType))
+    return studioUploadError(415, "Unsupported media type");
+
+  const rawLength = request.headers.get("Content-Length");
+  const size = rawLength ? Number(rawLength) : NaN;
+  if (!Number.isSafeInteger(size) || size <= 0) return studioUploadError(411, "Content length required");
+  if (size > STUDIO_UPLOAD_LIMIT_BYTES) return studioUploadError(413, "Upload exceeds current limit");
+
+  const uploadedAt = new Date().toISOString();
+  const key = buildStudioAssetKey(funnelId, assetId, filename);
+  try {
+    const object = await env.FUNNEL_MEDIA.put(key, request.body, {
+      httpMetadata: {
+        contentType,
+        cacheControl: "public, max-age=31536000, immutable",
+      },
+      customMetadata: {
+        funnelId: sanitizeStudioSegment(funnelId, "funnel"),
+        assetId: sanitizeStudioSegment(assetId, "asset"),
+        filename: sanitizeStudioFilename(filename),
+        uploadedAt,
+      },
+    });
+    if (!object) return studioUploadError(500, "Unable to save upload");
+    const payload: StudioUploadResponse = {
+      assetId,
+      key: object.key,
+      src: `/media/${object.key.split("/").map(encodeURIComponent).join("/")}`,
+      filename: sanitizeStudioFilename(filename),
+      contentType,
+      size: object.size,
+      etag: object.httpEtag,
+      uploadedAt: object.uploaded.toISOString(),
+    };
+    return Response.json(payload, { status: 201 });
+  } catch (error) {
+    console.error("Studio upload failed", error);
+    return studioUploadError(500, "Unable to save upload");
+  }
+}
+
 function mediaHeaders(object: R2ObjectHead, contentLength: number): Headers {
   return new Headers({
     "Accept-Ranges": "bytes",
@@ -180,6 +303,9 @@ export default {
           return new Response("Media storage is not configured", { status: 503 });
         }
         return await handleMediaRequest(request, env.FUNNEL_MEDIA);
+      }
+      if (new URL(request.url).pathname === STUDIO_UPLOAD_PATH) {
+        return await handleStudioAssetUpload(request, env);
       }
 
       const handler = await getServerEntry();

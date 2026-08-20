@@ -7,11 +7,9 @@ import {
   duplicateFunnel,
   emptyFunnel,
   exportStudioFunnel,
-  findAssetUsages,
   importFunnel,
   loadFunnel,
   loadProjects,
-  removeAsset,
   reorderScenes,
   saveFunnel,
   seedDemo,
@@ -27,6 +25,7 @@ import { IncomingCallOverlay } from "@/components/dev/IncomingCallOverlay";
 import { StudioInspector } from "./inspectors/StudioInspector";
 import { FunnelStudioHome, GuidedBuilder } from "./GuidedBuilder";
 import { invalidateStructuralTests, loadGuidedUi, saveGuidedUi, type GuidedUiState } from "./guidedState";
+import { AssetManager } from "./AssetManager";
 const RuntimeQuiz = QuizOverlay as any,
   RuntimeChoice = ChoiceOverlay as any,
   RuntimeMessaging = MessagingOverlay as any,
@@ -269,7 +268,8 @@ export function FunnelStudio() {
     [future, setFuture] = useState<FunnelDefinition[]>([]),
     [urls, setUrls] = useState<PreviewUrls>({}),
     [forced, setForced] = useState<SceneEventDefinition>(),
-    [testingForced, setTestingForced] = useState(false);
+    [testingForced, setTestingForced] = useState(false),
+    [assetsOpen, setAssetsOpen] = useState(false);
   const runtimeRef = useRef<FunnelRuntime | null>(null),
     videoRef = useRef<HTMLVideoElement>(null);
   const [snapshot, setSnapshot] = useState<RuntimeSnapshot | null>(null);
@@ -331,6 +331,31 @@ export function FunnelStudio() {
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   });
+  const addPreviewFile = (file: File, assetId?: string, sceneId?: string) => {
+    if (!funnel) return;
+    const mediaType: "video" | "audio" | "image" = file.type.startsWith("video") ? "video" : file.type.startsWith("audio") ? "audio" : "image";
+    const id = assetId || uid(mediaType);
+    const objectUrl = URL.createObjectURL(file);
+    setUrls((old) => {
+      if (old[id]) URL.revokeObjectURL(old[id]);
+      return { ...old, [id]: objectUrl };
+    });
+    const asset = { id, mediaType, source: "preview" as const, objectUrl, fileName: file.name, status: "ready" as const };
+    change({
+      ...funnel,
+      assets: assetId ? funnel.assets.map((item) => item.id === id ? asset : item) : [...funnel.assets, asset],
+      scenes: sceneId ? funnel.scenes.map((item) => item.id === sceneId ? { ...item, videoAssetId: id } : item) : funnel.scenes,
+    });
+  };
+  const revokePreviewUrl = (assetId: string) => {
+    setUrls((old) => {
+      if (!old[assetId]) return old;
+      URL.revokeObjectURL(old[assetId]);
+      const next = { ...old };
+      delete next[assetId];
+      return next;
+    });
+  };
   const attachPreview = (assetId?: string, sceneId?: string) => {
     const input = document.createElement("input");
     input.type = "file";
@@ -338,19 +363,7 @@ export function FunnelStudio() {
     input.onchange = () => {
       const file = input.files?.[0];
       if (!file || !funnel) return;
-      const mediaType: "video" | "audio" | "image" = file.type.startsWith("video") ? "video" : file.type.startsWith("audio") ? "audio" : "image";
-      const id = assetId || uid(mediaType);
-      const objectUrl = URL.createObjectURL(file);
-      setUrls((old) => {
-        if (old[id]) URL.revokeObjectURL(old[id]);
-        return { ...old, [id]: objectUrl };
-      });
-      const asset = { id, mediaType, source: "preview" as const, objectUrl, fileName: file.name, status: "ready" as const };
-      change({
-        ...funnel,
-        assets: assetId ? funnel.assets.map((item) => item.id === id ? asset : item) : [...funnel.assets, asset],
-        scenes: sceneId ? funnel.scenes.map((scene) => scene.id === sceneId ? { ...scene, videoAssetId: id } : scene) : funnel.scenes,
-      });
+      addPreviewFile(file, assetId, sceneId);
     };
     input.click();
   };
@@ -572,6 +585,7 @@ export function FunnelStudio() {
           onChange={(e) => change({ ...funnel, title: e.target.value })}
         />
         <span className="text-[10px] text-emerald-400">{saveState}</span>
+        <button onClick={() => setAssetsOpen(true)}>ARQUIVOS</button>
         <button
           onClick={() => {
             const n = emptyFunnel();
@@ -799,6 +813,7 @@ export function FunnelStudio() {
         }
         onAdd={add}
       />
+      {/* Legacy inline asset list replaced by AssetManager. It remains commented temporarily to avoid changing unrelated Studio code in C2.
       <div className="fixed bottom-3 right-[350px] bg-zinc-900 border border-zinc-700 p-2 text-xs">
         <b>ARQUIVOS</b>
         {funnel.assets.map((a) => {
@@ -867,7 +882,24 @@ export function FunnelStudio() {
           + URL PERMANENTE
         </button>
         <button onClick={() => attach()}>+ ARQUIVO LOCAL PARA PREVIEW</button>
-      </div>
+      </div> */}
+      {assetsOpen && (
+        <AssetManager
+          funnel={funnel}
+          urls={urls}
+          onChange={change}
+          onAttachPreview={addPreviewFile}
+          onRevoke={revokePreviewUrl}
+          onClose={() => setAssetsOpen(false)}
+          onOpenUsage={(path) => {
+            const targetScene = funnel.scenes.find((item) => path.includes(item.id));
+            if (targetScene) setSelectedSceneId(targetScene.id);
+            const targetEvent = funnel.scenes.flatMap((item) => item.events).find((item) => path.includes(item.id));
+            if (targetEvent) setSelectedEventId(targetEvent.id);
+            setAssetsOpen(false);
+          }}
+        />
+      )}
       <Overlays
         funnel={funnel}
         urls={urls}

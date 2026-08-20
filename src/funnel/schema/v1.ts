@@ -19,6 +19,12 @@ export const assetRefSchema = z.discriminatedUnion("source", [
     mediaType: z.enum(["video", "audio", "image"]),
     source: z.literal("permanent"),
     url: z.string().min(1),
+    fileName: z.string().min(1).optional(),
+    contentType: z.string().min(1).optional(),
+    size: z.number().int().nonnegative().optional(),
+    uploadedAt: z.string().datetime().optional(),
+    r2Key: z.string().min(1).optional(),
+    etag: z.string().min(1).optional(),
   }),
   // Object URLs are in-memory preview handles, not durable/public asset URLs.
   z.object({

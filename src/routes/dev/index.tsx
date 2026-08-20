@@ -29,6 +29,7 @@ function DevCentral() {
 
   const technicalTools = [
     { path: "/dev/funnel-studio", label: "FUNNEL STUDIO — Construa cenas, eventos e interações visualmente." },
+    { path: "/dev/r2-upload-proof", label: "R2 Upload Proof — Envie mídia permanente com gate temporário." },
     { path: "/notas", label: "Bloco de Notas 📝" },
     { path: "/dev/timeline", label: "Timeline Engine" },
     { path: "/dev/scene", label: "Scene Engine" },
