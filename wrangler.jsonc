@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "my-happy-place",
+  "main": "./src/server.ts",
+  "compatibility_date": "2026-08-20",
+  "compatibility_flags": ["nodejs_compat"],
+  "r2_buckets": [
+    {
+      "binding": "FUNNEL_MEDIA",
+      "bucket_name": "my-happy-place-media"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}
