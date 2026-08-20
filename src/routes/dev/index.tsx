@@ -8,7 +8,8 @@ import {
   History, 
   CheckCircle2, 
   Clock,
-  ArrowRightCircle
+  ArrowRightCircle,
+  MapIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,7 @@ function DevCentral() {
     { path: "/dev/audio", label: "Áudio" },
     { path: "/dev/preloader", label: "Preload" },
   ];
+
 
   const oldLabs = [
     { path: "/dev/notes", label: "Notas Bloqueadas" },
