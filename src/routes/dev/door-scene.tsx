@@ -854,6 +854,21 @@ function DoorScenePreview() {
               onPause={() => setIsPlaying(false)}
               onEnded={handleVideoEnded}
             />
+            <video
+              ref={futureMarinaPreCallVideoRef}
+              src="/assets/scene-04/video/scene-04-marina-future-call-intro-01.mp4"
+              playsInline
+              preload="auto"
+              className={cn(
+                "w-full h-full object-cover absolute inset-0 transition-opacity duration-0",
+                sceneStep === "future-marina-precall" ? "opacity-100 z-10" : "opacity-0 z-0"
+              )}
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onEnded={handleVideoEnded}
+            />
 
             {/* Transition Copy Overlay */}
             {showCopy && (
@@ -920,13 +935,17 @@ function DoorScenePreview() {
             {/* Interaction Overlay */}
             <IncomingCallOverlay
               open={isCallOpen}
-              callerName="Mamãe"
-              callerAvatar={LUCIA_AVATAR_URL}
+              callerName={sceneStep === "future-marina-call" ? "Marina" : "Mamãe"}
+              callerAvatar={sceneStep === "future-marina-call" ? undefined : LUCIA_AVATAR_URL}
               callerSubtitle="Celular"
               ringtoneSrc={undefined} // No ringtone for Scene 01 as per requirement
               vibrationSrc={assetStatuses["/assets/scene-01/audio/phone-vibration.mp3"] === 'ready' ? "/assets/scene-01/audio/phone-vibration.mp3" : undefined}
               connectSfxSrc={assetStatuses["/assets/scene-01/audio/call-connect.mp3"] === 'ready' ? "/assets/scene-01/audio/call-connect.mp3" : undefined}
-              voiceAudioSrc={assetStatuses["/assets/scene-01/audio/mother-call-01.mp3"] === 'ready' ? "/assets/scene-01/audio/mother-call-01.mp3" : undefined}
+              voiceAudioSrc={
+                sceneStep === "future-marina-call" 
+                  ? (assetStatuses["/assets/scene-04/audio/marina-future-call-01.mp3"] === 'ready' ? "/assets/scene-04/audio/marina-future-call-01.mp3" : undefined)
+                  : (assetStatuses["/assets/scene-01/audio/mother-call-01.mp3"] === 'ready' ? "/assets/scene-01/audio/mother-call-01.mp3" : undefined)
+              }
               endSfxSrc={assetStatuses["/assets/scene-01/audio/call-end.mp3"] === 'ready' ? "/assets/scene-01/audio/call-end.mp3" : undefined}
               onStateChange={setCallState}
               onDecline={() => setIsCallOpen(false)}
@@ -1062,9 +1081,15 @@ function DoorScenePreview() {
             closeBehavior="prevent"
             onComplete={(result) => {
               setScene03QuizResult(result);
-              // Wait 900ms for microfeedback then close
+              // Wait 900ms for microfeedback then close and start next video
               setTimeout(() => {
                 setIsScene03QuizOpen(false);
+                setSceneStep("future-marina-precall");
+                if (futureMarinaPreCallVideoRef.current) {
+                  futureMarinaPreCallVideoRef.current.currentTime = 0;
+                  futureMarinaPreCallVideoRef.current.play().catch(console.error);
+                  setIsPlaying(true);
+                }
               }, 900);
             }}
           />
