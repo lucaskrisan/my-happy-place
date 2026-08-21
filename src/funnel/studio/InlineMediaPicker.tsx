@@ -4,10 +4,13 @@ import { ASSET_UPLOAD_SESSION_KEY } from "./AssetManager";
 import { addPermanentUrl, assetStatus, promoteAssetInFunnel } from "./assetManagerState";
 import { isStudioMediaType, studioMediaTypeForMime, uploadPermanentAsset, type UploadStatus } from "./permanentUpload";
 import { uid } from "./studioState";
+import { HelpText, PrimaryButton, SecondaryButton, GhostButton, Badge } from "./ui";
 
 type Props = { label: string; mediaType: AssetRef["mediaType"]; funnel: FunnelDefinition; urls: Record<string, string>; value?: string | undefined; onSelect: (assetId?: string) => void; onChange: (funnel: FunnelDefinition) => void; onAttachPreview?: (file: File, assetId?: string) => void };
 const accepts: Record<AssetRef["mediaType"], string> = { video: "video/mp4,video/webm", audio: "audio/mpeg,audio/mp4,audio/wav,audio/ogg", image: "image/jpeg,image/png,image/webp" };
 const assetName = (asset: AssetRef) => asset.source === "preview" ? asset.fileName : asset.fileName || asset.url.split("/").at(-1) || "Arquivo";
+const mediaWord = (mediaType: AssetRef["mediaType"]) => (mediaType === "video" ? "vídeo" : mediaType === "audio" ? "áudio" : "imagem");
+const fieldClass = "w-full rounded-lg border border-studio-border bg-white/[.04] p-2.5 text-sm text-studio-text placeholder:text-studio-text-muted focus:border-studio-primary/50 focus:outline-none transition-colors";
 
 export function InlineMediaPicker({ label, mediaType, funnel, urls, value, onSelect, onChange, onAttachPreview }: Props) {
   const [open, setOpen] = useState(false), [token, setToken] = useState(""), [tokenDraft, setTokenDraft] = useState(""), [url, setUrl] = useState(""), [status, setStatus] = useState<UploadStatus | null>(null), [progress, setProgress] = useState(0), [error, setError] = useState("");
@@ -32,5 +35,84 @@ export function InlineMediaPicker({ label, mediaType, funnel, urls, value, onSel
   };
   const choose = (previewOnly: boolean, assetId?: string) => { if (!input.current) return; input.current.dataset["previewOnly"] = String(previewOnly); input.current.dataset["assetId"] = assetId || ""; input.current.click(); };
   const unresolved = current?.source === "preview" && assetStatus(current, urls) === "unresolved";
-  return <div className="grid gap-1"><b>{label}</b><button type="button" onClick={() => setOpen(true)}>{current ? assetName(current) : `Escolher ou enviar ${mediaType === "video" ? "vídeo" : mediaType === "audio" ? "áudio" : "imagem"}`}</button>{current?.source === "preview" && <small>{unresolved ? `PRECISA SER REANEXADO — ${current.fileName}` : "LOCAL — SOMENTE PREVIEW"}</small>}{value && <button type="button" onClick={() => onSelect(undefined)}>REMOVER</button>}{open && <div className="rounded border border-zinc-600 bg-zinc-900 p-3 grid gap-2" role="dialog" aria-label={`Arquivos para ${label}`}><b>ARQUIVOS DO PROJETO</b>{assets.length ? assets.map((asset) => <button type="button" key={asset.id} onClick={() => { if (asset.source === "preview" && !urls[asset.id]) return setError(`Este arquivo precisa ser reanexado: ${asset.fileName}`); onSelect(asset.id); setOpen(false); }}>{assetName(asset)} — {asset.source === "permanent" ? "PERMANENTE" : assetStatus(asset, urls) === "unresolved" ? "PRECISA SER REANEXADO" : "LOCAL"}</button>) : <small>Você ainda não adicionou nenhum arquivo compatível.</small>}{unresolved && <><button type="button" onClick={() => choose(true, current.id)}>REANEXAR</button>{token && <button type="button" onClick={() => choose(false, current.id)}>REANEXAR E TORNAR PERMANENTE</button>}</>}<input ref={input} className="hidden" type="file" accept={accepts[mediaType]} onChange={(event) => { const file = event.target.files?.[0], previewOnly = event.currentTarget.dataset["previewOnly"] === "true", assetId = event.currentTarget.dataset["assetId"] || undefined; if (file) void upload(file, previewOnly, assetId); event.currentTarget.dataset["previewOnly"] = ""; event.currentTarget.dataset["assetId"] = ""; event.target.value = ""; }} />{token ? <><button type="button" onClick={() => choose(false)}>ENVIAR E SALVAR NO PROJETO</button><button type="button" onClick={() => choose(true)}>USAR SÓ PARA PREVIEW</button></> : <><small>UPLOAD PERMANENTE DESATIVADO</small><input type="password" placeholder="TOKEN DE AUTORIA" value={tokenDraft} onChange={(event) => setTokenDraft(event.target.value)} /><button type="button" onClick={() => { if (!tokenDraft.trim()) return; sessionStorage.setItem(ASSET_UPLOAD_SESSION_KEY, tokenDraft.trim()); setToken(tokenDraft.trim()); setTokenDraft(""); }}>CONFIGURAR UPLOAD</button><button type="button" onClick={() => choose(true)}>USAR SÓ PARA PREVIEW</button></>}<label>COLAR URL<input value={url} onChange={(event) => setUrl(event.target.value)} /></label><button type="button" onClick={() => { if (!url.trim()) return; const next = addPermanentUrl(funnel, url.trim(), mediaType), asset = next.assets.at(-1)!; onChange(next); onSelect(asset.id); setOpen(false); }}>ADICIONAR URL</button>{status && <div role="status">{status === "uploading" ? `ENVIANDO ${progress}%` : status.toUpperCase()} {status === "uploading" && <button type="button" onClick={() => controller.current?.abort()}>CANCELAR</button>}</div>}{error && <small role="alert">{error}</small>}<button type="button" onClick={() => setOpen(false)}>CANCELAR</button></div>}</div>;
+  return (
+    <div className="space-y-1.5">
+      <span className="block text-xs font-semibold uppercase tracking-wider text-studio-text-muted">{label}</span>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex-1 min-w-0 rounded-lg border border-dashed border-studio-border-strong bg-white/[.02] px-3.5 py-2.5 text-left text-sm text-studio-text-secondary transition-colors hover:border-studio-primary/40 hover:text-studio-text"
+        >
+          {current ? <span className="truncate text-studio-text">{assetName(current)}</span> : `Escolher arquivo ou enviar novo ${mediaWord(mediaType)}`}
+        </button>
+        {value && <GhostButton type="button" onClick={() => onSelect(undefined)} className="shrink-0 text-xs">Remover</GhostButton>}
+      </div>
+      {current?.source === "preview" && <Badge tone={unresolved ? "warning" : "neutral"}>{unresolved ? `Precisa ser reanexado — ${current.fileName}` : "Local — somente preview"}</Badge>}
+      {open && (
+        <div className="space-y-3 rounded-xl border border-studio-border bg-studio-surface-2 p-4" role="dialog" aria-label={`Arquivos para ${label}`}>
+          <div>
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-studio-text-muted">Meus arquivos</span>
+            {assets.length ? (
+              <div className="max-h-40 space-y-1 overflow-y-auto">
+                {assets.map((asset) => (
+                  <button
+                    type="button"
+                    key={asset.id}
+                    onClick={() => { if (asset.source === "preview" && !urls[asset.id]) return setError(`Este arquivo precisa ser reanexado: ${asset.fileName}`); onSelect(asset.id); setOpen(false); }}
+                    className="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-studio-text-secondary transition-colors hover:bg-white/[.05] hover:text-studio-text"
+                  >
+                    <span className="truncate">{assetName(asset)}</span>
+                    <Badge tone={asset.source === "permanent" ? "success" : assetStatus(asset, urls) === "unresolved" ? "warning" : "neutral"}>{asset.source === "permanent" ? "Permanente" : assetStatus(asset, urls) === "unresolved" ? "Reanexar" : "Local"}</Badge>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <HelpText className="text-xs">Você ainda não adicionou nenhum arquivo compatível.</HelpText>
+            )}
+            {unresolved && (
+              <div className="mt-2 flex gap-2">
+                <SecondaryButton type="button" onClick={() => choose(true, current.id)} className="text-xs">Reanexar</SecondaryButton>
+                {token && <SecondaryButton type="button" onClick={() => choose(false, current.id)} className="text-xs">Reanexar e tornar permanente</SecondaryButton>}
+              </div>
+            )}
+          </div>
+          <input ref={input} className="hidden" type="file" accept={accepts[mediaType]} onChange={(event) => { const file = event.target.files?.[0], previewOnly = event.currentTarget.dataset["previewOnly"] === "true", assetId = event.currentTarget.dataset["assetId"] || undefined; if (file) void upload(file, previewOnly, assetId); event.currentTarget.dataset["previewOnly"] = ""; event.currentTarget.dataset["assetId"] = ""; event.target.value = ""; }} />
+          <div>
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-studio-text-muted">Enviar novo</span>
+            {token ? (
+              <div className="flex flex-wrap gap-2">
+                <PrimaryButton type="button" onClick={() => choose(false)} className="text-xs">Enviar e salvar no projeto</PrimaryButton>
+                <SecondaryButton type="button" onClick={() => choose(true)} className="text-xs">Usar só para preview</SecondaryButton>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <HelpText className="text-xs">Upload permanente desativado — informe o token de autoria para enviar arquivos definitivos.</HelpText>
+                <input type="password" placeholder="Token de autoria" value={tokenDraft} onChange={(event) => setTokenDraft(event.target.value)} className={fieldClass} />
+                <div className="flex flex-wrap gap-2">
+                  <SecondaryButton type="button" onClick={() => { if (!tokenDraft.trim()) return; sessionStorage.setItem(ASSET_UPLOAD_SESSION_KEY, tokenDraft.trim()); setToken(tokenDraft.trim()); setTokenDraft(""); }} className="text-xs">Configurar upload</SecondaryButton>
+                  <GhostButton type="button" onClick={() => choose(true)} className="text-xs">Usar só para preview</GhostButton>
+                </div>
+              </div>
+            )}
+          </div>
+          <div>
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-studio-text-muted">Ou cole uma URL</span>
+            <div className="flex gap-2">
+              <input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://…" className={fieldClass} />
+              <SecondaryButton type="button" onClick={() => { if (!url.trim()) return; const next = addPermanentUrl(funnel, url.trim(), mediaType), asset = next.assets.at(-1)!; onChange(next); onSelect(asset.id); setOpen(false); }} className="shrink-0 text-xs">Adicionar</SecondaryButton>
+            </div>
+          </div>
+          {status && (
+            <div role="status" className="flex items-center gap-2 text-xs text-studio-text-secondary">
+              <span>{status === "uploading" ? `Enviando ${progress}%` : status}</span>
+              {status === "uploading" && <GhostButton type="button" onClick={() => controller.current?.abort()} className="px-2 py-1 text-xs">Cancelar</GhostButton>}
+            </div>
+          )}
+          {error && <p role="alert" className="text-xs text-studio-error">{error}</p>}
+          <GhostButton type="button" onClick={() => setOpen(false)} className="text-xs">Fechar</GhostButton>
+        </div>
+      )}
+    </div>
+  );
 }

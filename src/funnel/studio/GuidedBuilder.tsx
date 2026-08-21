@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import type { FunnelDefinition, SceneEventDefinition } from "../schema/v1";
 import {
   addGuidedScene,
@@ -6,18 +7,39 @@ import {
   createGuidedFunnel,
   guidedEvent,
   guidedProgress,
+  issueBelongsToScene,
   markSceneTested,
   nextGuidedStep,
   sceneStatus,
   triggerFromGuided,
   type GuidedUiState,
 } from "./guidedState";
+import { validateFunnel } from "../validator/validateFunnel";
 import { reorderScenes, uid } from "./studioState";
 import { GuidedPreview, formatTime } from "./GuidedPreview";
 import { GuidedEssentialInteractions } from "./GuidedEssentialInteractions";
 import { GuidedComplexInteractions } from "./GuidedComplexInteractions";
 import { InlineMediaPicker } from "./InlineMediaPicker";
 import { exportGuidedProject, goToIssue, globalNextStep, reviewSummary } from "./guidedReview";
+import {
+  PageTitle,
+  SectionTitle,
+  Eyebrow,
+  HelpText,
+  Card,
+  Badge,
+  ProgressBar,
+  Breadcrumb,
+  Stepper,
+  type StepState,
+  PrimaryButton,
+  SecondaryButton,
+  GhostButton,
+  EmptyState,
+  useToast,
+  Toast,
+  Dot,
+} from "./ui";
 
 // "review" is a funnel-level destination (reached from the top nav's REVISÃO button), not a per-scene
 // step, so it stays out of this tab list even though the Step type still allows it.
@@ -135,210 +157,231 @@ export function GuidedBuilder({
     }
     updateEvent(event);
   };
+  const sceneIssues = validateFunnel(funnel).filter((issue) => issueBelongsToScene(issue.path, scene));
+  const status = sceneStatus(scene, funnel);
+  // sceneStatus().production only ever distinguishes "EM ANDAMENTO"/"NÃO INICIADO" (never "PRONTO"), so
+  // the stepper checks the production guide's own steps directly to know when this one is actually done.
+  const productionSteps = scene.guided?.productionGuide?.steps;
+  const productionDone = !!productionSteps?.length && productionSteps.every((item: any) => item.completed);
+  const stepState = (key: (typeof steps)[number]): StepState => {
+    if (key === step) return "active";
+    if (key === "interactivity" && sceneIssues.length) return "error";
+    if (key === "production") return productionDone ? "done" : "pending";
+    const value = { script: status.script, video: status.video, interactivity: status.interactivity, test: status.test }[key];
+    return value === "PRONTO" ? "done" : "pending";
+  };
   return (
-    <main className="min-h-screen bg-[#09090b] text-white p-5 md:p-8">
-      <header className="max-w-7xl mx-auto flex items-center justify-between gap-3 border-b border-white/[.07] pb-5">
-        <div>
-          {productName && <button onClick={onBackToProduct} className="mb-2 block text-xs font-medium text-zinc-500 hover:text-zinc-200">{productName} / FUNIL</button>}
-          <h1 className="text-2xl font-bold">{funnel.title}</h1>
-          <p className="text-zinc-400">
-            {progress.ready}/{progress.total} cenas prontas · {progress.percent}% concluído
-          </p>
+    <main className="min-h-screen bg-studio-bg text-studio-text">
+      <header className="border-b border-studio-border px-5 py-4 md:px-8">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
+          <div>
+            {productName && <Breadcrumb items={[{ label: productName, onClick: onBackToProduct }, funnel.title]} />}
+            <div className="mt-1 flex items-center gap-3">
+              <PageTitle className="text-2xl">{funnel.title}</PageTitle>
+              <Badge tone={progress.ready === progress.total ? "success" : "neutral"}>{progress.ready}/{progress.total} prontas</Badge>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link to="/studio/blueprint" className="text-sm font-medium text-studio-text-secondary hover:text-studio-text transition-colors">Blueprint</Link>
+            {/* Discrete on purpose — Guided is the default experience, Advanced is an escape hatch. */}
+            <button onClick={onAdvanced} className="text-sm text-studio-text-muted hover:text-studio-text-secondary transition-colors">Editor avançado</button>
+          </div>
         </div>
-        {/* Single Advanced Editor entry point for this whole screen — it used to repeat in the nav and the footer too. */}
-        <button onClick={onAdvanced} className="shrink-0 rounded-lg border border-white/[.08] px-3 py-2 text-sm text-zinc-300 hover:bg-white/[.06]">EDITOR AVANÇADO</button>
+        <div className="mx-auto mt-3 max-w-6xl"><ProgressBar percent={progress.percent} /></div>
       </header>
       {/* Funnel-level navigation. EXPORTAR RASCUNHO/VÁLIDO used to live here, disconnected from the
           validation context in REVISÃO — the real, validation-aware export actions live only inside
           Revisão now (see ReviewStep below). */}
-      <nav className="max-w-7xl mx-auto mt-4 flex flex-wrap gap-1 rounded-xl border border-white/[.07] bg-white/[.025] p-1.5 text-sm">
-        <button className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-white/[.06]" onClick={() => persist("script")}>CRIAÇÃO</button>
-        <button className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-white/[.06]" onClick={() => document.getElementById("studio-scenes")?.scrollIntoView({ behavior: "smooth" })}>CENAS</button>
-        <button className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-white/[.06]" onClick={onAssets}>ARQUIVOS</button>
-        <button className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-white/[.06]" onClick={() => persist("review")}>REVISÃO / EXPORTAÇÃO</button>
+      <nav className="mx-auto mt-5 flex max-w-6xl gap-1 px-5 md:px-8">
+        {(
+          [
+            { key: "create", label: "Criar", onClick: () => persist("script"), active: step !== "review" },
+            { key: "assets", label: "Arquivos", onClick: () => onAssets?.(), active: false },
+            { key: "review", label: "Revisar", onClick: () => persist("review"), active: step === "review" },
+          ] satisfies { key: string; label: string; onClick: () => void; active: boolean }[]
+        ).map(({ key, label, onClick, active }) => (
+          <button key={key} onClick={onClick} className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${active ? "bg-studio-surface-2 text-studio-text" : "text-studio-text-secondary hover:text-studio-text hover:bg-white/[.04]"}`}>
+            {label}
+          </button>
+        ))}
       </nav>
-      <div className="max-w-7xl mx-auto mt-7 grid grid-cols-[250px_minmax(0,1fr)] gap-8">
-        <aside id="studio-scenes" className="space-y-2">
-          <p className="px-2 text-xs font-semibold tracking-[.16em] text-zinc-500">CENAS</p>
+      <div className="mx-auto mt-6 grid max-w-6xl grid-cols-1 gap-8 px-5 md:px-8 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <aside id="studio-scenes" className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <Eyebrow>Cenas</Eyebrow>
+            <GhostButton
+              className="px-2 py-1 text-xs"
+              onClick={() => {
+                const next = addGuidedScene(funnel);
+                onChange(next);
+                const created = next.scenes.at(-1)!;
+                onUi({ ...ui, mode: "guided", funnelId: funnel.id, sceneId: created.id, step: "script" });
+              }}
+            >
+              + Nova cena
+            </GhostButton>
+          </div>
           {sceneOrderMismatch(funnel) && (
-            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+            <p className="rounded-lg border border-studio-warning/30 bg-studio-warning-soft px-3 py-2 text-xs text-studio-warning">
               A ordem desta lista é diferente da ordem real do funil (siga as setas ↑↓ para corrigir).
             </p>
           )}
-          <button
-            className="mb-3 w-full rounded-lg border border-dashed border-zinc-700 px-3 py-3 text-sm font-medium text-zinc-300 hover:border-blue-400 hover:text-white"
-            onClick={() => {
-              const next = addGuidedScene(funnel);
-              onChange(next);
-              const created = next.scenes.at(-1)!;
-              onUi({
-                ...ui,
-                mode: "guided",
-                funnelId: funnel.id,
-                sceneId: created.id,
-                step: "script",
-              });
-            }}
-          >
-            + NOVA CENA
-          </button>
-          {funnel.scenes.map((item, index) => {
-            const status = sceneStatus(item, funnel);
-            return (
-              <div
-                role="button"
-                tabIndex={0}
-                className={`w-full rounded-xl p-4 text-left transition ${item.id === scene.id ? "bg-blue-500/10 ring-1 ring-blue-400/70" : "hover:bg-white/[.035]"}`}
-                key={item.id}
-                onClick={() => persist("script", item.id)}
-              >
-                <b>
-                  CENA {index + 1}: {item.title}
-                </b>
-                <small className="block text-zinc-400">
-                  Roteiro {status.script} · Vídeo {status.video}
-                </small>
-                <div className="mt-3 flex items-center justify-between gap-2 text-xs text-zinc-500">
-                  <span>{item.nextSceneId ? "Próxima cena conectada" : "Última cena"}</span>
-                  <span className="flex gap-1"><button aria-label="Mover cena para cima" disabled={index === 0} onClick={(event) => { event.stopPropagation(); onChange(reorderScenes(funnel, index, index - 1)); }}>↑</button><button aria-label="Mover cena para baixo" disabled={index === funnel.scenes.length - 1} onClick={(event) => { event.stopPropagation(); onChange(reorderScenes(funnel, index, index + 1)); }}>↓</button></span>
-                </div>
-              </div>
-            );
-          })}
+          <ol className="space-y-1">
+            {funnel.scenes.map((item, index) => {
+              const itemStatus = sceneStatus(item, funnel);
+              const done = itemStatus.video === "PRONTO" && itemStatus.test === "PRONTO";
+              const started = itemStatus.script !== "NÃO INICIADO" || itemStatus.video === "PRONTO";
+              const isActive = item.id === scene.id;
+              return (
+                <li key={item.id}>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => persist("script", item.id)}
+                    className={`group flex w-full items-start gap-3 rounded-xl border-l-2 px-3 py-2.5 text-left transition-colors cursor-pointer ${isActive ? "border-studio-primary bg-studio-primary-soft" : "border-transparent hover:bg-white/[.035]"}`}
+                  >
+                    <span className="mt-0.5 font-mono text-xs text-studio-text-muted">{String(index + 1).padStart(2, "0")}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        {done ? <span className="text-studio-success text-xs">✓</span> : started ? <Dot tone="primary" /> : <Dot />}
+                        <p className={`truncate text-sm ${isActive ? "font-semibold text-studio-text" : "text-studio-text-secondary"}`}>{item.title}</p>
+                      </div>
+                      <p className="mt-0.5 text-xs text-studio-text-muted">{done ? "Pronta" : started ? "Em andamento" : "Não iniciada"}</p>
+                    </div>
+                    <span className="hidden shrink-0 flex-col gap-0.5 group-hover:flex">
+                      <button aria-label="Mover cena para cima" disabled={index === 0} className="text-studio-text-muted hover:text-studio-text disabled:opacity-30" onClick={(event) => { event.stopPropagation(); onChange(reorderScenes(funnel, index, index - 1)); }}>↑</button>
+                      <button aria-label="Mover cena para baixo" disabled={index === funnel.scenes.length - 1} className="text-studio-text-muted hover:text-studio-text disabled:opacity-30" onClick={(event) => { event.stopPropagation(); onChange(reorderScenes(funnel, index, index + 1)); }}>↓</button>
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
         </aside>
-        <section className="space-y-5">
-          <div className="rounded-xl bg-zinc-900 p-4">
-            <b>PRÓXIMO PASSO</b>
-            <p className="text-lg">{nextGuidedStep(scene, funnel)}</p>
+        <section className="space-y-6 pb-16">
+          <Card className="p-4">
+            <Eyebrow>Próximo passo</Eyebrow>
+            <p className="mt-1 text-base text-studio-text">{nextGuidedStep(scene, funnel)}</p>
+          </Card>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-[180px_minmax(0,1fr)]">
+            <Stepper steps={steps.map((item) => ({ id: item, label: labels[item], state: stepState(item) }))} current={step} onSelect={(id) => persist(id as Step)} />
+            <div className="min-w-0 space-y-5">
+              {step === "script" && <Script scene={scene} update={update} />}
+              {step === "production" && <Production scene={scene} update={update} />}
+              {step === "video" && (
+                <VideoStep
+                  funnel={funnel}
+                  scene={scene}
+                  asset={asset || undefined}
+                  onChange={onChange}
+                  update={update}
+                  urls={urls}
+                  onAttachPreview={onAttachPreview}
+                  onAttachPreviewFile={onAttachPreviewFile}
+                />
+              )}
+              {step === "interactivity" && (
+                <div className="space-y-6">
+                  <GuidedEssentialInteractions funnel={funnel} scene={scene} urls={urls} onChange={onChange} onAttachAsset={() => onAttachPreview()} onAttachPreviewFile={onAttachPreviewFile} focusEventId={ui.eventId} onFocusHandled={clearFocusEventId} />
+                  <GuidedComplexInteractions funnel={funnel} scene={scene} urls={urls} onChange={onChange} onAttachAsset={() => onAttachPreview()} onAttachPreviewFile={onAttachPreviewFile} focusEventId={ui.eventId} onFocusHandled={clearFocusEventId} />
+                </div>
+              )}
+              {step === "test" && <TestStep funnel={funnel} scene={scene} urls={urls} onTested={() => onChange(markSceneTested(funnel, scene.id))} />}
+              {step === "review" && <ReviewStep funnel={funnel} urls={urls} onUi={onUi} onChange={onChange} />}
+              {step !== "review" && (
+                <footer className="flex justify-between border-t border-studio-border pt-5">
+                  <SecondaryButton onClick={() => persist(steps[Math.max(0, steps.indexOf(step as (typeof steps)[number]) - 1)]!)}>Voltar</SecondaryButton>
+                  <PrimaryButton onClick={() => persist(steps[Math.min(steps.length - 1, steps.indexOf(step as (typeof steps)[number]) + 1)]!)}>Continuar</PrimaryButton>
+                </footer>
+              )}
+            </div>
           </div>
-          <nav className="flex gap-2 flex-wrap">
-            {steps.map((item) => (
-              <button
-                key={item}
-                className={step === item ? "bg-blue-600" : ""}
-                onClick={() => persist(item)}
-              >
-                {labels[item]}
-              </button>
-            ))}
-          </nav>
-          {step === "script" && <Script scene={scene} update={update} />}{" "}
-          {step === "production" && <Production scene={scene} update={update} />}{" "}
-          {step === "video" && (
-            <VideoStep
-              funnel={funnel}
-              scene={scene}
-              asset={asset || undefined}
-              onChange={onChange}
-              update={update}
-              urls={urls}
-              onAttachPreview={onAttachPreview}
-              onAttachPreviewFile={onAttachPreviewFile}
-            />
-          )}{" "}
-          {step === "interactivity" && (
-            <><GuidedEssentialInteractions funnel={funnel} scene={scene} urls={urls} onChange={onChange} onAttachAsset={() => onAttachPreview()} onAttachPreviewFile={onAttachPreviewFile} focusEventId={ui.eventId} onFocusHandled={clearFocusEventId} /><GuidedComplexInteractions funnel={funnel} scene={scene} urls={urls} onChange={onChange} onAttachAsset={() => onAttachPreview()} onAttachPreviewFile={onAttachPreviewFile} focusEventId={ui.eventId} onFocusHandled={clearFocusEventId} /></>
-          )}{" "}
-          {step === "test" && <TestStep funnel={funnel} scene={scene} urls={urls} onTested={() => onChange(markSceneTested(funnel, scene.id))} />}
-          {step === "review" && <ReviewStep funnel={funnel} urls={urls} onUi={onUi} onChange={onChange} />}
-          {step !== "review" && (
-            <footer className="flex justify-between">
-              <button onClick={() => persist(steps[Math.max(0, steps.indexOf(step as (typeof steps)[number]) - 1)]!)}>
-                VOLTAR
-              </button>
-              <button
-                onClick={() => persist(steps[Math.min(steps.length - 1, steps.indexOf(step as (typeof steps)[number]) + 1)]!)}
-              >
-                CONTINUAR
-              </button>
-            </footer>
-          )}
         </section>
       </div>
       {wizard && (
-        <div className="fixed inset-0 bg-black/70 grid place-items-center p-6">
-          <div className="bg-zinc-900 p-6 max-w-lg w-full grid gap-4">
-            <h2>O que você quer criar?</h2>
-            <select value={type} onChange={(e) => setType(e.target.value as any)}>
-              <option value="story">História Interativa</option>
-              <option value="vsl">VSL Interativa</option>
-              <option value="quiz">Quiz / Diagnóstico</option>
-              <option value="gamified">Funil Gamificado</option>
-              <option value="training">Treinamento Interativo</option>
-              <option value="blank">Começar do Zero</option>
-            </select>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Como vamos chamar sua experiência?"
-            />
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descrição opcional"
-            />
-            <select value={structure} onChange={(e) => setStructure(e.target.value as any)}>
-              <option value="one">Criar primeira cena</option>
-              <option value="three">Começar com estrutura de 3 cenas</option>
-              <option value="empty">Começar vazio</option>
-            </select>
-            <div className="flex justify-between">
-              <button onClick={() => setWizard(false)}>VOLTAR</button>
-              <button
-                disabled={!title.trim()}
-                onClick={() => {
-                  onNew(createGuidedFunnel(type, title, description, structure));
-                  setWizard(false);
-                }}
-              >
-                CRIAR EXPERIÊNCIA
-              </button>
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-6 backdrop-blur-sm">
+          <Card className="w-full max-w-lg bg-studio-surface-2 p-6">
+            <SectionTitle>O que você quer criar?</SectionTitle>
+            <div className="mt-4 grid gap-3">
+              <select value={type} onChange={(e) => setType(e.target.value as any)} className="rounded-lg border border-studio-border bg-white/[.04] p-3 text-sm text-studio-text">
+                <option value="story">História Interativa</option>
+                <option value="vsl">VSL Interativa</option>
+                <option value="quiz">Quiz / Diagnóstico</option>
+                <option value="gamified">Funil Gamificado</option>
+                <option value="training">Treinamento Interativo</option>
+                <option value="blank">Começar do Zero</option>
+              </select>
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Como vamos chamar sua experiência?"
+                className="rounded-lg border border-studio-border bg-white/[.04] p-3 text-sm text-studio-text"
+              />
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Descrição opcional"
+                className="rounded-lg border border-studio-border bg-white/[.04] p-3 text-sm text-studio-text"
+              />
+              <select value={structure} onChange={(e) => setStructure(e.target.value as any)} className="rounded-lg border border-studio-border bg-white/[.04] p-3 text-sm text-studio-text">
+                <option value="one">Criar primeira cena</option>
+                <option value="three">Começar com estrutura de 3 cenas</option>
+                <option value="empty">Começar vazio</option>
+              </select>
+              <div className="flex justify-between pt-2">
+                <SecondaryButton onClick={() => setWizard(false)}>Voltar</SecondaryButton>
+                <PrimaryButton
+                  disabled={!title.trim()}
+                  onClick={() => {
+                    onNew(createGuidedFunnel(type, title, description, structure));
+                    setWizard(false);
+                  }}
+                >
+                  Criar experiência
+                </PrimaryButton>
+              </div>
             </div>
-          </div>
+          </Card>
         </div>
       )}
     </main>
   );
 }
+const fieldClass = "w-full rounded-lg border border-studio-border bg-white/[.03] p-3 text-sm text-studio-text placeholder:text-studio-text-muted focus:border-studio-primary/50 focus:outline-none transition-colors";
 function Script({ scene, update }: { scene: any; update: (patch: any) => void }) {
   const guided = scene.guided || {};
   const script = guided.script || {};
+  const [details, setDetails] = useState(false);
   const set = (key: string, value: string) =>
     update({ guided: { ...guided, script: { ...script, [key]: value } } });
   return (
-    <div className="grid gap-4">
-      <h2>O que acontece nesta cena?</h2>
-      <input
-        value={scene.title}
-        onChange={(e) => update({ title: e.target.value })}
-        placeholder="Nome da cena"
-      />
-      <input
-        value={guided.objective || ""}
-        onChange={(e) => update({ guided: { ...guided, objective: e.target.value } })}
-        placeholder="Objetivo da cena"
-      />
-      <textarea
-        value={script.happens || ""}
-        onChange={(e) => set("happens", e.target.value)}
-        placeholder="O que acontece?"
-      />
-      <input
-        value={script.who || ""}
-        onChange={(e) => set("who", e.target.value)}
-        placeholder="Quem aparece?"
-      />
-      <textarea
-        value={script.dialogue || ""}
-        onChange={(e) => set("dialogue", e.target.value)}
-        placeholder="O que é dito?"
-      />
-      <textarea
-        value={script.notes || ""}
-        onChange={(e) => set("notes", e.target.value)}
-        placeholder="Observações"
-      />
+    <div className="space-y-5">
+      <div>
+        <SectionTitle>Roteiro da cena</SectionTitle>
+        <HelpText className="mt-1">O que acontece nesta cena?</HelpText>
+      </div>
+      <input value={scene.title} onChange={(e) => update({ title: e.target.value })} placeholder="Nome da cena" className={`${fieldClass} text-base font-medium`} />
+      <textarea value={script.happens || ""} onChange={(e) => set("happens", e.target.value)} placeholder="Descreva o que acontece, em poucas frases." rows={5} className={fieldClass} />
+      <button onClick={() => setDetails(!details)} className="text-sm font-medium text-studio-text-secondary hover:text-studio-text transition-colors">
+        {details ? "Ocultar detalhes" : "+ Adicionar objetivo, personagens e falas"}
+      </button>
+      {details && (
+        <div className="space-y-4 rounded-xl border border-studio-border bg-white/[.02] p-4">
+          <Field label="Objetivo"><input value={guided.objective || ""} onChange={(e) => update({ guided: { ...guided, objective: e.target.value } })} placeholder="O que essa cena precisa comunicar?" className={fieldClass} /></Field>
+          <Field label="Personagens"><input value={script.who || ""} onChange={(e) => set("who", e.target.value)} placeholder="Quem aparece?" className={fieldClass} /></Field>
+          <Field label="Falas"><textarea value={script.dialogue || ""} onChange={(e) => set("dialogue", e.target.value)} placeholder="O que é dito?" rows={3} className={fieldClass} /></Field>
+          <Field label="Observações"><textarea value={script.notes || ""} onChange={(e) => set("notes", e.target.value)} placeholder="Observações" rows={2} className={fieldClass} /></Field>
+        </div>
+      )}
     </div>
+  );
+}
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-studio-text-muted">{label}</span>
+      {children}
+    </label>
   );
 }
 function Production({ scene, update }: { scene: any; update: (patch: any) => void }) {
@@ -394,65 +437,85 @@ function Production({ scene, update }: { scene: any; update: (patch: any) => voi
   const save = (steps: any[]) =>
     update({ guided: { ...scene.guided, productionGuide: { steps } } });
   const activeIndex = Math.max(0, guide.steps.findIndex((item: any) => !item.completed));
+  const { message, show } = useToast();
   return (
-    <div className="grid gap-3">
-      <h2>PRODUZIR ESTA CENA</h2>
-      {guide.steps.map((item: any, index: number) => (
-        <div className={`rounded-xl p-4 ${index === activeIndex ? "border border-blue-400/50 bg-blue-500/5" : "bg-white/[.03] text-zinc-500 [&>p]:hidden [&>textarea]:hidden [&>button]:hidden [&>label]:hidden"}`} key={item.id}>
-          <b>
-            PASSO {index + 1} — {item.title}
-          </b>
-          <p>{item.instructions}</p>
-          <textarea
-            value={item.prompt || ""}
-            onChange={(e) =>
-              save(
-                guide.steps.map((step: any, i: number) =>
-                  i === index ? { ...step, prompt: e.target.value } : step,
-                ),
-              )
-            }
-          />
-          <button onClick={() => navigator.clipboard?.writeText(item.prompt || "")}>
-            COPIAR PROMPT
-          </button>
-          <label>
-            <input
-              type="checkbox"
-              checked={item.completed}
-              onChange={(e) =>
-                save(
-                  guide.steps.map((step: any, i: number) =>
-                    i === index ? { ...step, completed: e.target.checked } : step,
-                  ),
-                )
-              }
-            />{" "}
-            concluído
-          </label>
-          {item.type === "VIDEO_ANIMATION" && (
-            <button
-              onClick={() =>
-                save(
-                  guide.steps.map((step: any, i: number) =>
-                    i === index
-                      ? {
-                          ...step,
-                          takes: [
-                            ...step.takes,
-                            { id: uid("take"), title: "Novo take", completed: false },
-                          ],
-                        }
-                      : step,
-                  ),
-                )
-              }
-            >
-              + NOVO TAKE
-            </button>
-          )}
+    <div className="space-y-4">
+      <div className="flex items-baseline justify-between">
+        <SectionTitle>Produzir esta cena</SectionTitle>
+        <span className="text-sm text-studio-text-muted">Passo {Math.min(activeIndex + 1, guide.steps.length)} de {guide.steps.length}</span>
+      </div>
+      <div className="space-y-2">
+        {guide.steps.map((item: any, index: number) => {
+          const open = index === activeIndex;
+          return (
+            <Card key={item.id} className={open ? "border-studio-primary/40 bg-studio-primary-soft/40 p-4" : "p-3"}>
+              <div className="flex items-center gap-3">
+                {item.completed ? <span className="text-studio-success">✓</span> : open ? <Dot tone="primary" /> : <Dot />}
+                <span className={`text-sm font-semibold ${open ? "text-studio-text" : "text-studio-text-muted"}`}>{item.title}</span>
+              </div>
+              {open && (
+                <div className="mt-4 space-y-3">
+                  <HelpText>{item.instructions}</HelpText>
+                  {item.prompt !== undefined && (
+                    <div>
+                      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-studio-text-muted">Prompt{item.tool ? ` para ${item.tool}` : ""}</span>
+                      <textarea
+                        value={item.prompt || ""}
+                        onChange={(e) => save(guide.steps.map((step: any, i: number) => (i === index ? { ...step, prompt: e.target.value } : step)))}
+                        rows={4}
+                        className={fieldClass}
+                      />
+                      <div className="mt-2 flex gap-2">
+                        <SecondaryButton onClick={() => { navigator.clipboard?.writeText(item.prompt || ""); show("Copiado ✓"); }} className="text-xs">Copiar prompt</SecondaryButton>
+                      </div>
+                    </div>
+                  )}
+                  {item.type === "VIDEO_ANIMATION" && (
+                    <div className="space-y-2 pt-1">
+                      <span className="block text-xs font-semibold uppercase tracking-wider text-studio-text-muted">Takes</span>
+                      {item.takes.map((take: any, takeIndex: number) => (
+                        <TakeCard
+                          key={take.id}
+                          take={take}
+                          index={takeIndex}
+                          onToggle={() => save(guide.steps.map((step: any, i: number) => (i === index ? { ...step, takes: step.takes.map((t: any) => (t.id === take.id ? { ...t, completed: !t.completed } : t)) } : step)))}
+                        />
+                      ))}
+                      <SecondaryButton
+                        className="text-xs"
+                        onClick={() => save(guide.steps.map((step: any, i: number) => (i === index ? { ...step, takes: [...step.takes, { id: uid("take"), title: "Novo take", completed: false }] } : step)))}
+                      >
+                        + Adicionar take
+                      </SecondaryButton>
+                    </div>
+                  )}
+                  <label className="flex items-center gap-2 pt-1 text-sm text-studio-text-secondary">
+                    <input type="checkbox" checked={item.completed} onChange={(e) => save(guide.steps.map((step: any, i: number) => (i === index ? { ...step, completed: e.target.checked } : step)))} />
+                    Marcar como concluído
+                  </label>
+                </div>
+              )}
+            </Card>
+          );
+        })}
+      </div>
+      <Toast message={message} />
+    </div>
+  );
+}
+function TakeCard({ take, index, onToggle }: { take: any; index: number; onToggle: () => void }) {
+  return (
+    <div className="rounded-lg border border-studio-border bg-white/[.02] p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <span className="font-mono text-[11px] text-studio-text-muted">TAKE {String(index + 1).padStart(2, "0")}</span>
+          <p className="mt-0.5 text-sm font-medium text-studio-text">{take.title}</p>
+          {take.objective && <p className="mt-1 text-xs text-studio-text-muted">{take.objective}</p>}
         </div>
-      ))}
+        <button onClick={onToggle} className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${take.completed ? "bg-studio-success-soft text-studio-success" : "bg-white/[.06] text-studio-text-muted"}`}>
+          {take.completed ? "✓ Feito" : "Pendente"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -476,19 +539,24 @@ function VideoStep({
   onAttachPreviewFile: (file: File, assetId?: string, sceneId?: string) => void;
 }) {
   return (
-    <div className="grid gap-3">
-      <h2>Adicione o vídeo final desta cena.</h2>
-      <InlineMediaPicker label="VÍDEO" mediaType="video" funnel={funnel} urls={urls} value={scene.videoAssetId} onSelect={(assetId) => update({ videoAssetId: assetId })} onChange={onChange} onAttachPreview={(file, assetId) => onAttachPreviewFile(file, assetId, scene.id)} />
-      {asset && (
-        <>
-          <b>✓ VÍDEO ADICIONADO</b>
-          {asset.source === "preview" && !urls[asset.id] ? (
-            <button onClick={() => onAttachPreview(asset.id, scene.id)}>REANEXAR ARQUIVO: {asset.fileName}</button>
-          ) : (
+    <div className="space-y-4">
+      <div>
+        <SectionTitle>Vídeo da cena</SectionTitle>
+        <HelpText className="mt-1">Adicione o vídeo final desta cena.</HelpText>
+      </div>
+      {asset ? (
+        asset.source === "preview" && !urls[asset.id] ? (
+          <EmptyState title={`Arquivo local perdido: ${asset.fileName}`} description="Reanexe o arquivo para continuar vendo o preview." action={<SecondaryButton onClick={() => onAttachPreview(asset.id, scene.id)}>Reanexar arquivo</SecondaryButton>} />
+        ) : (
+          <div className="space-y-3">
+            <Badge tone="success">✓ Vídeo adicionado</Badge>
             <GuidedPreview funnel={funnel} scene={scene} urls={urls} onMoment={() => undefined} />
-          )}
-        </>
+          </div>
+        )
+      ) : (
+        <EmptyState title="Nenhum vídeo adicionado." description="Envie o arquivo final ou escolha um já existente no funil." />
       )}
+      <InlineMediaPicker label="Vídeo" mediaType="video" funnel={funnel} urls={urls} value={scene.videoAssetId} onSelect={(assetId) => update({ videoAssetId: assetId })} onChange={onChange} onAttachPreview={(file, assetId) => onAttachPreviewFile(file, assetId, scene.id)} />
     </div>
   );
 }
@@ -687,10 +755,16 @@ function Interactions({
   );
 }
 function TestStep({ funnel, scene, urls, onTested }: { funnel: FunnelDefinition; scene: any; urls: Record<string, string>; onTested: () => void }) {
+  const tested = scene.guided?.tested;
   return (
-    <div className="grid gap-3">
-      <h2>TESTE ESTA CENA</h2>
-      <p>Use o preview abaixo para executar o vídeo real e testar as interações desta cena.</p>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <SectionTitle>Teste esta cena</SectionTitle>
+          <HelpText className="mt-1">Use o preview abaixo para executar o vídeo real e testar as interações.</HelpText>
+        </div>
+        <Badge tone={tested ? "success" : "warning"}>{tested ? "Testada" : "Não testada"}</Badge>
+      </div>
       <GuidedPreview funnel={funnel} scene={scene} urls={urls} onTested={onTested} />
     </div>
   );
@@ -710,10 +784,75 @@ function ReviewStep({ funnel, urls, onUi, onChange }: { funnel: FunnelDefinition
     const target = goToIssue(issue);
     onUi({ mode: "guided", funnelId: funnel.id, ...(target.sceneId ? { sceneId: target.sceneId } : {}), ...(target.eventId ? { eventId: target.eventId } : {}), step: target.step });
   };
-  if (testing) return <section className="grid gap-3"><header className="flex justify-between"><h2>TESTAR EXPERIÊNCIA COMPLETA</h2><button onClick={() => setTesting(false)}>SAIR DO TESTE</button></header><GuidedPreview funnel={funnel} scene={funnel.scenes.find((scene) => scene.id === funnel.entrySceneId) || funnel.scenes[0]!} urls={urls} /></section>;
-  return <section className="grid gap-4"><h2>REVISAR EXPERIÊNCIA</h2><p>{globalNextStep(funnel)}</p><div className="grid md:grid-cols-3 gap-3"><ReviewCard title="ESTRUTURA" ready={funnel.scenes.length > 0 && !summary.errors.some((issue) => issue.title.includes("Conexão") || issue.title.includes("Cena"))} text={`${funnel.scenes.length} cenas configuradas`} /><ReviewCard title="VÍDEOS" ready={summary.videos === funnel.scenes.length} text={`${summary.videos}/${funnel.scenes.length} vídeos configurados`} /><ReviewCard title="INTERAÇÕES" ready text={`${summary.interactions} interações`} /><ReviewCard title="ARQUIVOS" ready={!summary.errors.some((issue) => issue.title.includes("Arquivo"))} text={`${funnel.assets.length} arquivos`} /><ReviewCard title="TESTES" ready={summary.warnings.length === 0} text={`${summary.tested}/${funnel.scenes.length} cenas testadas`} /><ReviewCard title="CONEXÕES" ready={!summary.errors.some((issue) => issue.title.includes("Conexão"))} text={funnel.scenes.map((scene) => scene.nextSceneId ? `${scene.title} ↓ ${funnel.scenes.find((item) => item.id === scene.nextSceneId)?.title || "?"}` : scene.title).join(" · ")} /></div><div className="rounded bg-zinc-900 p-4"><b>FALTAM {summary.errors.length + summary.warnings.length} COISAS PARA SUA EXPERIÊNCIA FICAR PRONTA</b>{summary.issues.length ? summary.issues.map((issue) => <div className="flex justify-between gap-2 mt-2" key={issue.id}><span><b>{issue.severity === "error" ? "ERRO" : "ATENÇÃO"}</b> — {issue.message}</span><button onClick={() => fix(issue)}>CORRIGIR</button></div>) : <p>SUA EXPERIÊNCIA ESTÁ PRONTA ✅</p>}</div>{summary.errors.length === 0 && <div className="rounded border border-emerald-700 p-4"><b>SUA EXPERIÊNCIA ESTÁ PRONTA ✅</b><p>{funnel.title} · {funnel.scenes.length} cenas · {summary.interactions} interações · {summary.videos} vídeos · {funnel.assets.length} arquivos · {summary.warnings.length} avisos</p></div>}<div className="flex flex-wrap gap-2"><button onClick={() => setTesting(true)}>▶ TESTAR EXPERIÊNCIA COMPLETA</button><button onClick={() => download("draft")}>EXPORTAR RASCUNHO</button><button disabled={summary.errors.length > 0} onClick={() => download("valid")}>EXPORTAR PROJETO VÁLIDO</button><button disabled>EXPORTAR PARA PUBLICAÇÃO — EM BREVE</button></div>{exported && <p>PROJETO EXPORTADO ✅ Na próxima etapa, este arquivo poderá virar um pacote para publicação na Cloudflare.</p>}</section>;
+  const totalIssues = summary.errors.length + summary.warnings.length;
+  if (testing)
+    return (
+      <section className="space-y-4">
+        <header className="flex items-center justify-between">
+          <SectionTitle>Testar experiência completa</SectionTitle>
+          <SecondaryButton onClick={() => setTesting(false)}>Sair do teste</SecondaryButton>
+        </header>
+        <GuidedPreview funnel={funnel} scene={funnel.scenes.find((scene) => scene.id === funnel.entrySceneId) || funnel.scenes[0]!} urls={urls} />
+      </section>
+    );
+  return (
+    <section className="space-y-5">
+      <div>
+        <SectionTitle>Revisão do funil</SectionTitle>
+        <HelpText className="mt-1">{globalNextStep(funnel)}</HelpText>
+      </div>
+      <div className="grid gap-3 md:grid-cols-3">
+        <ReviewCard title="Estrutura" ready={funnel.scenes.length > 0 && !summary.errors.some((issue) => issue.title.includes("Conexão") || issue.title.includes("Cena"))} text={`${funnel.scenes.length} cenas configuradas`} />
+        <ReviewCard title="Vídeos" ready={summary.videos === funnel.scenes.length} text={`${summary.videos}/${funnel.scenes.length} vídeos configurados`} />
+        <ReviewCard title="Interações" ready text={`${summary.interactions} interações`} />
+        <ReviewCard title="Arquivos" ready={!summary.errors.some((issue) => issue.title.includes("Arquivo"))} text={`${funnel.assets.length} arquivos`} />
+        <ReviewCard title="Testes" ready={summary.warnings.length === 0} text={`${summary.tested}/${funnel.scenes.length} cenas testadas`} />
+        <ReviewCard title="Conexões" ready={!summary.errors.some((issue) => issue.title.includes("Conexão"))} text={funnel.scenes.map((scene) => scene.nextSceneId ? `${scene.title} ↓ ${funnel.scenes.find((item) => item.id === scene.nextSceneId)?.title || "?"}` : scene.title).join(" · ")} />
+      </div>
+      {totalIssues > 0 ? (
+        <Card className="p-5">
+          <div className="flex items-center justify-between">
+            <SectionTitle className="text-base">Faltam {totalIssues} coisa{totalIssues === 1 ? "" : "s"} para ficar pronta</SectionTitle>
+          </div>
+          <div className="mt-3 divide-y divide-studio-border">
+            {summary.issues.map((issue) => (
+              <div className="flex items-center justify-between gap-3 py-2.5" key={issue.id}>
+                <span className="flex items-center gap-2 text-sm text-studio-text-secondary">
+                  <Badge tone={issue.severity === "error" ? "error" : "warning"}>{issue.severity === "error" ? "Erro" : "Atenção"}</Badge>
+                  {issue.message}
+                </span>
+                <GhostButton onClick={() => fix(issue)} className="shrink-0 text-studio-primary-strong">Corrigir</GhostButton>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : (
+        <Card className="border-studio-success/30 bg-studio-success-soft p-5">
+          <p className="font-semibold text-studio-success">Sua experiência está pronta ✓</p>
+          <HelpText className="mt-1">{funnel.title} · {funnel.scenes.length} cenas · {summary.interactions} interações · {summary.videos} vídeos · {funnel.assets.length} arquivos</HelpText>
+        </Card>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <PrimaryButton onClick={() => setTesting(true)}>▶ Testar experiência completa</PrimaryButton>
+        <SecondaryButton onClick={() => download("draft")}>Exportar rascunho</SecondaryButton>
+        <SecondaryButton disabled={summary.errors.length > 0} onClick={() => download("valid")}>Exportar projeto válido</SecondaryButton>
+        <GhostButton disabled>Exportar para publicação — em breve</GhostButton>
+      </div>
+      {exported && <HelpText>Projeto exportado ✓ Na próxima etapa, este arquivo poderá virar um pacote para publicação na Cloudflare.</HelpText>}
+    </section>
+  );
 }
-function ReviewCard({ title, ready, text }: { title: string; ready: boolean; text: string }) { return <div className="border border-zinc-700 p-3"><b>{title}</b><p>{ready ? "PRONTO" : "ATENÇÃO"}</p><small>{text}</small></div>; }
+function ReviewCard({ title, ready, text }: { title: string; ready: boolean; text: string }) {
+  return (
+    <Card className="p-3.5">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-studio-text">{title}</span>
+        <Badge tone={ready ? "success" : "warning"}>{ready ? "Pronto" : "Atenção"}</Badge>
+      </div>
+      <p className="mt-1.5 text-xs text-studio-text-muted">{text}</p>
+    </Card>
+  );
+}
 
 export function FunnelStudioHome({
   projects,
@@ -737,45 +876,45 @@ export function FunnelStudioHome({
     [description, setDescription] = useState(""),
     [structure, setStructure] = useState<"one" | "three" | "empty">("one");
   return (
-    <main className="min-h-screen bg-zinc-950 text-white p-8">
+    <main className="min-h-screen bg-studio-bg text-studio-text p-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold">FUNNEL STUDIO</h1>
-        <p className="text-zinc-400 mt-2">Crie experiências interativas sem precisar programar.</p>
-        <div className="grid md:grid-cols-2 gap-5 mt-8">
-          <button className="text-left p-8 rounded-xl bg-blue-600" onClick={onGuided}>
-            <b className="text-xl">CRIAÇÃO GUIADA</b>
-            <span className="block mt-2">Recomendado. Monte sua experiência passo a passo.</span>
+        <PageTitle className="text-4xl">Funnel Studio</PageTitle>
+        <HelpText className="mt-2 text-base">Crie experiências interativas sem precisar programar.</HelpText>
+        <div className="grid md:grid-cols-2 gap-4 mt-8">
+          <button className="text-left p-7 rounded-2xl bg-studio-primary text-white transition-colors hover:bg-studio-primary-strong" onClick={onGuided}>
+            <span className="block text-lg font-semibold">Criação guiada</span>
+            <span className="block mt-1.5 text-sm text-white/80">Recomendado. Monte sua experiência passo a passo.</span>
           </button>
-          <button className="text-left p-8 rounded-xl bg-zinc-800" onClick={onAdvanced}>
-            <b className="text-xl">EDITOR AVANÇADO</b>
-            <span className="block mt-2">Controle cenas, timeline, eventos, triggers e ações.</span>
+          <button className="text-left p-7 rounded-2xl border border-studio-border bg-studio-surface transition-colors hover:border-studio-border-strong" onClick={onAdvanced}>
+            <span className="block text-lg font-semibold text-studio-text">Editor avançado</span>
+            <span className="block mt-1.5 text-sm text-studio-text-muted">Controle cenas, timeline, eventos, triggers e ações.</span>
           </button>
         </div>
-        <div className="mt-10 flex justify-between">
-          <h2 className="text-xl">MEUS FUNIS</h2>
-          <button onClick={() => setWizard(true)}>+ NOVA EXPERIÊNCIA</button>
+        <div className="mt-10 flex items-center justify-between">
+          <SectionTitle className="text-xl">Meus funis</SectionTitle>
+          <SecondaryButton onClick={() => setWizard(true)}>+ Nova experiência</SecondaryButton>
         </div>
         <div className="mt-3 grid gap-3">
           {projects.map((project) => (
-            <div className="bg-zinc-900 p-4 flex justify-between" key={project.id}>
+            <Card key={project.id} className="flex items-center justify-between p-4">
               <div>
-                <b>{project.title}</b>
-                <small className="block text-zinc-400">
+                <p className="font-medium text-studio-text">{project.title}</p>
+                <HelpText className="mt-0.5">
                   {project.id === funnel.id
                     ? `${funnel.scenes.length} cenas · ${progress.percent}% concluído`
                     : "Projeto salvo"}
-                </small>
+                </HelpText>
               </div>
-              <button onClick={onGuided}>CONTINUAR</button>
-            </div>
+              <PrimaryButton onClick={onGuided}>Continuar</PrimaryButton>
+            </Card>
           ))}
         </div>
       </div>
       {wizard && (
-        <div className="fixed inset-0 bg-black/70 grid place-items-center p-6">
-          <div className="bg-zinc-900 p-6 max-w-lg w-full grid gap-4">
-            <h2>O que você quer criar?</h2>
-            <select value={type} onChange={(e) => setType(e.target.value as typeof type)}>
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-6 backdrop-blur-sm">
+          <Card className="w-full max-w-lg bg-studio-surface-2 p-6 grid gap-4">
+            <SectionTitle>O que você quer criar?</SectionTitle>
+            <select value={type} onChange={(e) => setType(e.target.value as typeof type)} className={fieldClass}>
               <option value="story">História Interativa</option>
               <option value="vsl">VSL Interativa</option>
               <option value="quiz">Quiz / Diagnóstico</option>
@@ -783,35 +922,37 @@ export function FunnelStudioHome({
               <option value="training">Treinamento Interativo</option>
               <option value="blank">Começar do Zero</option>
             </select>
-            <h2>Como vamos chamar sua experiência?</h2>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nome" />
+            <SectionTitle className="text-base">Como vamos chamar sua experiência?</SectionTitle>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nome" className={fieldClass} />
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Descrição opcional"
+              className={fieldClass}
             />
-            <h2>Como você quer começar?</h2>
+            <SectionTitle className="text-base">Como você quer começar?</SectionTitle>
             <select
               value={structure}
               onChange={(e) => setStructure(e.target.value as typeof structure)}
+              className={fieldClass}
             >
               <option value="one">Criar primeira cena</option>
               <option value="three">Criar estrutura com 3 cenas</option>
               <option value="empty">Começar vazio</option>
             </select>
-            <div className="flex justify-between">
-              <button onClick={() => setWizard(false)}>VOLTAR</button>
-              <button
+            <div className="flex justify-between pt-2">
+              <SecondaryButton onClick={() => setWizard(false)}>Voltar</SecondaryButton>
+              <PrimaryButton
                 disabled={!title.trim()}
                 onClick={() => {
                   onNew(createGuidedFunnel(type, title, description, structure));
                   setWizard(false);
                 }}
               >
-                CONTINUAR
-              </button>
+                Continuar
+              </PrimaryButton>
             </div>
-          </div>
+          </Card>
         </div>
       )}
     </main>
