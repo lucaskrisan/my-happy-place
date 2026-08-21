@@ -24,6 +24,10 @@ jobs:
           node-version: 22
           cache: npm
 
+      # npm 10.x (the default bundled with Node 22 here) fails "npm ci" on this lockfile's Cloudflare
+      # workerd/miniflare optional-platform-dependency shape, flagging already-satisfied packages as
+      # missing. npm 11 validates the same lockfile correctly (verified locally against this exact commit).
+      - run: npm install -g npm@11
       - run: npm ci
       - run: npm run typecheck
       - run: npm run build
