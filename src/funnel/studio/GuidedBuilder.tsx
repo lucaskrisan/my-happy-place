@@ -12,7 +12,7 @@ import {
   triggerFromGuided,
   type GuidedUiState,
 } from "./guidedState";
-import { uid } from "./studioState";
+import { reorderScenes, uid } from "./studioState";
 import { GuidedPreview, formatTime } from "./GuidedPreview";
 import { GuidedEssentialInteractions } from "./GuidedEssentialInteractions";
 import { GuidedComplexInteractions } from "./GuidedComplexInteractions";
@@ -45,6 +45,11 @@ export function GuidedBuilder({
   urls,
   onAttachPreview,
   onAttachPreviewFile,
+  productName,
+  onBackToProduct,
+  onAssets,
+  onExportDraft,
+  onExportValid,
 }: {
   funnel: FunnelDefinition;
   onChange: (funnel: FunnelDefinition) => void;
@@ -54,6 +59,11 @@ export function GuidedBuilder({
   urls: Record<string, string>;
   onAttachPreview: (assetId?: string, sceneId?: string) => void;
   onAttachPreviewFile: (file: File, assetId?: string, sceneId?: string) => void;
+  productName?: string;
+  onBackToProduct?: () => void;
+  onAssets?: () => void;
+  onExportDraft?: () => void;
+  onExportValid?: () => void;
 }) {
   // The project wizard lives on the Studio home; these remain false here so a scene wizard never opens it.
   const [wizard, setWizard] = useState(false),
@@ -108,9 +118,10 @@ export function GuidedBuilder({
     updateEvent(event);
   };
   return (
-    <main className="min-h-screen bg-zinc-950 text-white p-6">
-      <header className="max-w-6xl mx-auto flex items-center justify-between gap-3">
+    <main className="min-h-screen bg-[#09090b] text-white p-5 md:p-8">
+      <header className="max-w-7xl mx-auto flex items-center justify-between gap-3 border-b border-white/[.07] pb-5">
         <div>
+          {productName && <button onClick={onBackToProduct} className="mb-2 block text-xs font-medium text-zinc-500 hover:text-zinc-200">{productName} / FUNIL</button>}
           <h1 className="text-2xl font-bold">{funnel.title}</h1>
           <p className="text-zinc-400">
             {progress.ready}/{progress.total} cenas prontas · {progress.percent}% concluído
@@ -118,10 +129,20 @@ export function GuidedBuilder({
         </div>
         <div className="flex gap-2"><button onClick={() => persist("review")}>FINALIZAR EXPERIÊNCIA</button><button onClick={onAdvanced}>ABRIR EDITOR AVANÇADO</button></div>
       </header>
-      <div className="max-w-6xl mx-auto mt-6 grid grid-cols-[260px_1fr] gap-6">
-        <aside className="space-y-3">
+      <nav className="max-w-7xl mx-auto mt-4 flex flex-wrap gap-1 rounded-xl border border-white/[.07] bg-white/[.025] p-1.5 text-sm">
+        <button className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-white/[.06]" onClick={() => persist("script")}>CRIAÇÃO</button>
+        <button className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-white/[.06]" onClick={() => document.getElementById("studio-scenes")?.scrollIntoView({ behavior: "smooth" })}>CENAS</button>
+        <button className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-white/[.06]" onClick={onAssets}>ARQUIVOS</button>
+        <button className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-white/[.06]" onClick={() => persist("review")}>REVISÃO</button>
+        <button className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-white/[.06]" onClick={onExportDraft}>EXPORTAR RASCUNHO</button>
+        <button className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-white/[.06]" onClick={onExportValid}>EXPORTAR VÁLIDO</button>
+        <button className="ml-auto rounded-lg px-3 py-2 text-zinc-400 hover:bg-white/[.06]" onClick={onAdvanced}>EDITOR AVANÇADO</button>
+      </nav>
+      <div className="max-w-7xl mx-auto mt-7 grid grid-cols-[250px_minmax(0,1fr)] gap-8">
+        <aside id="studio-scenes" className="space-y-2">
+          <p className="px-2 text-xs font-semibold tracking-[.16em] text-zinc-500">CENAS</p>
           <button
-            className="w-full"
+            className="mb-3 w-full rounded-lg border border-dashed border-zinc-700 px-3 py-3 text-sm font-medium text-zinc-300 hover:border-blue-400 hover:text-white"
             onClick={() => {
               const next = addGuidedScene(funnel);
               onChange(next);
@@ -141,8 +162,10 @@ export function GuidedBuilder({
           {funnel.scenes.map((item, index) => {
             const status = sceneStatus(item, funnel);
             return (
-              <button
-                className={`w-full text-left p-3 border ${item.id === scene.id ? "border-blue-500" : "border-zinc-700"}`}
+              <div
+                role="button"
+                tabIndex={0}
+                className={`w-full rounded-xl p-4 text-left transition ${item.id === scene.id ? "bg-blue-500/10 ring-1 ring-blue-400/70" : "hover:bg-white/[.035]"}`}
                 key={item.id}
                 onClick={() => {
                   setSceneId(item.id);
@@ -155,7 +178,11 @@ export function GuidedBuilder({
                 <small className="block text-zinc-400">
                   Roteiro {status.script} · Vídeo {status.video}
                 </small>
-              </button>
+                <div className="mt-3 flex items-center justify-between gap-2 text-xs text-zinc-500">
+                  <span>{item.nextSceneId ? "Próxima cena conectada" : "Última cena"}</span>
+                  <span className="flex gap-1"><button aria-label="Mover cena para cima" disabled={index === 0} onClick={(event) => { event.stopPropagation(); onChange(reorderScenes(funnel, index, index - 1)); }}>↑</button><button aria-label="Mover cena para baixo" disabled={index === funnel.scenes.length - 1} onClick={(event) => { event.stopPropagation(); onChange(reorderScenes(funnel, index, index + 1)); }}>↓</button></span>
+                </div>
+              </div>
             );
           })}
         </aside>
@@ -258,7 +285,7 @@ function Script({ scene, update }: { scene: any; update: (patch: any) => void })
   const set = (key: string, value: string) =>
     update({ guided: { ...guided, script: { ...script, [key]: value } } });
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-4">
       <h2>O que acontece nesta cena?</h2>
       <input
         value={scene.title}
@@ -345,11 +372,12 @@ function Production({ scene, update }: { scene: any; update: (patch: any) => voi
   };
   const save = (steps: any[]) =>
     update({ guided: { ...scene.guided, productionGuide: { steps } } });
+  const activeIndex = Math.max(0, guide.steps.findIndex((item: any) => !item.completed));
   return (
     <div className="grid gap-3">
       <h2>PRODUZIR ESTA CENA</h2>
       {guide.steps.map((item: any, index: number) => (
-        <div className="border border-zinc-700 p-3" key={item.id}>
+        <div className={`rounded-xl p-4 ${index === activeIndex ? "border border-blue-400/50 bg-blue-500/5" : "bg-white/[.03] text-zinc-500 [&>p]:hidden [&>textarea]:hidden [&>button]:hidden [&>label]:hidden"}`} key={item.id}>
           <b>
             PASSO {index + 1} — {item.title}
           </b>
