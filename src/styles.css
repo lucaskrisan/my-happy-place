@@ -142,3 +142,49 @@
     color: var(--color-foreground);
   }
 }
+
+/*
+ * Funnel Studio design system (/studio and /studio/*).
+ *
+ * A small, presentation-only token set for the creation tool — deliberately dark and separate from the
+ * app-wide shadcn tokens above, which stay untouched. Same mechanism (Tailwind v4 @theme), no new
+ * dependency: this just generates bg-studio-*, text-studio-*, border-studio-* utility classes.
+ */
+@theme inline {
+  --color-studio-bg: var(--studio-bg);
+  --color-studio-surface: var(--studio-surface);
+  --color-studio-surface-2: var(--studio-surface-2);
+  --color-studio-border: var(--studio-border);
+  --color-studio-border-strong: var(--studio-border-strong);
+  --color-studio-primary: var(--studio-primary);
+  --color-studio-primary-strong: var(--studio-primary-strong);
+  --color-studio-primary-soft: var(--studio-primary-soft);
+  --color-studio-success: var(--studio-success);
+  --color-studio-success-soft: var(--studio-success-soft);
+  --color-studio-warning: var(--studio-warning);
+  --color-studio-warning-soft: var(--studio-warning-soft);
+  --color-studio-error: var(--studio-error);
+  --color-studio-error-soft: var(--studio-error-soft);
+  --color-studio-text: var(--studio-text);
+  --color-studio-text-secondary: var(--studio-text-secondary);
+  --color-studio-text-muted: var(--studio-text-muted);
+}
+:root {
+  --studio-bg: oklch(0.16 0.006 285);
+  --studio-surface: oklch(0.2 0.006 285);
+  --studio-surface-2: oklch(0.24 0.007 285);
+  --studio-border: oklch(1 0 0 / 7%);
+  --studio-border-strong: oklch(1 0 0 / 14%);
+  --studio-primary: oklch(0.62 0.16 258);
+  --studio-primary-strong: oklch(0.7 0.16 258);
+  --studio-primary-soft: oklch(0.62 0.16 258 / 14%);
+  --studio-success: oklch(0.72 0.14 152);
+  --studio-success-soft: oklch(0.72 0.14 152 / 14%);
+  --studio-warning: oklch(0.79 0.14 82);
+  --studio-warning-soft: oklch(0.79 0.14 82 / 14%);
+  --studio-error: oklch(0.66 0.19 25);
+  --studio-error-soft: oklch(0.66 0.19 25 / 14%);
+  --studio-text: oklch(0.97 0.002 285);
+  --studio-text-secondary: oklch(0.78 0.006 285);
+  --studio-text-muted: oklch(0.56 0.008 285);
+}
