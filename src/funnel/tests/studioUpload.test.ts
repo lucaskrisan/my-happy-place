@@ -3,6 +3,8 @@ import {
   STUDIO_UPLOAD_LIMIT_BYTES,
   buildStudioAssetKey,
   handleStudioAssetUpload,
+  handleStudioAssetDelete,
+  handleStudioAssetInventory,
   type WorkerEnv,
 } from "../../server";
 import {
@@ -88,6 +90,25 @@ describe("studio upload endpoint", () => {
   it("builds a bounded traversal-safe key", () => {
     const key = buildStudioAssetKey("../../funnel", "a/b", "../../x.mp4", "version");
     expect(key).toBe("funnels/funnel/assets/a-b/version-x.mp4");
+  });
+});
+
+describe("studio asset cleanup endpoint", () => {
+  const remove = (body: unknown, token = "secret") => new Request("https://example.test/api/studio/assets/object", { method: "DELETE", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  it("rejects missing secrets, invalid tokens, traversal, other funnels and legacy media", async () => {
+    const bucket = { put: async () => null, get: async () => null, head: async () => null, delete: async () => undefined, list: async () => ({ objects: [], truncated: false }) };
+    expect((await handleStudioAssetDelete(remove({ funnelId: "f", assetId: "a", r2Key: "funnels/f/assets/a/v.mp4" }), {})).status).toBe(503);
+    expect((await handleStudioAssetDelete(remove({ funnelId: "f", assetId: "a", r2Key: "funnels/f/assets/a/v.mp4" }, "wrong"), environment(bucket))).status).toBe(401);
+    for (const key of ["funnels/f/assets/a/../x", "funnels/other/assets/a/v", "scene-02/video/scene.mp4"]) expect((await handleStudioAssetDelete(remove({ funnelId: "f", assetId: "a", r2Key: key }), environment(bucket))).status).toBe(400);
+  });
+  it("deletes only a valid studio key and inventories only its funnel prefix", async () => {
+    let deleted = "", prefix = "";
+    const bucket = { put: async () => null, get: async () => null, head: async () => null, delete: async (key: string | string[]) => { deleted = Array.isArray(key) ? key[0]! : key; }, list: async ({ prefix: value }: { prefix: string }) => { prefix = value; return { objects: [], truncated: false }; } };
+    const key = "funnels/f/assets/a/v.mp4";
+    expect((await handleStudioAssetDelete(remove({ funnelId: "f", assetId: "a", r2Key: key }), environment(bucket))).status).toBe(200);
+    expect(deleted).toBe(key);
+    expect((await handleStudioAssetInventory(new Request("https://x/api/studio/assets/inventory?funnelId=f", { headers: { Authorization: "Bearer secret" } }), environment(bucket))).status).toBe(200);
+    expect(prefix).toBe("funnels/f/assets/");
   });
 });
 

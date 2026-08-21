@@ -37,6 +37,8 @@ type FunnelMediaBucket = {
       customMetadata: Record<string, string>;
     },
   ) => Promise<(R2ObjectHead & { key: string; uploaded: Date }) | null>;
+  delete?: (key: string | string[]) => Promise<void>;
+  list?: (options: { prefix: string; cursor?: string }) => Promise<{ objects: Array<{ key: string; size: number; etag: string; uploaded: Date; httpMetadata?: R2ObjectMetadata }>; truncated: boolean; cursor?: string }>;
 };
 
 export type WorkerEnv = {
@@ -45,6 +47,8 @@ export type WorkerEnv = {
 };
 
 export const STUDIO_UPLOAD_PATH = "/api/studio/assets/upload";
+export const STUDIO_ASSET_DELETE_PATH = "/api/studio/assets/object";
+export const STUDIO_ASSET_INVENTORY_PATH = "/api/studio/assets/inventory";
 export const STUDIO_UPLOAD_LIMIT_BYTES = 90 * 1024 * 1024;
 export const STUDIO_UPLOAD_MIME_TYPES = STUDIO_MEDIA_TYPES;
 
@@ -178,6 +182,39 @@ function studioUploadError(status: number, message: string): Response {
   return Response.json({ error: message }, { status });
 }
 
+function studioAssetPrefix(funnelId: string, assetId?: string) {
+  const funnel = sanitizeStudioSegment(funnelId, "funnel");
+  return `funnels/${funnel}/assets/${assetId ? `${sanitizeStudioSegment(assetId, "asset")}/` : ""}`;
+}
+
+function studioAuthorized(request: Request, env: WorkerEnv) {
+  const secret = env.STUDIO_UPLOAD_TOKEN;
+  return !!secret && request.headers.get("Authorization") === `Bearer ${secret}`;
+}
+
+export async function handleStudioAssetDelete(request: Request, env: WorkerEnv): Promise<Response> {
+  if (request.method !== "DELETE") return new Response("Method not allowed", { status: 405, headers: { Allow: "DELETE" } });
+  if (!env.STUDIO_UPLOAD_TOKEN) return studioUploadError(503, "Remote management unavailable");
+  if (!studioAuthorized(request, env)) return studioUploadError(401, "Unauthorized");
+  if (!env.FUNNEL_MEDIA?.delete) return studioUploadError(503, "Remote management unavailable");
+  let body: { funnelId?: string; assetId?: string; r2Key?: string };
+  try { body = await request.json(); } catch { return studioUploadError(400, "Invalid delete request"); }
+  if (!body.funnelId || !body.assetId || !body.r2Key || body.r2Key.split("/").some((segment) => !segment || segment === "." || segment === "..") || !body.r2Key.startsWith(studioAssetPrefix(body.funnelId, body.assetId))) return studioUploadError(400, "Invalid asset key");
+  try { await env.FUNNEL_MEDIA.delete(body.r2Key); return Response.json({ deleted: true, key: body.r2Key }); }
+  catch { return studioUploadError(500, "Unable to delete file"); }
+}
+
+export async function handleStudioAssetInventory(request: Request, env: WorkerEnv): Promise<Response> {
+  if (request.method !== "GET") return new Response("Method not allowed", { status: 405, headers: { Allow: "GET" } });
+  if (!env.STUDIO_UPLOAD_TOKEN) return studioUploadError(503, "Remote management unavailable");
+  if (!studioAuthorized(request, env)) return studioUploadError(401, "Unauthorized");
+  if (!env.FUNNEL_MEDIA?.list) return studioUploadError(503, "Remote management unavailable");
+  const url = new URL(request.url), funnelId = url.searchParams.get("funnelId");
+  if (!funnelId) return studioUploadError(400, "Invalid inventory request");
+  const listed = await env.FUNNEL_MEDIA.list({ prefix: studioAssetPrefix(funnelId), ...(url.searchParams.get("cursor") ? { cursor: url.searchParams.get("cursor")! } : {}) });
+  return Response.json({ objects: listed.objects.map((item) => ({ key: item.key, size: item.size, etag: item.etag, uploadedAt: item.uploaded.toISOString(), contentType: item.httpMetadata?.contentType })), truncated: listed.truncated, cursor: listed.cursor });
+}
+
 function decodeUploadFilename(value: string | null): string | undefined {
   if (!value) return undefined;
   try {
@@ -306,6 +343,12 @@ export default {
       }
       if (new URL(request.url).pathname === STUDIO_UPLOAD_PATH) {
         return await handleStudioAssetUpload(request, env);
+      }
+      if (new URL(request.url).pathname === STUDIO_ASSET_DELETE_PATH) {
+        return await handleStudioAssetDelete(request, env);
+      }
+      if (new URL(request.url).pathname === STUDIO_ASSET_INVENTORY_PATH) {
+        return await handleStudioAssetInventory(request, env);
       }
 
       const handler = await getServerEntry();

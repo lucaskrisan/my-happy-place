@@ -79,6 +79,7 @@ export function replacePermanentAsset(
 ) {
   const current = funnel.assets.find((asset) => asset.id === assetId);
   if (!current || current.source !== "permanent") return funnel;
+  const previous = current.r2Key ? { r2Key: current.r2Key, ...(current.etag ? { etag: current.etag } : {}), ...(current.uploadedAt ? { uploadedAt: current.uploadedAt } : {}), ...(current.size !== undefined ? { size: current.size } : {}) } : undefined;
   const next = {
     ...funnel,
     assets: funnel.assets.map((asset) => asset.id === assetId ? {
@@ -90,6 +91,7 @@ export function replacePermanentAsset(
       uploadedAt: result.uploadedAt,
       r2Key: result.key,
       etag: result.etag,
+      previousVersions: [...(current.previousVersions ?? []), ...(previous ? [previous] : [])],
     } : asset),
   };
   return invalidateStructuralTests(funnel, next);

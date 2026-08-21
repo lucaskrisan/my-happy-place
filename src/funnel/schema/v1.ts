@@ -13,6 +13,12 @@ export const blockTypes = [
 export type BlockType = (typeof blockTypes)[number];
 
 const id = z.string().min(1);
+const previousAssetVersionSchema = z.object({
+  r2Key: z.string().min(1),
+  etag: z.string().min(1).optional(),
+  uploadedAt: z.string().datetime().optional(),
+  size: z.number().int().nonnegative().optional(),
+});
 export const assetRefSchema = z.discriminatedUnion("source", [
   z.object({
     id,
@@ -25,6 +31,7 @@ export const assetRefSchema = z.discriminatedUnion("source", [
     uploadedAt: z.string().datetime().optional(),
     r2Key: z.string().min(1).optional(),
     etag: z.string().min(1).optional(),
+    previousVersions: z.array(previousAssetVersionSchema).optional(),
   }),
   // Object URLs are in-memory preview handles, not durable/public asset URLs.
   z.object({
