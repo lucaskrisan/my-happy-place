@@ -3,13 +3,14 @@ import type { ActionDefinition, FunnelDefinition, SceneEventDefinition, SceneDef
 import { actionFromGuided, createGuidedInteraction, deleteGuidedInteraction, duplicateGuidedInteraction, guidedInteractionReferences, triggerFromGuided, updateGuidedInteraction } from "./guidedState";
 import { GuidedPreview, formatTime } from "./GuidedPreview";
 import { uid } from "./studioState";
+import { InlineMediaPicker } from "./InlineMediaPicker";
 
 type Essential = Extract<SceneEventDefinition["block"], "quiz" | "notification" | "audio" | "scene_transition">;
 const labels: Record<Essential, string> = { quiz: "Pergunta", notification: "Notificação", audio: "Áudio", scene_transition: "Ir para outra cena" };
 const triggerLabel = (trigger: TriggerDefinition) => trigger.kind === "SCENE_START" ? "no começo do vídeo" : trigger.kind === "TIME" ? `em ${formatTime(trigger.seconds)}` : trigger.kind === "BEFORE_END" ? `${trigger.seconds.toFixed(2)}s antes do final` : trigger.kind === "VIDEO_END" ? "quando o vídeo terminar" : "depois de outra interação";
 const actionLabel = (action?: ActionDefinition) => !action ? "continua o vídeo" : action.type === "RESUME_VIDEO" ? "continua o vídeo" : action.type === "NEXT_SCENE" ? "vai para a próxima cena" : action.type === "GO_TO_SCENE" ? "vai para outra cena" : action.type === "OPEN_EVENT" ? "abre outra interação" : "encerra";
 
-export function GuidedEssentialInteractions({ funnel, scene, urls, onChange, onAttachAsset }: { funnel: FunnelDefinition; scene: SceneDefinition; urls: Record<string, string>; onChange: (funnel: FunnelDefinition) => void; onAttachAsset: () => void }) {
+export function GuidedEssentialInteractions({ funnel, scene, urls, onChange, onAttachAsset, onAttachPreviewFile }: { funnel: FunnelDefinition; scene: SceneDefinition; urls: Record<string, string>; onChange: (funnel: FunnelDefinition) => void; onAttachAsset: () => void; onAttachPreviewFile: ((file: File, assetId?: string) => void) | undefined }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [pickingTime, setPickingTime] = useState<string | null>(null);
   const events = scene.events.filter((event): event is Extract<SceneEventDefinition, { block: Essential }> => ["quiz", "notification", "audio", "scene_transition"].includes(event.block));
@@ -39,13 +40,13 @@ export function GuidedEssentialInteractions({ funnel, scene, urls, onChange, onA
         <button onClick={() => onChange(duplicateGuidedInteraction(funnel, scene.id, event.id))}>DUPLICAR</button>
         <button onClick={() => { const refs = guidedInteractionReferences(funnel, event.id); if (refs.length && !confirm(`Esta interação é usada em ${refs.length} lugares:\n${refs.join("\n")}\n\nExcluir mesmo assim?`)) return; onChange(deleteGuidedInteraction(funnel, scene.id, event.id)); }}>EXCLUIR</button>
       </div>
-      {editing === event.id && <Editor event={event} funnel={funnel} scene={scene} urls={urls} update={update} onClose={() => setEditing(null)} onAddUrl={addUrl} onAttachAsset={onAttachAsset} pickingTime={pickingTime === event.id} setPickingTime={(open) => setPickingTime(open ? event.id : null)} />}
+      {editing === event.id && <Editor event={event} funnel={funnel} scene={scene} urls={urls} update={update} onClose={() => setEditing(null)} onAddUrl={addUrl} onAttachAsset={onAttachAsset} onFunnelChange={onChange} onAttachPreviewFile={onAttachPreviewFile} pickingTime={pickingTime === event.id} setPickingTime={(open) => setPickingTime(open ? event.id : null)} />}
     </div>)}
     {events.length > 0 && <div className="rounded bg-zinc-900 p-3"><b>RESUMO DA CENA</b>{events.map((event) => <p key={event.id}>• {summaryTitle(event)} — {triggerLabel(event.trigger)}. {summaryAfter(event, funnel)}</p>)}</div>}
   </section>;
 }
 
-function Editor({ event, funnel, scene, urls, update, onClose, onAddUrl, onAttachAsset, pickingTime, setPickingTime }: { event: Extract<SceneEventDefinition, { block: Essential }>; funnel: FunnelDefinition; scene: SceneDefinition; urls: Record<string, string>; update: (event: SceneEventDefinition) => void; onClose: () => void; onAddUrl: (type: "audio" | "image") => void; onAttachAsset: () => void; pickingTime: boolean; setPickingTime: (open: boolean) => void }) {
+function Editor({ event, funnel, scene, urls, update, onClose, onAddUrl, onAttachAsset, onFunnelChange, onAttachPreviewFile, pickingTime, setPickingTime }: { event: Extract<SceneEventDefinition, { block: Essential }>; funnel: FunnelDefinition; scene: SceneDefinition; urls: Record<string, string>; update: (event: SceneEventDefinition) => void; onClose: () => void; onAddUrl: (type: "audio" | "image") => void; onAttachAsset: () => void; onFunnelChange: (funnel: FunnelDefinition) => void; onAttachPreviewFile: ((file: File, assetId?: string) => void) | undefined; pickingTime: boolean; setPickingTime: (open: boolean) => void }) {
   const setTrigger = (trigger: TriggerDefinition) => update({ ...event, trigger });
   return <div className="mt-2 rounded bg-zinc-950 p-3 grid gap-3">
     <b>1. Quando isso acontece?</b>
@@ -58,6 +59,8 @@ function Editor({ event, funnel, scene, urls, update, onClose, onAddUrl, onAttac
     {event.block === "quiz" && <QuizEditor event={event} update={update} />}
     {event.block === "notification" && <NotificationEditor event={event} funnel={funnel} update={update} onAddUrl={onAddUrl} onAttachAsset={onAttachAsset} />}
     {event.block === "audio" && <AudioEditor event={event} funnel={funnel} urls={urls} update={update} onAddUrl={onAddUrl} onAttachAsset={onAttachAsset} />}
+    {onAttachPreviewFile && event.block === "notification" && <><InlineMediaPicker label="Avatar" mediaType="image" funnel={funnel} urls={urls} value={event.avatarAssetId} onSelect={(assetId) => update({ ...event, avatarAssetId: assetId })} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} /><InlineMediaPicker label="Som da notificação" mediaType="audio" funnel={funnel} urls={urls} value={event.soundAssetId} onSelect={(assetId) => update({ ...event, soundAssetId: assetId })} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} /></>}
+    {onAttachPreviewFile && event.block === "audio" && <InlineMediaPicker label="Áudio" mediaType="audio" funnel={funnel} urls={urls} value={event.assetId} onSelect={(assetId) => update({ ...event, assetId: assetId || "" })} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} />}
     {event.block === "scene_transition" && <label>Para qual cena? <select value={event.targetSceneId} onChange={(e) => update({ ...event, targetSceneId: e.target.value, actions: [{ type: "GO_TO_SCENE", sceneId: e.target.value }] })}><option value="">Escolha uma cena</option>{funnel.scenes.filter((item) => item.id !== scene.id).map((item, index) => <option key={item.id} value={item.id}>Cena {index + 1} — {item.title}</option>)}</select>{!event.targetSceneId && <small>Escolha para qual cena continuar.</small>}</label>}
     {event.block !== "notification" && event.block !== "scene_transition" && <Actions value={event.actions[0]} funnel={funnel} scene={scene} onChange={(action) => update({ ...event, actions: [action] } as SceneEventDefinition)} />}
     {event.block === "notification" && <><Actions label="Quando a pessoa tocar" value={event.onTap[0]} funnel={funnel} scene={scene} onChange={(action) => update({ ...event, onTap: [action] })} /><Actions label="E se ela fechar" value={event.onDismiss[0]} funnel={funnel} scene={scene} onChange={(action) => update({ ...event, onDismiss: [action] })} /></>}

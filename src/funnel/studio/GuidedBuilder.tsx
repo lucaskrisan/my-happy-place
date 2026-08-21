@@ -16,6 +16,7 @@ import { uid } from "./studioState";
 import { GuidedPreview, formatTime } from "./GuidedPreview";
 import { GuidedEssentialInteractions } from "./GuidedEssentialInteractions";
 import { GuidedComplexInteractions } from "./GuidedComplexInteractions";
+import { InlineMediaPicker } from "./InlineMediaPicker";
 import { exportGuidedProject, goToIssue, globalNextStep, reviewSummary } from "./guidedReview";
 
 const steps = ["script", "production", "video", "interactivity", "test", "review"] as const;
@@ -43,6 +44,7 @@ export function GuidedBuilder({
   onUi,
   urls,
   onAttachPreview,
+  onAttachPreviewFile,
 }: {
   funnel: FunnelDefinition;
   onChange: (funnel: FunnelDefinition) => void;
@@ -51,6 +53,7 @@ export function GuidedBuilder({
   onUi: (next: GuidedUiState) => void;
   urls: Record<string, string>;
   onAttachPreview: (assetId?: string, sceneId?: string) => void;
+  onAttachPreviewFile: (file: File, assetId?: string, sceneId?: string) => void;
 }) {
   // The project wizard lives on the Studio home; these remain false here so a scene wizard never opens it.
   const [wizard, setWizard] = useState(false),
@@ -183,10 +186,11 @@ export function GuidedBuilder({
               update={update}
               urls={urls}
               onAttachPreview={onAttachPreview}
+              onAttachPreviewFile={onAttachPreviewFile}
             />
           )}{" "}
           {step === "interactivity" && (
-            <><GuidedEssentialInteractions funnel={funnel} scene={scene} urls={urls} onChange={onChange} onAttachAsset={() => onAttachPreview()} /><GuidedComplexInteractions funnel={funnel} scene={scene} urls={urls} onChange={onChange} onAttachAsset={() => onAttachPreview()} /></>
+            <><GuidedEssentialInteractions funnel={funnel} scene={scene} urls={urls} onChange={onChange} onAttachAsset={() => onAttachPreview()} onAttachPreviewFile={onAttachPreviewFile} /><GuidedComplexInteractions funnel={funnel} scene={scene} urls={urls} onChange={onChange} onAttachAsset={() => onAttachPreview()} onAttachPreviewFile={onAttachPreviewFile} /></>
           )}{" "}
           {step === "test" && <TestStep funnel={funnel} scene={scene} urls={urls} onTested={() => onChange(markSceneTested(funnel, scene.id))} />}
           {step === "review" && <ReviewStep funnel={funnel} urls={urls} onUi={onUi} onChange={onChange} />}
@@ -411,6 +415,7 @@ function VideoStep({
   update,
   urls,
   onAttachPreview,
+  onAttachPreviewFile,
 }: {
   funnel: FunnelDefinition;
   scene: any;
@@ -419,40 +424,12 @@ function VideoStep({
   update: (p: any) => void;
   urls: Record<string, string>;
   onAttachPreview: (assetId?: string, sceneId?: string) => void;
+  onAttachPreviewFile: (file: File, assetId?: string, sceneId?: string) => void;
 }) {
   return (
     <div className="grid gap-3">
       <h2>Adicione o vídeo final desta cena.</h2>
-      <select
-        value={scene.videoAssetId || ""}
-        onChange={(e) => update({ videoAssetId: e.target.value || undefined })}
-      >
-        <option value="">Selecionar arquivo existente</option>
-        {funnel.assets
-          .filter((item) => item.mediaType === "video")
-          .map((item) => (
-            <option value={item.id} key={item.id}>
-              {item.id}
-            </option>
-          ))}
-      </select>
-      <button
-        onClick={() => {
-          const url = prompt("URL permanente do vídeo");
-          if (!url) return;
-          const id = uid("video");
-          onChange({
-            ...funnel,
-            assets: [...funnel.assets, { id, mediaType: "video", source: "permanent", url }],
-            scenes: funnel.scenes.map((item) =>
-              item.id === scene.id ? { ...item, videoAssetId: id } : item,
-            ),
-          });
-        }}
-      >
-        COLAR URL PERMANENTE
-      </button>
-      <button onClick={() => onAttachPreview(undefined, scene.id)}>ARQUIVO LOCAL PARA PREVIEW</button>
+      <InlineMediaPicker label="VÍDEO" mediaType="video" funnel={funnel} urls={urls} value={scene.videoAssetId} onSelect={(assetId) => update({ videoAssetId: assetId })} onChange={onChange} onAttachPreview={(file, assetId) => onAttachPreviewFile(file, assetId, scene.id)} />
       {asset && (
         <>
           <b>✓ VÍDEO ADICIONADO</b>

@@ -407,6 +407,7 @@ export function FunnelStudio() {
         onUi={setMode}
         urls={urls}
         onAttachPreview={attachPreview}
+        onAttachPreviewFile={addPreviewFile}
       />
     );
   const scene = (funnel.scenes.find((s) => s.id === selectedSceneId) || funnel.scenes[0])!;

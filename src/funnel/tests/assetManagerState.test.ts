@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { FunnelDefinition } from "../schema/v1";
 import { addPermanentUrl, assetStatus, assetSummary, filterAssets, promoteAssetInFunnel, removeUnusedAsset, renameAsset, replacePermanentAsset } from "../studio/assetManagerState";
 import { findAssetUsages, serializeForStorage } from "../studio/studioState";
+import { invalidateStructuralTests } from "../studio/guidedState";
 
 const result = { assetId: "video", key: "funnels/demo/assets/video/version-video.mp4", src: "/media/funnels/demo/assets/video/version-video.mp4", filename: "video.mp4", contentType: "video/mp4", size: 12, etag: '"etag"', uploadedAt: "2026-08-20T00:00:00.000Z" };
 const funnel = (): FunnelDefinition => ({ schemaVersion: 1, id: "demo", title: "Demo", entrySceneId: "scene-one", exportable: true, assets: [
@@ -71,5 +72,50 @@ describe("asset manager state", () => {
     const unused = addPermanentUrl(current, "https://cdn.example.test/unused.mp3", "audio");
     const assetId = unused.assets.at(-1)!.id;
     expect(removeUnusedAsset(unused, assetId).assets.some((asset) => asset.id === assetId)).toBe(false);
+  });
+
+  it("keeps the inline picker catalog type-safe for video, image and audio fields", () => {
+    const current = funnel();
+    expect(filterAssets(current.assets, {}, "video", "").map((asset) => asset.id)).toEqual(["video"]);
+    expect(filterAssets(current.assets, {}, "audio", "").map((asset) => asset.id)).toEqual(["sound"]);
+    expect(filterAssets(current.assets, {}, "image", "").map((asset) => asset.id)).toEqual(["avatar"]);
+  });
+
+  it("models inline URL selection without copying an existing AssetRef", () => {
+    const current = funnel();
+    const selectedId = "sound";
+    const selected = current.assets.find((asset) => asset.id === selectedId);
+    expect(selected).toMatchObject({ id: selectedId, mediaType: "audio" });
+    expect(current.assets.filter((asset) => asset.id === selectedId)).toHaveLength(1);
+    const next = addPermanentUrl(current, "https://cdn.example.test/new.mp3", "audio");
+    expect(next.assets.at(-1)).toMatchObject({ source: "permanent", mediaType: "audio" });
+    expect(next.assets).toHaveLength(current.assets.length + 1);
+  });
+
+  it("models inline removal as a reference change while retaining the AssetRef library", () => {
+    const current = funnel();
+    const next = { ...current, scenes: current.scenes.map((scene) => scene.id === "scene-one" ? { ...scene, videoAssetId: undefined } : scene) };
+    expect(next.scenes[0]?.videoAssetId).toBeUndefined();
+    expect(next.assets.find((asset) => asset.id === "video")).toBeDefined();
+  });
+
+  it("treats a local inline preview as unresolved after reload and reattaches with the same id", () => {
+    const stored = serializeForStorage(funnel());
+    const unresolved = stored.assets.find((asset) => asset.id === "video")!;
+    expect(assetStatus(unresolved, {})).toBe("unresolved");
+    const reattached = { ...stored, assets: stored.assets.map((asset) => asset.id === "video" ? { ...asset, objectUrl: "blob:reattached", status: "ready" as const } : asset) };
+    expect(reattached.assets.find((asset) => asset.id === "video")).toMatchObject({ id: "video", objectUrl: "blob:reattached" });
+  });
+
+  it("invalidates only scenes that receive an inline asset association and exposes that usage", () => {
+    const current = funnel();
+    const unused = addPermanentUrl(current, "https://cdn.example.test/unused.mp3", "audio");
+    const unchanged = invalidateStructuralTests(current, unused);
+    expect(unchanged.scenes.every((scene) => scene.guided?.tested)).toBe(true);
+    const associated = { ...unused, scenes: unused.scenes.map((scene) => scene.id === "scene-one" ? { ...scene, events: scene.events.map((event) => event.block === "incoming_call" ? { ...event, voiceAssetId: unused.assets.at(-1)!.id } : event) } : scene) };
+    const next = invalidateStructuralTests(unused, associated);
+    expect(next.scenes[0]?.guided?.tested).toBe(false);
+    expect(next.scenes[1]?.guided?.tested).toBe(true);
+    expect(findAssetUsages(next, unused.assets.at(-1)!.id).map((usage) => usage.label)).toContain("Cena 01 — incoming_call / Voice");
   });
 });
