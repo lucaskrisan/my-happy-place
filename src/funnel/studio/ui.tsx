@@ -1,4 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
+import * as SelectPrimitive from "@radix-ui/react-select";
+import { ChevronDown } from "lucide-react";
 
 /**
  * Presentation-only primitives shared across the Funnel Studio screens (/studio/*).
@@ -149,5 +151,69 @@ export function ProgressBar({ percent }: { percent: number }) {
     <div className="h-1.5 overflow-hidden rounded-full bg-white/[.08]">
       <div className="h-full rounded-full bg-studio-primary transition-all duration-300" style={{ width: `${Math.max(0, Math.min(100, percent))}%` }} />
     </div>
+  );
+}
+
+// ---- Select -----------------------------------------------------------------
+// Native <select> dropdown popups are drawn by the OS/browser, not the page — on some platforms they
+// ignore color-scheme entirely and render in the browser's light default no matter what CSS says
+// (confirmed: a real user's Windows Chrome still showed a white popup after that fix). This renders the
+// whole dropdown itself with Radix (already a project dependency, used elsewhere in the app), so there is
+// no native popup left to mis-render. Same value/onChange contract as a native select, so every call site
+// swaps in directly. Empty string means "nothing selected" everywhere in this codebase, but Radix Select
+// reserves "" as invalid — NONE_VALUE is the sentinel used only inside this component to represent it.
+const NONE_VALUE = "__studio_select_none__";
+export function StudioSelect({
+  value,
+  onChange,
+  options,
+  placeholder = "Selecionar",
+  className = "",
+  // Set false only when the value can never legitimately be empty (an action type, a trigger kind, …) —
+  // matches a native <select> that never had an empty <option> to begin with, so there's nothing to clear.
+  clearable = true,
+}: {
+  value: string | undefined;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  placeholder?: string;
+  className?: string;
+  clearable?: boolean;
+}) {
+  return (
+    <SelectPrimitive.Root value={value ? value : NONE_VALUE} onValueChange={(next) => onChange(next === NONE_VALUE ? "" : next)}>
+      <SelectPrimitive.Trigger
+        className={`flex w-full items-center justify-between gap-2 rounded-lg border border-studio-border bg-white/[.04] p-3 text-left text-sm text-studio-text focus:border-studio-primary/50 focus:outline-none transition-colors data-[placeholder]:text-studio-text-muted ${className}`}
+      >
+        <SelectPrimitive.Value placeholder={placeholder} />
+        <SelectPrimitive.Icon>
+          <ChevronDown className="h-4 w-4 shrink-0 text-studio-text-muted" />
+        </SelectPrimitive.Icon>
+      </SelectPrimitive.Trigger>
+      <SelectPrimitive.Portal>
+        <SelectPrimitive.Content
+          position="popper"
+          sideOffset={4}
+          className="z-50 max-h-72 overflow-hidden rounded-lg border border-studio-border-strong bg-studio-surface-2 shadow-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+        >
+          <SelectPrimitive.Viewport className="p-1" style={{ width: "var(--radix-select-trigger-width)" }}>
+            {clearable && (
+              <SelectPrimitive.Item value={NONE_VALUE} className="relative flex cursor-pointer select-none items-center rounded-md px-3 py-2 text-sm text-studio-text-muted outline-none data-[highlighted]:bg-studio-primary-soft data-[highlighted]:text-studio-text">
+                <SelectPrimitive.ItemText>{placeholder}</SelectPrimitive.ItemText>
+              </SelectPrimitive.Item>
+            )}
+            {options.map((option) => (
+              <SelectPrimitive.Item
+                key={option.value}
+                value={option.value}
+                className="relative flex cursor-pointer select-none items-center rounded-md px-3 py-2 text-sm text-studio-text outline-none data-[highlighted]:bg-studio-primary-soft data-[state=checked]:text-studio-primary-strong"
+              >
+                <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
+              </SelectPrimitive.Item>
+            ))}
+          </SelectPrimitive.Viewport>
+        </SelectPrimitive.Content>
+      </SelectPrimitive.Portal>
+    </SelectPrimitive.Root>
   );
 }

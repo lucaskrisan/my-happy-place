@@ -5,7 +5,7 @@ import { findAssetUsages, uid } from "./studioState";
 import { addPermanentUrl, assetStatus, assetSummary, filterAssets, promoteAssetInFunnel, removeUnusedAsset, renameAsset, replacePermanentAsset, type AssetFilter } from "./assetManagerState";
 import { AssetCleanupPanel } from "./AssetCleanupPanel";
 import { AssetVersionInspector } from "./AssetVersionInspector";
-import { PageTitle, HelpText, Card, Badge, PrimaryButton, SecondaryButton, GhostButton, EmptyState } from "./ui";
+import { PageTitle, HelpText, Card, Badge, PrimaryButton, SecondaryButton, GhostButton, EmptyState, StudioSelect } from "./ui";
 
 export const ASSET_UPLOAD_SESSION_KEY = "funnel-studio:upload-token";
 const ACCEPT = "video/mp4,video/webm,audio/mpeg,audio/mp4,audio/wav,audio/ogg,image/jpeg,image/png,image/webp";
@@ -148,11 +148,16 @@ export function AssetManager({ funnel, urls, onChange, onAttachPreview, onRevoke
               <span className="block text-xs font-semibold uppercase tracking-wider text-studio-text-muted">Colar URL permanente</span>
               <input placeholder="https://... ou /media/..." value={permanentUrl} onChange={(event) => setPermanentUrl(event.target.value)} className={fieldClass} />
               <input placeholder="Nome opcional" value={permanentName} onChange={(event) => setPermanentName(event.target.value)} className={fieldClass} />
-              <select value={permanentType} onChange={(event) => setPermanentType(event.target.value as AssetRef["mediaType"])} className={fieldClass}>
-                <option value="video">Vídeo</option>
-                <option value="audio">Áudio</option>
-                <option value="image">Imagem</option>
-              </select>
+              <StudioSelect
+                clearable={false}
+                value={permanentType}
+                onChange={(next) => setPermanentType(next as AssetRef["mediaType"])}
+                options={[
+                  { value: "video", label: "Vídeo" },
+                  { value: "audio", label: "Áudio" },
+                  { value: "image", label: "Imagem" },
+                ]}
+              />
               <SecondaryButton className="w-full text-xs" onClick={() => { if (!permanentUrl.trim()) return; onChange(addPermanentUrl(funnel, permanentUrl.trim(), permanentType, permanentName.trim() || undefined)); setPermanentUrl(""); setPermanentName(""); }}>Adicionar URL</SecondaryButton>
             </div>
           </aside>

@@ -4,7 +4,7 @@ import { actionFromGuided, createGuidedInteraction, deleteGuidedInteraction, dup
 import { GuidedPreview, formatTime } from "./GuidedPreview";
 import { uid } from "./studioState";
 import { InlineMediaPicker } from "./InlineMediaPicker";
-import { SectionTitle, HelpText, Card, PrimaryButton, SecondaryButton, GhostButton } from "./ui";
+import { SectionTitle, HelpText, Card, PrimaryButton, SecondaryButton, GhostButton, StudioSelect } from "./ui";
 
 type Essential = Extract<SceneEventDefinition["block"], "quiz" | "notification" | "audio" | "scene_transition">;
 const labels: Record<Essential, string> = { quiz: "Pergunta", notification: "Notificação", audio: "Áudio", scene_transition: "Ir para outra cena" };
@@ -107,16 +107,14 @@ function Editor({ event, funnel, scene, urls, update, onClose, onAddUrl, onAttac
   return (
     <div className="mt-3 space-y-4 rounded-xl border border-studio-border bg-white/[.02] p-4">
       <Field label="Quando isso acontece?">
-        <select
+        <StudioSelect
+          clearable={false}
           value={event.trigger.kind}
-          onChange={(e) => {
-            const kind = e.target.value;
+          onChange={(kind) => {
             setTrigger(kind === "SCENE_START" ? triggerFromGuided("start") : kind === "TIME" ? triggerFromGuided("time", 0) : kind === "BEFORE_END" ? triggerFromGuided("before_end", 2) : kind === "VIDEO_END" ? triggerFromGuided("end") : triggerFromGuided("after", 0, scene.events.find((item) => item.id !== event.id)?.id || ""));
           }}
-          className={field}
-        >
-          {TRIGGER_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-        </select>
+          options={TRIGGER_OPTIONS.map(([value, label]) => ({ value, label }))}
+        />
       </Field>
       {event.trigger.kind === "TIME" && (
         <div className="space-y-2">
@@ -128,10 +126,12 @@ function Editor({ event, funnel, scene, urls, update, onClose, onAddUrl, onAttac
       {event.trigger.kind === "BEFORE_END" && <Field label="Quantos segundos antes?"><input type="number" step="0.01" value={event.trigger.seconds} onChange={(e) => setTrigger(triggerFromGuided("before_end", Number(e.target.value)))} className={field} /></Field>}
       {event.trigger.kind === "INTERACTION_COMPLETE" && (
         <Field label="Depois de qual interação?">
-          <select value={event.trigger.interactionId} onChange={(e) => setTrigger(triggerFromGuided("after", 0, e.target.value))} className={field}>
-            <option value="">Escolha uma interação</option>
-            {scene.events.filter((item) => item.id !== event.id).map((item) => <option key={item.id} value={item.id}>{summaryTitle(item)}</option>)}
-          </select>
+          <StudioSelect
+            placeholder="Escolha uma interação"
+            value={event.trigger.interactionId}
+            onChange={(id) => setTrigger(triggerFromGuided("after", 0, id))}
+            options={scene.events.filter((item) => item.id !== event.id).map((item) => ({ value: item.id, label: summaryTitle(item) }))}
+          />
         </Field>
       )}
       {event.block === "quiz" && <QuizEditor event={event} update={update} />}
@@ -146,10 +146,12 @@ function Editor({ event, funnel, scene, urls, update, onClose, onAddUrl, onAttac
       {onAttachPreviewFile && event.block === "audio" && <InlineMediaPicker label="Áudio" mediaType="audio" funnel={funnel} urls={urls} value={event.assetId} onSelect={(assetId) => update({ ...event, assetId: assetId || "" })} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} />}
       {event.block === "scene_transition" && (
         <Field label="Para qual cena?">
-          <select value={event.targetSceneId} onChange={(e) => update({ ...event, targetSceneId: e.target.value, actions: [{ type: "GO_TO_SCENE", sceneId: e.target.value }] })} className={field}>
-            <option value="">Escolha uma cena</option>
-            {funnel.scenes.filter((item) => item.id !== scene.id).map((item, index) => <option key={item.id} value={item.id}>Cena {index + 1} — {item.title}</option>)}
-          </select>
+          <StudioSelect
+            placeholder="Escolha uma cena"
+            value={event.targetSceneId}
+            onChange={(sceneId) => update({ ...event, targetSceneId: sceneId, actions: [{ type: "GO_TO_SCENE", sceneId }] })}
+            options={funnel.scenes.filter((item) => item.id !== scene.id).map((item, index) => ({ value: item.id, label: `Cena ${index + 1} — ${item.title}` }))}
+          />
           {!event.targetSceneId && <HelpText className="mt-1 text-xs">Escolha para qual cena continuar.</HelpText>}
         </Field>
       )}
@@ -191,11 +193,16 @@ function QuizEditor({ event, update }: { event: Extract<SceneEventDefinition, { 
       <details className="pt-1">
         <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wider text-studio-text-muted">Configurações avançadas</summary>
         <div className="mt-2 space-y-2">
-          <select value={event.variant || "default"} onChange={(e) => update({ ...event, variant: e.target.value as any })} className={field}>
-            <option value="default">Padrão</option>
-            <option value="cinematic">Cinemático</option>
-            <option value="immersive">Imersivo</option>
-          </select>
+          <StudioSelect
+            clearable={false}
+            value={event.variant || "default"}
+            onChange={(variant) => update({ ...event, variant: variant as any })}
+            options={[
+              { value: "default", label: "Padrão" },
+              { value: "cinematic", label: "Cinemático" },
+              { value: "immersive", label: "Imersivo" },
+            ]}
+          />
           <label className="flex items-center gap-2 text-sm text-studio-text-secondary"><input type="checkbox" checked={event.showProgress || false} onChange={(e) => update({ ...event, showProgress: e.target.checked })} /> Mostrar progresso</label>
         </div>
       </details>
@@ -236,10 +243,12 @@ function AudioEditor({ event, funnel, urls, update, onAddUrl, onAttachAsset }: {
 function AssetSelect({ label, value, assets, onChange, onAdd, onAttach }: { label: string; value?: string | undefined; assets: FunnelDefinition["assets"]; onChange: (id: string) => void; onAdd: () => void; onAttach: () => void }) {
   return (
     <Field label={label}>
-      <select value={value || ""} onChange={(e) => onChange(e.target.value)} className={field}>
-        <option value="">Selecionar arquivo do projeto</option>
-        {assets.map((asset) => <option key={asset.id} value={asset.id}>{asset.id}{asset.source === "preview" ? " (local)" : ""}</option>)}
-      </select>
+      <StudioSelect
+        placeholder="Selecionar arquivo do projeto"
+        value={value}
+        onChange={onChange}
+        options={assets.map((asset) => ({ value: asset.id, label: `${asset.id}${asset.source === "preview" ? " (local)" : ""}` }))}
+      />
       <div className="mt-1.5 flex gap-1.5">
         <GhostButton onClick={onAdd} className="px-2 py-1 text-xs">+ URL permanente</GhostButton>
         <GhostButton onClick={onAttach} className="px-2 py-1 text-xs">+ Arquivo local</GhostButton>
@@ -251,31 +260,37 @@ function Actions({ label = "Depois disso", value, funnel, scene, onChange }: { l
   const kind = value?.type || "RESUME_VIDEO";
   return (
     <Field label={label}>
-      <select
+      <StudioSelect
+        clearable={false}
         value={kind}
-        onChange={(e) => {
-          const type = e.target.value;
+        onChange={(type) => {
           onChange(type === "RESUME_VIDEO" ? { type } : type === "NEXT_SCENE" ? { type } : type === "STOP" ? { type } : type === "GO_TO_SCENE" ? { type, sceneId: funnel.scenes.find((item) => item.id !== scene.id)?.id || "" } : { type: "OPEN_EVENT", eventId: scene.events.find((item) => item.id)?.id || "" });
         }}
-        className={field}
-      >
-        <option value="RESUME_VIDEO">Continuar o vídeo</option>
-        <option value="NEXT_SCENE">Ir para a próxima cena</option>
-        <option value="GO_TO_SCENE">Ir para outra cena</option>
-        <option value="OPEN_EVENT">Abrir outra interação</option>
-        <option value="STOP">Encerrar</option>
-      </select>
+        options={[
+          { value: "RESUME_VIDEO", label: "Continuar o vídeo" },
+          { value: "NEXT_SCENE", label: "Ir para a próxima cena" },
+          { value: "GO_TO_SCENE", label: "Ir para outra cena" },
+          { value: "OPEN_EVENT", label: "Abrir outra interação" },
+          { value: "STOP", label: "Encerrar" },
+        ]}
+      />
       {kind === "GO_TO_SCENE" && (
-        <select value={value?.type === "GO_TO_SCENE" ? value.sceneId : ""} onChange={(e) => onChange({ type: "GO_TO_SCENE", sceneId: e.target.value })} className={`${field} mt-1.5`}>
-          <option value="">Escolha uma cena</option>
-          {funnel.scenes.filter((item) => item.id !== scene.id).map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
-        </select>
+        <StudioSelect
+          className="mt-1.5"
+          placeholder="Escolha uma cena"
+          value={value?.type === "GO_TO_SCENE" ? value.sceneId : ""}
+          onChange={(sceneId) => onChange({ type: "GO_TO_SCENE", sceneId })}
+          options={funnel.scenes.filter((item) => item.id !== scene.id).map((item) => ({ value: item.id, label: item.title }))}
+        />
       )}
       {kind === "OPEN_EVENT" && (
-        <select value={value?.type === "OPEN_EVENT" ? value.eventId : ""} onChange={(e) => onChange({ type: "OPEN_EVENT", eventId: e.target.value })} className={`${field} mt-1.5`}>
-          <option value="">Escolha uma interação</option>
-          {scene.events.map((item) => <option key={item.id} value={item.id}>{summaryTitle(item)}</option>)}
-        </select>
+        <StudioSelect
+          className="mt-1.5"
+          placeholder="Escolha uma interação"
+          value={value?.type === "OPEN_EVENT" ? value.eventId : ""}
+          onChange={(eventId) => onChange({ type: "OPEN_EVENT", eventId })}
+          options={scene.events.map((item) => ({ value: item.id, label: summaryTitle(item) }))}
+        />
       )}
     </Field>
   );

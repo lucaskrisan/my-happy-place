@@ -5,7 +5,7 @@ import { GuidedPreview, formatTime } from "./GuidedPreview";
 import { uid } from "./studioState";
 import { InlineMediaPicker } from "./InlineMediaPicker";
 import { field, Field } from "./GuidedEssentialInteractions";
-import { Card, SecondaryButton, GhostButton, HelpText } from "./ui";
+import { Card, SecondaryButton, GhostButton, HelpText, StudioSelect } from "./ui";
 
 type ComplexBlock = "incoming_call" | "messaging" | "choice";
 const blockName: Record<ComplexBlock, string> = { incoming_call: "Receber uma ligação", messaging: "Abrir uma conversa", choice: "Dar uma escolha" };
@@ -122,9 +122,12 @@ const TRIGGER_OPTIONS = [
 function TriggerEditor({ trigger, scene, funnel, urls, onChange, picking, setPicking }: { trigger: TriggerDefinition; scene: SceneDefinition; funnel: FunnelDefinition; urls: Record<string, string>; onChange: (trigger: TriggerDefinition) => void; picking: boolean; setPicking: (value: boolean) => void }) {
   return (
     <div className="space-y-2">
-      <select value={trigger.kind} onChange={(e) => { const kind = e.target.value; onChange(kind === "SCENE_START" ? triggerFromGuided("start") : kind === "TIME" ? triggerFromGuided("time", 0) : kind === "BEFORE_END" ? triggerFromGuided("before_end", 2) : kind === "VIDEO_END" ? triggerFromGuided("end") : triggerFromGuided("after", 0, scene.events[0]?.id || "")); }} className={field}>
-        {TRIGGER_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-      </select>
+      <StudioSelect
+        clearable={false}
+        value={trigger.kind}
+        onChange={(kind) => onChange(kind === "SCENE_START" ? triggerFromGuided("start") : kind === "TIME" ? triggerFromGuided("time", 0) : kind === "BEFORE_END" ? triggerFromGuided("before_end", 2) : kind === "VIDEO_END" ? triggerFromGuided("end") : triggerFromGuided("after", 0, scene.events[0]?.id || ""))}
+        options={TRIGGER_OPTIONS.map(([value, label]) => ({ value, label }))}
+      />
       {trigger.kind === "TIME" && (
         <div className="space-y-2">
           <input type="number" step="0.01" value={trigger.seconds} onChange={(e) => onChange(triggerFromGuided("time", Number(e.target.value)))} className={field} />
@@ -134,10 +137,12 @@ function TriggerEditor({ trigger, scene, funnel, urls, onChange, picking, setPic
       )}
       {trigger.kind === "BEFORE_END" && <Field label="Quantos segundos antes?"><input type="number" step="0.01" value={trigger.seconds} onChange={(e) => onChange(triggerFromGuided("before_end", Number(e.target.value)))} className={field} /></Field>}
       {trigger.kind === "INTERACTION_COMPLETE" && (
-        <select value={trigger.interactionId} onChange={(e) => onChange(triggerFromGuided("after", 0, e.target.value))} className={field}>
-          <option value="">Escolha uma interação</option>
-          {scene.events.map((item) => <option value={item.id} key={item.id}>{humanTitle(item)}</option>)}
-        </select>
+        <StudioSelect
+          placeholder="Escolha uma interação"
+          value={trigger.interactionId}
+          onChange={(id) => onChange(triggerFromGuided("after", 0, id))}
+          options={scene.events.map((item) => ({ value: item.id, label: humanTitle(item) }))}
+        />
       )}
     </div>
   );
@@ -161,11 +166,16 @@ function CallFields({ event, funnel, scene, onUpdate, onAddUrl, onAttachAsset }:
           <Picker label="Vibração" value={event.vibrationAssetId} assets={audio} onChange={(id) => onUpdate({ ...event, vibrationAssetId: id || undefined })} addUrl={() => onAddUrl("audio")} attach={onAttachAsset} />
           <Picker label="Som de conexão" value={event.connectSfxAssetId} assets={audio} onChange={(id) => onUpdate({ ...event, connectSfxAssetId: id || undefined })} addUrl={() => onAddUrl("audio")} attach={onAttachAsset} />
           <Picker label="Som de encerramento" value={event.endSfxAssetId} assets={audio} onChange={(id) => onUpdate({ ...event, endSfxAssetId: id || undefined })} addUrl={() => onAddUrl("audio")} attach={onAttachAsset} />
-          <select value={event.voiceFailure || "skip"} onChange={(e) => onUpdate({ ...event, voiceFailure: e.target.value as any })} className={field}>
-            <option value="retry">Tentar novamente</option>
-            <option value="skip">Pular este áudio</option>
-            <option value="stop">Encerrar</option>
-          </select>
+          <StudioSelect
+            clearable={false}
+            value={event.voiceFailure || "skip"}
+            onChange={(voiceFailure) => onUpdate({ ...event, voiceFailure: voiceFailure as any })}
+            options={[
+              { value: "retry", label: "Tentar novamente" },
+              { value: "skip", label: "Pular este áudio" },
+              { value: "stop", label: "Encerrar" },
+            ]}
+          />
         </div>
       </details>
       <ActionPicker label="Quando a ligação terminar" value={event.onEnd[0]} funnel={funnel} scene={scene} onChange={(action) => onUpdate({ ...event, onEnd: [action] })} />
@@ -216,11 +226,16 @@ function MessagingFields({ event, funnel, scene, urls, onUpdate, onAddUrl, onAtt
       <ActionPicker label="Quando a conversa terminar" value={event.actions[0]} funnel={funnel} scene={scene} onChange={(action) => onUpdate({ ...event, actions: [action] })} />
       <ActionPicker label="E se a pessoa fechar" value={event.onClose[0]} funnel={funnel} scene={scene} onChange={(action) => onUpdate({ ...event, onClose: [action] })} />
       <Field label="Se o áudio falhar">
-        <select value={event.voiceFailure} onChange={(e) => onUpdate({ ...event, voiceFailure: e.target.value as any })} className={field}>
-          <option value="retry">Tentar novamente</option>
-          <option value="skip">Pular este áudio</option>
-          <option value="stop">Encerrar</option>
-        </select>
+        <StudioSelect
+          clearable={false}
+          value={event.voiceFailure}
+          onChange={(voiceFailure) => onUpdate({ ...event, voiceFailure: voiceFailure as any })}
+          options={[
+            { value: "retry", label: "Tentar novamente" },
+            { value: "skip", label: "Pular este áudio" },
+            { value: "stop", label: "Encerrar" },
+          ]}
+        />
       </Field>
     </div>
   );
@@ -260,10 +275,12 @@ function ChoiceFields({ event, onUpdate }: { event: Extract<SceneEventDefinition
 function Picker({ label, value, assets, onChange, addUrl, attach }: { label: string; value?: string | undefined; assets: FunnelDefinition["assets"]; onChange: (value: string) => void; addUrl: () => void; attach: () => void }) {
   return (
     <Field label={label}>
-      <select value={value || ""} onChange={(e) => onChange(e.target.value)} className={field}>
-        <option value="">Selecionar arquivo do projeto</option>
-        {assets.map((asset) => <option key={asset.id} value={asset.id}>{asset.id}</option>)}
-      </select>
+      <StudioSelect
+        placeholder="Selecionar arquivo do projeto"
+        value={value}
+        onChange={onChange}
+        options={assets.map((asset) => ({ value: asset.id, label: asset.id }))}
+      />
       <div className="mt-1.5 flex gap-1.5">
         <GhostButton onClick={addUrl} className="px-2 py-1 text-xs">+ URL permanente</GhostButton>
         <GhostButton onClick={attach} className="px-2 py-1 text-xs">+ Arquivo local</GhostButton>
@@ -275,24 +292,28 @@ function ActionPicker({ label, value, funnel, scene, onChange }: { label: string
   const type = value?.type || "RESUME_VIDEO";
   return (
     <Field label={label}>
-      <select
+      <StudioSelect
+        clearable={false}
         value={type}
-        onChange={(e) => {
-          const next = e.target.value;
+        onChange={(next) => {
           onChange(next === "RESUME_VIDEO" ? { type: "RESUME_VIDEO" } : next === "NEXT_SCENE" ? { type: "NEXT_SCENE" } : next === "STOP" ? { type: "STOP" } : next === "GO_TO_SCENE" ? { type: "GO_TO_SCENE", sceneId: funnel.scenes.find((item) => item.id !== scene.id)?.id || "" } : { type: "OPEN_EVENT", eventId: scene.events[0]?.id || "" });
         }}
-        className={field}
-      >
-        <option value="RESUME_VIDEO">Continuar o vídeo</option>
-        <option value="NEXT_SCENE">Próxima cena</option>
-        <option value="GO_TO_SCENE">Outra cena</option>
-        <option value="OPEN_EVENT">Abrir outra interação</option>
-        <option value="STOP">Encerrar</option>
-      </select>
+        options={[
+          { value: "RESUME_VIDEO", label: "Continuar o vídeo" },
+          { value: "NEXT_SCENE", label: "Próxima cena" },
+          { value: "GO_TO_SCENE", label: "Outra cena" },
+          { value: "OPEN_EVENT", label: "Abrir outra interação" },
+          { value: "STOP", label: "Encerrar" },
+        ]}
+      />
       {type === "GO_TO_SCENE" && (
-        <select value={value?.type === "GO_TO_SCENE" ? value.sceneId : ""} onChange={(e) => onChange({ type: "GO_TO_SCENE", sceneId: e.target.value })} className={`${field} mt-1.5`}>
-          {funnel.scenes.filter((item) => item.id !== scene.id).map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
-        </select>
+        <StudioSelect
+          className="mt-1.5"
+          placeholder="Escolha uma cena"
+          value={value?.type === "GO_TO_SCENE" ? value.sceneId : undefined}
+          onChange={(sceneId) => onChange({ type: "GO_TO_SCENE", sceneId })}
+          options={funnel.scenes.filter((item) => item.id !== scene.id).map((item) => ({ value: item.id, label: item.title }))}
+        />
       )}
     </Field>
   );

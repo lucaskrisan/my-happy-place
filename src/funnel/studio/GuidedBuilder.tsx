@@ -39,6 +39,7 @@ import {
   useToast,
   Toast,
   Dot,
+  StudioSelect,
 } from "./ui";
 
 // "review" is a funnel-level destination (reached from the top nav's REVISÃO button), not a per-scene
@@ -303,14 +304,19 @@ export function GuidedBuilder({
           <Card className="w-full max-w-lg bg-studio-surface-2 p-6">
             <SectionTitle>O que você quer criar?</SectionTitle>
             <div className="mt-4 grid gap-3">
-              <select value={type} onChange={(e) => setType(e.target.value as any)} className="rounded-lg border border-studio-border bg-white/[.04] p-3 text-sm text-studio-text">
-                <option value="story">História Interativa</option>
-                <option value="vsl">VSL Interativa</option>
-                <option value="quiz">Quiz / Diagnóstico</option>
-                <option value="gamified">Funil Gamificado</option>
-                <option value="training">Treinamento Interativo</option>
-                <option value="blank">Começar do Zero</option>
-              </select>
+              <StudioSelect
+                clearable={false}
+                value={type}
+                onChange={(next) => setType(next as any)}
+                options={[
+                  { value: "story", label: "História Interativa" },
+                  { value: "vsl", label: "VSL Interativa" },
+                  { value: "quiz", label: "Quiz / Diagnóstico" },
+                  { value: "gamified", label: "Funil Gamificado" },
+                  { value: "training", label: "Treinamento Interativo" },
+                  { value: "blank", label: "Começar do Zero" },
+                ]}
+              />
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -323,11 +329,16 @@ export function GuidedBuilder({
                 placeholder="Descrição opcional"
                 className="rounded-lg border border-studio-border bg-white/[.04] p-3 text-sm text-studio-text"
               />
-              <select value={structure} onChange={(e) => setStructure(e.target.value as any)} className="rounded-lg border border-studio-border bg-white/[.04] p-3 text-sm text-studio-text">
-                <option value="one">Criar primeira cena</option>
-                <option value="three">Começar com estrutura de 3 cenas</option>
-                <option value="empty">Começar vazio</option>
-              </select>
+              <StudioSelect
+                clearable={false}
+                value={structure}
+                onChange={(next) => setStructure(next as any)}
+                options={[
+                  { value: "one", label: "Criar primeira cena" },
+                  { value: "three", label: "Começar com estrutura de 3 cenas" },
+                  { value: "empty", label: "Começar vazio" },
+                ]}
+              />
               <div className="flex justify-between pt-2">
                 <SecondaryButton onClick={() => setWizard(false)}>Voltar</SecondaryButton>
                 <PrimaryButton
@@ -914,14 +925,19 @@ export function FunnelStudioHome({
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-6 backdrop-blur-sm">
           <Card className="w-full max-w-lg bg-studio-surface-2 p-6 grid gap-4">
             <SectionTitle>O que você quer criar?</SectionTitle>
-            <select value={type} onChange={(e) => setType(e.target.value as typeof type)} className={fieldClass}>
-              <option value="story">História Interativa</option>
-              <option value="vsl">VSL Interativa</option>
-              <option value="quiz">Quiz / Diagnóstico</option>
-              <option value="gamified">Funil Gamificado</option>
-              <option value="training">Treinamento Interativo</option>
-              <option value="blank">Começar do Zero</option>
-            </select>
+            <StudioSelect
+              clearable={false}
+              value={type}
+              onChange={(next) => setType(next as typeof type)}
+              options={[
+                { value: "story", label: "História Interativa" },
+                { value: "vsl", label: "VSL Interativa" },
+                { value: "quiz", label: "Quiz / Diagnóstico" },
+                { value: "gamified", label: "Funil Gamificado" },
+                { value: "training", label: "Treinamento Interativo" },
+                { value: "blank", label: "Começar do Zero" },
+              ]}
+            />
             <SectionTitle className="text-base">Como vamos chamar sua experiência?</SectionTitle>
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nome" className={fieldClass} />
             <textarea
@@ -931,15 +947,16 @@ export function FunnelStudioHome({
               className={fieldClass}
             />
             <SectionTitle className="text-base">Como você quer começar?</SectionTitle>
-            <select
+            <StudioSelect
+              clearable={false}
               value={structure}
-              onChange={(e) => setStructure(e.target.value as typeof structure)}
-              className={fieldClass}
-            >
-              <option value="one">Criar primeira cena</option>
-              <option value="three">Criar estrutura com 3 cenas</option>
-              <option value="empty">Começar vazio</option>
-            </select>
+              onChange={(next) => setStructure(next as typeof structure)}
+              options={[
+                { value: "one", label: "Criar primeira cena" },
+                { value: "three", label: "Criar estrutura com 3 cenas" },
+                { value: "empty", label: "Começar vazio" },
+              ]}
+            />
             <div className="flex justify-between pt-2">
               <SecondaryButton onClick={() => setWizard(false)}>Voltar</SecondaryButton>
               <PrimaryButton
