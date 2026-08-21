@@ -188,3 +188,10 @@
   --studio-text-secondary: oklch(0.78 0.006 285);
   --studio-text-muted: oklch(0.56 0.008 285);
 }
+/* Chromium's native <select> popup only reliably honors color-scheme when it's set on the select
+ * itself (or html/:root) — setting it on an ancestor container and relying on inheritance does not
+ * reach the popup. Every <select> in this app is Studio-only (dark), so this is safe app-wide; the
+ * public door-scene/intro flow uses no <select> elements at all. */
+select {
+  color-scheme: dark;
+}
