@@ -257,7 +257,17 @@ function Overlays({
     );
   return null;
 }
-export function FunnelStudio() {
+export function FunnelStudio({
+  productName,
+  initialFunnelId,
+  forceGuided = false,
+  onBackToProduct,
+}: {
+  productName?: string;
+  initialFunnelId?: string;
+  forceGuided?: boolean;
+  onBackToProduct?: () => void;
+} = {}) {
   const [projects, setProjects] = useState<StudioProject[]>([]),
     [funnel, setFunnel] = useState<FunnelDefinition | null>(null),
     [selectedSceneId, setSelectedSceneId] = useState(""),
@@ -277,12 +287,18 @@ export function FunnelStudio() {
   useEffect(() => {
     const demo = seedDemo(localStorage),
       list = loadProjects(localStorage),
-      initial = list[0] ? loadFunnel(localStorage, list[0].id) : demo;
+      initial = initialFunnelId ? loadFunnel(localStorage, initialFunnelId) : list[0] ? loadFunnel(localStorage, list[0].id) : demo;
     setProjects(loadProjects(localStorage));
     setFunnel(initial || demo);
     setSelectedSceneId((initial || demo).entrySceneId);
-    setGuidedUi(loadGuidedUi());
-  }, []);
+    const storedUi = loadGuidedUi();
+    setGuidedUi(forceGuided ? {
+      mode: "guided",
+      funnelId: (initial || demo).id,
+      sceneId: (initial || demo).entrySceneId,
+      step: storedUi.funnelId === (initial || demo).id ? storedUi.step || "script" : "script",
+    } : storedUi);
+  }, [forceGuided, initialFunnelId]);
   useEffect(() => () => Object.values(urls).forEach(URL.revokeObjectURL), [urls]);
   useEffect(() => {
     if (!funnel) return;
@@ -408,6 +424,19 @@ export function FunnelStudio() {
         urls={urls}
         onAttachPreview={attachPreview}
         onAttachPreviewFile={addPreviewFile}
+        {...(productName ? { productName } : {})}
+        {...(onBackToProduct ? { onBackToProduct } : {})}
+        onAssets={() => setAssetsOpen(true)}
+        onExportDraft={() => download(`${funnel.id}-draft.json`, exportStudioFunnel(funnel, "draft").json)}
+        onExportValid={() => {
+          const result = exportStudioFunnel(funnel, "valid");
+          if (!result.ok) {
+            alert(`Corrija ${result.issues.length} problema(s) antes de exportar o projeto válido.`);
+            setMode({ mode: "guided", funnelId: funnel.id, sceneId: guidedUi.sceneId || funnel.entrySceneId, step: "review" });
+            return;
+          }
+          download(`${funnel.id}-valid.json`, result.json);
+        }}
       />
     );
   const scene = (funnel.scenes.find((s) => s.id === selectedSceneId) || funnel.scenes[0])!;
@@ -550,6 +579,7 @@ export function FunnelStudio() {
   return (
     <main className="h-screen min-h-[700px] bg-zinc-950 text-zinc-100 grid grid-rows-[52px_1fr_210px] overflow-hidden">
       <header className="flex items-center gap-2 px-3 border-b border-zinc-800 text-sm">
+        {productName && <button onClick={onBackToProduct} className="text-zinc-400 hover:text-white">{productName} /</button>}
         <b>FUNNEL STUDIO</b>
         <button
           onClick={() =>

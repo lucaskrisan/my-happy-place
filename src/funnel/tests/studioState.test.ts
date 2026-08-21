@@ -15,6 +15,7 @@ import {
   serializeForStorage,
 } from "../studio/studioState";
 import { validateFunnel } from "../validator/validateFunnel";
+import { attachFunnel, createProduct, ensureProducts } from "../studio/productState";
 class MemoryStorage {
   private data = new Map<string, string>();
   getItem(k: string) {
@@ -33,6 +34,21 @@ describe("Studio local operations", () => {
     const funnel = emptyFunnel("Autosave");
     saveFunnel(storage, funnel);
     expect(loadFunnel(storage, funnel.id)?.title).toBe("Autosave");
+  });
+  it("organizes existing funnels under the default product without duplicating them", () => {
+    const storage = new MemoryStorage();
+    const funnel = emptyFunnel("Principal");
+    saveFunnel(storage, funnel);
+    const [product] = ensureProducts(storage);
+    expect(product?.name).toBe("DESAFIO 14 DIAS");
+    expect(product?.funnelIds).toEqual([funnel.id]);
+  });
+  it("creates a product and attaches a funnel by reference", () => {
+    const storage = new MemoryStorage();
+    const product = createProduct(storage, "Novo produto", "Descrição");
+    const funnel = emptyFunnel("Novo funil");
+    const attached = attachFunnel(storage, product.id, funnel);
+    expect(attached?.funnelIds).toEqual([funnel.id]);
   });
   it("reorders scenes without changing ids", () => {
     const funnel = emptyFunnel();
