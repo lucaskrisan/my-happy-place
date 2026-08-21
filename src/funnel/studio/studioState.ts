@@ -5,6 +5,7 @@ import {
   type SceneEventDefinition,
 } from "../schema/v1";
 import { marinaProofFunnel } from "../definitions/marinaProofs";
+import { marinaOfficialFunnel } from "../definitions/marinaOfficialFunnel";
 import { validateFunnel } from "../validator/validateFunnel";
 
 export const STUDIO_INDEX_KEY = "funnel-studio:v1:projects";
@@ -143,6 +144,13 @@ export function loadFunnel(storage: StudioStorage, id: string) {
 export function seedDemo(storage: StudioStorage) {
   if (!loadFunnel(storage, marinaProofFunnel.id)) saveFunnel(storage, marinaProofFunnel);
   return marinaProofFunnel;
+}
+/** Seeds the real product funnel (not the technical runtime proof) for Product Studio. */
+export function seedOfficialFunnel(storage: StudioStorage) {
+  const existing = loadFunnel(storage, marinaOfficialFunnel.id);
+  if (existing) return existing;
+  saveFunnel(storage, marinaOfficialFunnel);
+  return marinaOfficialFunnel;
 }
 export function importFunnel(text: string) {
   let value: unknown;

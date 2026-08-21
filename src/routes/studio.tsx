@@ -1,4 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ProductStudio } from "@/funnel/studio/ProductStudio";
+import { Outlet, createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/studio")({ component: ProductStudio });
+export const Route = createFileRoute("/studio")({ component: StudioLayout });
+
+function StudioLayout() {
+  return <Outlet />;
+}

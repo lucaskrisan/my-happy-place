@@ -39,9 +39,14 @@ const FUTURE_MARINA_AVATAR_URL =
  
 import { z } from "zod";
 
+// TanStack Router coerces numeric-looking raw query values (e.g. a bookmarked/typed
+// "?autostart=1") into a JS number before this schema runs, even though search: { autostart: "1" }
+// from router.navigate() (how /intro actually reaches this route) arrives as a string. Accepting
+// both and normalizing to a string keeps every "1"/1 comparison in this file working either way.
+const optionalStringParam = z.union([z.string(), z.number()]).transform(String).optional();
 const sceneSearchSchema = z.object({
-  autostart: z.string().optional(),
-  checkpoint: z.string().optional(),
+  autostart: optionalStringParam,
+  checkpoint: optionalStringParam,
 });
 
 export const Route = createFileRoute("/dev/door-scene")({

@@ -12,10 +12,13 @@ import {
   removeAsset,
   reorderScenes,
   saveFunnel,
+  seedOfficialFunnel,
   serializeForStorage,
 } from "../studio/studioState";
 import { validateFunnel } from "../validator/validateFunnel";
-import { attachFunnel, createProduct, ensureProducts } from "../studio/productState";
+import { attachFunnel, createProduct, ensureProducts, pinFunnelFirst } from "../studio/productState";
+import { marinaOfficialFunnel } from "../definitions/marinaOfficialFunnel";
+import { marinaProofFunnel } from "../definitions/marinaProofs";
 class MemoryStorage {
   private data = new Map<string, string>();
   getItem(k: string) {
@@ -151,5 +154,42 @@ describe("Studio local operations", () => {
       next.scenes[0]!.events[1]!.block === "incoming_call" &&
         next.scenes[0]!.events[1]!.voiceAssetId,
     ).toBeUndefined();
+  });
+  it("seeds the real official funnel (not the technical proof) and attaches it as DESAFIO 14 DIAS's primary funnel", () => {
+    const storage = new MemoryStorage();
+    const official = seedOfficialFunnel(storage);
+    expect(official.id).toBe(marinaOfficialFunnel.id);
+    expect(official.id).not.toBe(marinaProofFunnel.id);
+    const [product] = ensureProducts(storage);
+    expect(product?.funnelIds).toContain(official.id);
+  });
+  it("keeps the technical runtime proof out of DESAFIO 14 DIAS even if it was attached in a previous session", () => {
+    const storage = new MemoryStorage();
+    saveFunnel(storage, marinaProofFunnel);
+    saveFunnel(storage, marinaOfficialFunnel);
+    // Simulate stale product state saved before the proof was excluded from product catalogs.
+    storage.setItem(
+      "funnel-studio:v1:product-catalog",
+      JSON.stringify([
+        { id: "product-desafio-14-dias", name: "DESAFIO 14 DIAS", funnelIds: [marinaProofFunnel.id, marinaOfficialFunnel.id], createdAt: 0, updatedAt: 0 },
+      ]),
+    );
+    const [product] = ensureProducts(storage);
+    expect(product?.funnelIds).not.toContain(marinaProofFunnel.id);
+    expect(product?.funnelIds).toContain(marinaOfficialFunnel.id);
+    // The proof itself must remain loadable — it still powers /dev/funnel-runtime-proof.
+    expect(loadFunnel(storage, marinaProofFunnel.id)?.id).toBe(marinaProofFunnel.id);
+  });
+  it("pins a funnel to the front of a product's funnel list so it reliably acts as the primary funnel", () => {
+    const storage = new MemoryStorage();
+    const product = createProduct(storage, "Produto");
+    const a = emptyFunnel("A");
+    const b = emptyFunnel("B");
+    saveFunnel(storage, a);
+    saveFunnel(storage, b);
+    attachFunnel(storage, product.id, a);
+    attachFunnel(storage, product.id, b);
+    const pinned = pinFunnelFirst(storage, product.id, b.id);
+    expect(pinned?.funnelIds[0]).toBe(b.id);
   });
 });

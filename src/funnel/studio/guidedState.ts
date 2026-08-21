@@ -12,6 +12,7 @@ export type GuidedUiState = {
   mode: "home" | "guided" | "advanced";
   funnelId?: string;
   sceneId?: string;
+  eventId?: string;
   step?: "script" | "production" | "video" | "interactivity" | "test" | "review";
 };
 export const guidedUiKey = "funnel-studio:v1:guided-ui";
@@ -170,21 +171,27 @@ export function sceneStatus(scene: SceneDefinition, funnel: FunnelDefinition) {
   const test = scene.guided?.tested ? "PRONTO" : "NÃO INICIADO";
   return { script, production, video, interactivity, test };
 }
+// Validation issue paths are "scenes.<sceneId>..." or "events.<eventId>..." (never both), so matching a
+// scene by substring against scene.id alone misses every event-level issue that belongs to that scene.
+export const issueBelongsToScene = (path: string, scene: SceneDefinition) =>
+  path.startsWith(`scenes.${scene.id}`) || scene.events.some((event) => path.startsWith(`events.${event.id}`));
 export function nextGuidedStep(scene: SceneDefinition, funnel: FunnelDefinition) {
   const status = sceneStatus(scene, funnel);
   if (status.script !== "PRONTO") return "Primeiro descreva o que acontece nesta cena.";
   if (!scene.videoAssetId) return "Produza ou adicione o vídeo final desta cena.";
-  const errors = validateFunnel(funnel).filter((issue) => issue.path.includes(scene.id));
+  const errors = validateFunnel(funnel).filter((issue) => issueBelongsToScene(issue.path, scene));
   if (errors.length) return `Corrija ${errors.length} configurações antes de testar.`;
   if (!scene.events.length) return "Quer tornar esta cena interativa?";
   if (!scene.guided?.tested) return "Teste esta cena.";
   return "Esta cena está pronta. Continue para a próxima cena.";
 }
 export function guidedProgress(funnel: FunnelDefinition) {
-  const ready = funnel.scenes.filter(
-    (scene) =>
-      sceneStatus(scene, funnel).video === "PRONTO" && sceneStatus(scene, funnel).test === "PRONTO",
-  ).length;
+  // A scene only counts as ready once every guided step that matters is actually done: it needs a
+  // script, not just a video that happens to be attached and a stale "tested" flag.
+  const ready = funnel.scenes.filter((scene) => {
+    const status = sceneStatus(scene, funnel);
+    return status.script === "PRONTO" && status.video === "PRONTO" && status.test === "PRONTO";
+  }).length;
   return {
     ready,
     total: funnel.scenes.length,

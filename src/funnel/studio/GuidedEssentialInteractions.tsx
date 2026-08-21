@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ActionDefinition, FunnelDefinition, SceneEventDefinition, SceneDefinition, TriggerDefinition } from "../schema/v1";
 import { actionFromGuided, createGuidedInteraction, deleteGuidedInteraction, duplicateGuidedInteraction, guidedInteractionReferences, triggerFromGuided, updateGuidedInteraction } from "./guidedState";
 import { GuidedPreview, formatTime } from "./GuidedPreview";
@@ -10,10 +10,16 @@ const labels: Record<Essential, string> = { quiz: "Pergunta", notification: "Not
 const triggerLabel = (trigger: TriggerDefinition) => trigger.kind === "SCENE_START" ? "no começo do vídeo" : trigger.kind === "TIME" ? `em ${formatTime(trigger.seconds)}` : trigger.kind === "BEFORE_END" ? `${trigger.seconds.toFixed(2)}s antes do final` : trigger.kind === "VIDEO_END" ? "quando o vídeo terminar" : "depois de outra interação";
 const actionLabel = (action?: ActionDefinition) => !action ? "continua o vídeo" : action.type === "RESUME_VIDEO" ? "continua o vídeo" : action.type === "NEXT_SCENE" ? "vai para a próxima cena" : action.type === "GO_TO_SCENE" ? "vai para outra cena" : action.type === "OPEN_EVENT" ? "abre outra interação" : "encerra";
 
-export function GuidedEssentialInteractions({ funnel, scene, urls, onChange, onAttachAsset, onAttachPreviewFile }: { funnel: FunnelDefinition; scene: SceneDefinition; urls: Record<string, string>; onChange: (funnel: FunnelDefinition) => void; onAttachAsset: () => void; onAttachPreviewFile: ((file: File, assetId?: string) => void) | undefined }) {
+export function GuidedEssentialInteractions({ funnel, scene, urls, onChange, onAttachAsset, onAttachPreviewFile, focusEventId, onFocusHandled }: { funnel: FunnelDefinition; scene: SceneDefinition; urls: Record<string, string>; onChange: (funnel: FunnelDefinition) => void; onAttachAsset: () => void; onAttachPreviewFile: ((file: File, assetId?: string) => void) | undefined; focusEventId?: string | undefined; onFocusHandled?: () => void }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [pickingTime, setPickingTime] = useState<string | null>(null);
   const events = scene.events.filter((event): event is Extract<SceneEventDefinition, { block: Essential }> => ["quiz", "notification", "audio", "scene_transition"].includes(event.block));
+  // Opens the exact interaction a review issue pointed at, instead of leaving the user to find it themselves.
+  useEffect(() => {
+    if (!focusEventId || !events.some((event) => event.id === focusEventId)) return;
+    setEditing(focusEventId);
+    onFocusHandled?.();
+  }, [focusEventId, events, onFocusHandled]);
   const create = (block: Essential) => {
     const next = createGuidedInteraction(funnel, scene.id, block);
     onChange(next);

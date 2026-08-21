@@ -10,6 +10,7 @@ import {
   guidedInteractionReferences,
   guidedProgress,
   invalidateStructuralTests,
+  issueBelongsToScene,
   markSceneTested,
   nextGuidedStep,
   sceneStructuralFingerprint,
@@ -153,5 +154,34 @@ describe("Guided Builder mappings", () => {
     const next = funnel.scenes[0]!.events[0] as any;
     expect(next.options).toHaveLength(3);
     expect(next.allowChange).toBe(true);
+  });
+  it("matches an event-level validation issue back to the scene that owns it", () => {
+    let funnel = emptyFunnel();
+    funnel = createGuidedInteraction(funnel, funnel.entrySceneId, "quiz");
+    const eventId = funnel.scenes[0]!.events[0]!.id;
+    expect(issueBelongsToScene(`events.${eventId}`, funnel.scenes[0]!)).toBe(true);
+    expect(issueBelongsToScene(`events.${eventId}.q1`, funnel.scenes[0]!)).toBe(true);
+    expect(issueBelongsToScene("events.some-other-event", funnel.scenes[0]!)).toBe(false);
+  });
+  it("counts a scene as needing correction for an event issue nextGuidedStep used to miss", () => {
+    let funnel = emptyFunnel();
+    const sceneId = funnel.entrySceneId;
+    funnel.scenes[0]!.guided = { script: { happens: "algo" } };
+    funnel.scenes[0]!.videoAssetId = "video";
+    funnel = createGuidedInteraction(funnel, sceneId, "choice");
+    const choice = funnel.scenes[0]!.events[0] as any;
+    // An empty choice (no options) is a real validator error whose path is "events.<id>", not "scenes.<id>".
+    funnel = updateGuidedInteraction(funnel, sceneId, { ...choice, options: [] });
+    expect(nextGuidedStep(funnel.scenes[0]!, funnel)).toMatch(/Corrija/);
+  });
+  it("only counts a scene as ready once its script is done too, not just video and test", () => {
+    let funnel = emptyFunnel();
+    funnel.scenes[0]!.videoAssetId = "video";
+    funnel = markSceneTested(funnel, funnel.entrySceneId);
+    // Video attached and tested, but no script — should not count as ready.
+    expect(guidedProgress(funnel).ready).toBe(0);
+    funnel.scenes[0]!.guided = { ...funnel.scenes[0]!.guided, script: { happens: "algo" } };
+    funnel = markSceneTested(funnel, funnel.entrySceneId);
+    expect(guidedProgress(funnel).ready).toBe(1);
   });
 });

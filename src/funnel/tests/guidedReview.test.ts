@@ -9,6 +9,11 @@ describe("Guided final review", () => {
     expect(issue.message).toMatch(/opções/);
     expect(goToIssue(issue).step).toBe("interactivity");
   });
+  it("carries the offending event id through to the correction destination instead of dropping it", () => {
+    const issue = humanizeValidationIssue({ code: "quiz_options_empty", message: "raw", path: "events.quiz-1" });
+    expect(issue.eventId).toBe("quiz-1");
+    expect(goToIssue(issue).eventId).toBe("quiz-1");
+  });
   it("reports missing video as a blocking review issue and untested scene as warning", () => {
     const funnel = emptyFunnel();
     const summary = reviewSummary(funnel);

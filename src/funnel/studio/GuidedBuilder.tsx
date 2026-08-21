@@ -19,8 +19,10 @@ import { GuidedComplexInteractions } from "./GuidedComplexInteractions";
 import { InlineMediaPicker } from "./InlineMediaPicker";
 import { exportGuidedProject, goToIssue, globalNextStep, reviewSummary } from "./guidedReview";
 
-const steps = ["script", "production", "video", "interactivity", "test", "review"] as const;
-type Step = (typeof steps)[number];
+// "review" is a funnel-level destination (reached from the top nav's REVISÃO button), not a per-scene
+// step, so it stays out of this tab list even though the Step type still allows it.
+const steps = ["script", "production", "video", "interactivity", "test"] as const;
+type Step = (typeof steps)[number] | "review";
 const labels: Record<Step, string> = {
   script: "ROTEIRO",
   production: "PRODUÇÃO",
@@ -36,6 +38,20 @@ const triggerOptions = [
   ["end", "QUANDO O VÍDEO TERMINAR"],
   ["after", "DEPOIS DE OUTRA INTERAÇÃO"],
 ] as const;
+// The sidebar lists scenes in array order (drag-to-reorder position), which can drift from the graph's
+// real playback order (entrySceneId -> nextSceneId chain). This flags that drift instead of hiding it.
+function sceneOrderMismatch(funnel: FunnelDefinition): boolean {
+  const graphOrder: string[] = [];
+  let cursor: string | undefined = funnel.entrySceneId;
+  const seen = new Set<string>();
+  while (cursor && !seen.has(cursor)) {
+    seen.add(cursor);
+    graphOrder.push(cursor);
+    cursor = funnel.scenes.find((scene) => scene.id === cursor)?.nextSceneId;
+  }
+  const arrayOrder = funnel.scenes.map((scene) => scene.id);
+  return graphOrder.length === arrayOrder.length && graphOrder.some((id, index) => id !== arrayOrder[index]);
+}
 export function GuidedBuilder({
   funnel,
   onChange,
@@ -72,20 +88,18 @@ export function GuidedBuilder({
     [description, setDescription] = useState(""),
     [structure, setStructure] = useState<any>("one");
   const onNew = (_funnel: FunnelDefinition) => undefined;
-  const [sceneId, setSceneId] = useState(
-    funnel.scenes.some((item) => item.id === ui.sceneId) ? ui.sceneId! : funnel.entrySceneId,
-  );
-  const [step, setStep] = useState<Step>(ui.step || "script");
-  const [timeEventId, setTimeEventId] = useState<string | null>(null);
+  // sceneId/step are derived from the `ui` prop (not local state) so that external navigation — e.g.
+  // "CORRIGIR" on a review issue calling onUi(...) — actually moves this screen instead of being silently
+  // ignored by state this component never re-read after mount.
+  const sceneId = funnel.scenes.some((item) => item.id === ui.sceneId) ? ui.sceneId! : funnel.entrySceneId;
+  const step: Step = ui.step || "script";
   const scene = funnel.scenes.find((item) => item.id === sceneId) || funnel.scenes[0]!;
   const progress = guidedProgress(funnel);
   useEffect(() => {
-    if (!funnel.scenes.some((item) => item.id === sceneId)) {
-      const fallback = funnel.scenes[0]?.id || funnel.entrySceneId;
-      setSceneId(fallback);
-      onUi({ ...ui, mode: "guided", funnelId: funnel.id, sceneId: fallback, step });
+    if (!funnel.scenes.some((item) => item.id === ui.sceneId)) {
+      onUi({ ...ui, mode: "guided", funnelId: funnel.id, sceneId, step });
     }
-  }, [funnel, sceneId, step, ui, onUi]);
+  }, [funnel, ui, sceneId, step, onUi]);
   const update = (patch: any) =>
     onChange({
       ...funnel,
@@ -98,9 +112,13 @@ export function GuidedBuilder({
         item.id === scene.id ? { ...item, events: [...item.events, event] } : item,
       ),
     });
-  const persist = (nextStep: Step) => {
-    setStep(nextStep);
-    onUi({ ...ui, mode: "guided", funnelId: funnel.id, sceneId: scene.id, step: nextStep });
+  const persist = (nextStep: Step, nextSceneId = scene.id) => {
+    const { eventId: _eventId, ...rest } = ui;
+    onUi({ ...rest, mode: "guided", funnelId: funnel.id, sceneId: nextSceneId, step: nextStep });
+  };
+  const clearFocusEventId = () => {
+    const { eventId: _eventId, ...rest } = ui;
+    onUi(rest);
   };
   const asset = scene.videoAssetId && funnel.assets.find((item) => item.id === scene.videoAssetId);
   const addInteraction = (block: SceneEventDefinition["block"]) => {
@@ -127,27 +145,32 @@ export function GuidedBuilder({
             {progress.ready}/{progress.total} cenas prontas · {progress.percent}% concluído
           </p>
         </div>
-        <div className="flex gap-2"><button onClick={() => persist("review")}>FINALIZAR EXPERIÊNCIA</button><button onClick={onAdvanced}>ABRIR EDITOR AVANÇADO</button></div>
+        {/* Single Advanced Editor entry point for this whole screen — it used to repeat in the nav and the footer too. */}
+        <button onClick={onAdvanced} className="shrink-0 rounded-lg border border-white/[.08] px-3 py-2 text-sm text-zinc-300 hover:bg-white/[.06]">EDITOR AVANÇADO</button>
       </header>
+      {/* Funnel-level navigation. EXPORTAR RASCUNHO/VÁLIDO used to live here, disconnected from the
+          validation context in REVISÃO — the real, validation-aware export actions live only inside
+          Revisão now (see ReviewStep below). */}
       <nav className="max-w-7xl mx-auto mt-4 flex flex-wrap gap-1 rounded-xl border border-white/[.07] bg-white/[.025] p-1.5 text-sm">
         <button className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-white/[.06]" onClick={() => persist("script")}>CRIAÇÃO</button>
         <button className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-white/[.06]" onClick={() => document.getElementById("studio-scenes")?.scrollIntoView({ behavior: "smooth" })}>CENAS</button>
         <button className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-white/[.06]" onClick={onAssets}>ARQUIVOS</button>
-        <button className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-white/[.06]" onClick={() => persist("review")}>REVISÃO</button>
-        <button className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-white/[.06]" onClick={onExportDraft}>EXPORTAR RASCUNHO</button>
-        <button className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-white/[.06]" onClick={onExportValid}>EXPORTAR VÁLIDO</button>
-        <button className="ml-auto rounded-lg px-3 py-2 text-zinc-400 hover:bg-white/[.06]" onClick={onAdvanced}>EDITOR AVANÇADO</button>
+        <button className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-white/[.06]" onClick={() => persist("review")}>REVISÃO / EXPORTAÇÃO</button>
       </nav>
       <div className="max-w-7xl mx-auto mt-7 grid grid-cols-[250px_minmax(0,1fr)] gap-8">
         <aside id="studio-scenes" className="space-y-2">
           <p className="px-2 text-xs font-semibold tracking-[.16em] text-zinc-500">CENAS</p>
+          {sceneOrderMismatch(funnel) && (
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+              A ordem desta lista é diferente da ordem real do funil (siga as setas ↑↓ para corrigir).
+            </p>
+          )}
           <button
             className="mb-3 w-full rounded-lg border border-dashed border-zinc-700 px-3 py-3 text-sm font-medium text-zinc-300 hover:border-blue-400 hover:text-white"
             onClick={() => {
               const next = addGuidedScene(funnel);
               onChange(next);
               const created = next.scenes.at(-1)!;
-              setSceneId(created.id);
               onUi({
                 ...ui,
                 mode: "guided",
@@ -167,10 +190,7 @@ export function GuidedBuilder({
                 tabIndex={0}
                 className={`w-full rounded-xl p-4 text-left transition ${item.id === scene.id ? "bg-blue-500/10 ring-1 ring-blue-400/70" : "hover:bg-white/[.035]"}`}
                 key={item.id}
-                onClick={() => {
-                  setSceneId(item.id);
-                  persist("script");
-                }}
+                onClick={() => persist("script", item.id)}
               >
                 <b>
                   CENA {index + 1}: {item.title}
@@ -217,21 +237,22 @@ export function GuidedBuilder({
             />
           )}{" "}
           {step === "interactivity" && (
-            <><GuidedEssentialInteractions funnel={funnel} scene={scene} urls={urls} onChange={onChange} onAttachAsset={() => onAttachPreview()} onAttachPreviewFile={onAttachPreviewFile} /><GuidedComplexInteractions funnel={funnel} scene={scene} urls={urls} onChange={onChange} onAttachAsset={() => onAttachPreview()} onAttachPreviewFile={onAttachPreviewFile} /></>
+            <><GuidedEssentialInteractions funnel={funnel} scene={scene} urls={urls} onChange={onChange} onAttachAsset={() => onAttachPreview()} onAttachPreviewFile={onAttachPreviewFile} focusEventId={ui.eventId} onFocusHandled={clearFocusEventId} /><GuidedComplexInteractions funnel={funnel} scene={scene} urls={urls} onChange={onChange} onAttachAsset={() => onAttachPreview()} onAttachPreviewFile={onAttachPreviewFile} focusEventId={ui.eventId} onFocusHandled={clearFocusEventId} /></>
           )}{" "}
           {step === "test" && <TestStep funnel={funnel} scene={scene} urls={urls} onTested={() => onChange(markSceneTested(funnel, scene.id))} />}
           {step === "review" && <ReviewStep funnel={funnel} urls={urls} onUi={onUi} onChange={onChange} />}
-          <footer className="flex justify-between">
-            <button onClick={() => persist(steps[Math.max(0, steps.indexOf(step) - 1)]!)}>
-              VOLTAR
-            </button>
-            <button
-              onClick={() => persist(steps[Math.min(steps.length - 1, steps.indexOf(step) + 1)]!)}
-            >
-              CONTINUAR
-            </button>
-            <button onClick={() => onAdvanced()}>ABRIR EDITOR AVANÇADO</button>
-          </footer>
+          {step !== "review" && (
+            <footer className="flex justify-between">
+              <button onClick={() => persist(steps[Math.max(0, steps.indexOf(step as (typeof steps)[number]) - 1)]!)}>
+                VOLTAR
+              </button>
+              <button
+                onClick={() => persist(steps[Math.min(steps.length - 1, steps.indexOf(step as (typeof steps)[number]) + 1)]!)}
+              >
+                CONTINUAR
+              </button>
+            </footer>
+          )}
         </section>
       </div>
       {wizard && (
@@ -669,7 +690,7 @@ function TestStep({ funnel, scene, urls, onTested }: { funnel: FunnelDefinition;
   return (
     <div className="grid gap-3">
       <h2>TESTE ESTA CENA</h2>
-      <p>Use o preview real no Editor Avançado para executar vídeo e interações.</p>
+      <p>Use o preview abaixo para executar o vídeo real e testar as interações desta cena.</p>
       <GuidedPreview funnel={funnel} scene={scene} urls={urls} onTested={onTested} />
     </div>
   );
@@ -687,7 +708,7 @@ function ReviewStep({ funnel, urls, onUi, onChange }: { funnel: FunnelDefinition
   };
   const fix = (issue: ReturnType<typeof reviewSummary>["issues"][number]) => {
     const target = goToIssue(issue);
-    onUi({ mode: "guided", funnelId: funnel.id, ...(target.sceneId ? { sceneId: target.sceneId } : {}), step: target.step });
+    onUi({ mode: "guided", funnelId: funnel.id, ...(target.sceneId ? { sceneId: target.sceneId } : {}), ...(target.eventId ? { eventId: target.eventId } : {}), step: target.step });
   };
   if (testing) return <section className="grid gap-3"><header className="flex justify-between"><h2>TESTAR EXPERIÊNCIA COMPLETA</h2><button onClick={() => setTesting(false)}>SAIR DO TESTE</button></header><GuidedPreview funnel={funnel} scene={funnel.scenes.find((scene) => scene.id === funnel.entrySceneId) || funnel.scenes[0]!} urls={urls} /></section>;
   return <section className="grid gap-4"><h2>REVISAR EXPERIÊNCIA</h2><p>{globalNextStep(funnel)}</p><div className="grid md:grid-cols-3 gap-3"><ReviewCard title="ESTRUTURA" ready={funnel.scenes.length > 0 && !summary.errors.some((issue) => issue.title.includes("Conexão") || issue.title.includes("Cena"))} text={`${funnel.scenes.length} cenas configuradas`} /><ReviewCard title="VÍDEOS" ready={summary.videos === funnel.scenes.length} text={`${summary.videos}/${funnel.scenes.length} vídeos configurados`} /><ReviewCard title="INTERAÇÕES" ready text={`${summary.interactions} interações`} /><ReviewCard title="ARQUIVOS" ready={!summary.errors.some((issue) => issue.title.includes("Arquivo"))} text={`${funnel.assets.length} arquivos`} /><ReviewCard title="TESTES" ready={summary.warnings.length === 0} text={`${summary.tested}/${funnel.scenes.length} cenas testadas`} /><ReviewCard title="CONEXÕES" ready={!summary.errors.some((issue) => issue.title.includes("Conexão"))} text={funnel.scenes.map((scene) => scene.nextSceneId ? `${scene.title} ↓ ${funnel.scenes.find((item) => item.id === scene.nextSceneId)?.title || "?"}` : scene.title).join(" · ")} /></div><div className="rounded bg-zinc-900 p-4"><b>FALTAM {summary.errors.length + summary.warnings.length} COISAS PARA SUA EXPERIÊNCIA FICAR PRONTA</b>{summary.issues.length ? summary.issues.map((issue) => <div className="flex justify-between gap-2 mt-2" key={issue.id}><span><b>{issue.severity === "error" ? "ERRO" : "ATENÇÃO"}</b> — {issue.message}</span><button onClick={() => fix(issue)}>CORRIGIR</button></div>) : <p>SUA EXPERIÊNCIA ESTÁ PRONTA ✅</p>}</div>{summary.errors.length === 0 && <div className="rounded border border-emerald-700 p-4"><b>SUA EXPERIÊNCIA ESTÁ PRONTA ✅</b><p>{funnel.title} · {funnel.scenes.length} cenas · {summary.interactions} interações · {summary.videos} vídeos · {funnel.assets.length} arquivos · {summary.warnings.length} avisos</p></div>}<div className="flex flex-wrap gap-2"><button onClick={() => setTesting(true)}>▶ TESTAR EXPERIÊNCIA COMPLETA</button><button onClick={() => download("draft")}>EXPORTAR RASCUNHO</button><button disabled={summary.errors.length > 0} onClick={() => download("valid")}>EXPORTAR PROJETO VÁLIDO</button><button disabled>EXPORTAR PARA PUBLICAÇÃO — EM BREVE</button></div>{exported && <p>PROJETO EXPORTADO ✅ Na próxima etapa, este arquivo poderá virar um pacote para publicação na Cloudflare.</p>}</section>;

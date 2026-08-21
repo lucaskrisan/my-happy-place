@@ -42,7 +42,11 @@ export function reviewSummary(funnel: FunnelDefinition) {
   const videos = funnel.scenes.filter((scene) => Boolean(scene.videoAssetId)).length;
   const interactions = funnel.scenes.reduce((total, scene) => total + scene.events.length, 0);
   const tested = funnel.scenes.filter((scene) => sceneStatus(scene, funnel).test === "PRONTO").length;
-  return { issues, errors: issues.filter((issue) => issue.severity === "error"), warnings: issues.filter((issue) => issue.severity === "warning"), videos, interactions, tested, readyScenes: funnel.scenes.filter((scene) => Boolean(scene.videoAssetId) && sceneStatus(scene, funnel).test === "PRONTO").length };
+  const readyScenes = funnel.scenes.filter((scene) => {
+    const status = sceneStatus(scene, funnel);
+    return status.script === "PRONTO" && Boolean(scene.videoAssetId) && status.test === "PRONTO";
+  }).length;
+  return { issues, errors: issues.filter((issue) => issue.severity === "error"), warnings: issues.filter((issue) => issue.severity === "warning"), videos, interactions, tested, readyScenes };
 }
 export function globalNextStep(funnel: FunnelDefinition) {
   const summary = reviewSummary(funnel);
@@ -50,7 +54,7 @@ export function globalNextStep(funnel: FunnelDefinition) {
   if (summary.warnings.length) return summary.warnings[0]!.message;
   return "Todas as cenas estão prontas. Revise sua experiência e exporte o projeto válido.";
 }
-export function goToIssue(issue: HumanIssue) { return { sceneId: issue.sceneId, step: issue.suggestedStep || "review" } as const; }
+export function goToIssue(issue: HumanIssue) { return { sceneId: issue.sceneId, eventId: issue.eventId, step: issue.suggestedStep || "review" } as const; }
 export function exportGuidedProject(funnel: FunnelDefinition, type: "draft" | "valid") {
   const review = reviewSummary(funnel);
   const core = exportStudioFunnel(funnel, type === "valid" ? "valid" : "draft");

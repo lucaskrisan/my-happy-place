@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ActionDefinition, FunnelDefinition, SceneDefinition, SceneEventDefinition, TriggerDefinition } from "../schema/v1";
 import { createGuidedInteraction, deleteGuidedInteraction, duplicateGuidedInteraction, guidedInteractionReferences, triggerFromGuided, updateGuidedInteraction } from "./guidedState";
 import { GuidedPreview, formatTime } from "./GuidedPreview";
@@ -8,10 +8,16 @@ import { InlineMediaPicker } from "./InlineMediaPicker";
 type ComplexBlock = "incoming_call" | "messaging" | "choice";
 const blockName: Record<ComplexBlock, string> = { incoming_call: "RECEBER UMA LIGAÇÃO", messaging: "ABRIR UMA CONVERSA", choice: "DAR UMA ESCOLHA" };
 
-export function GuidedComplexInteractions({ funnel, scene, urls, onChange, onAttachAsset, onAttachPreviewFile }: { funnel: FunnelDefinition; scene: SceneDefinition; urls: Record<string, string>; onChange: (funnel: FunnelDefinition) => void; onAttachAsset: () => void; onAttachPreviewFile: ((file: File, assetId?: string) => void) | undefined }) {
+export function GuidedComplexInteractions({ funnel, scene, urls, onChange, onAttachAsset, onAttachPreviewFile, focusEventId, onFocusHandled }: { funnel: FunnelDefinition; scene: SceneDefinition; urls: Record<string, string>; onChange: (funnel: FunnelDefinition) => void; onAttachAsset: () => void; onAttachPreviewFile: ((file: File, assetId?: string) => void) | undefined; focusEventId?: string | undefined; onFocusHandled?: () => void }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [picking, setPicking] = useState<string | null>(null);
   const events = scene.events.filter((event): event is Extract<SceneEventDefinition, { block: ComplexBlock }> => event.block === "incoming_call" || event.block === "messaging" || event.block === "choice");
+  // Opens the exact interaction a review issue pointed at, instead of leaving the user to find it themselves.
+  useEffect(() => {
+    if (!focusEventId || !events.some((event) => event.id === focusEventId)) return;
+    setEditing(focusEventId);
+    onFocusHandled?.();
+  }, [focusEventId, events, onFocusHandled]);
   const update = (event: SceneEventDefinition) => onChange(updateGuidedInteraction(funnel, scene.id, event));
   const addUrl = (mediaType: "audio" | "image") => { const url = prompt(`URL permanente do ${mediaType === "audio" ? "áudio" : "avatar"}`); if (url) onChange({ ...funnel, assets: [...funnel.assets, { id: uid(mediaType), mediaType, source: "permanent", url }] }); };
   return <section className="grid gap-3">
