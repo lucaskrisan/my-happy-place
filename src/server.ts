@@ -46,6 +46,10 @@ export type WorkerEnv = {
   STUDIO_UPLOAD_TOKEN?: string;
   SUPABASE_URL?: string;
   SUPABASE_SECRET_KEY?: string;
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
+  STRIPE_PRICE_ID?: string;
+  KAWAIPAY_WEBHOOK_TOKEN?: string;
 };
 
 export const STUDIO_UPLOAD_PATH = "/api/studio/assets/upload";
@@ -54,6 +58,9 @@ export const STUDIO_ASSET_INVENTORY_PATH = "/api/studio/assets/inventory";
 export const STUDIO_UPLOAD_LIMIT_BYTES = 90 * 1024 * 1024;
 export const STUDIO_UPLOAD_MIME_TYPES = STUDIO_MEDIA_TYPES;
 export const ADMIN_CLIENTS_PATH = "/api/admin/clients";
+export const BILLING_CHECKOUT_PATH = "/api/billing/checkout-session";
+export const BILLING_WEBHOOK_PATH = "/api/billing/webhook";
+export const KAWAIPAY_WEBHOOK_PATH = "/api/billing/kawaipay-webhook";
 
 type StudioUploadResponse = {
   assetId: string;
@@ -377,6 +384,125 @@ export async function handleAdminClients(request: Request, env: WorkerEnv): Prom
   return Response.json({ deleted: true });
 }
 
+export async function handleBillingCheckout(request: Request, env: WorkerEnv): Promise<Response> {
+  if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: { Allow: "POST" } });
+  if (!env.STRIPE_SECRET_KEY || !env.STRIPE_PRICE_ID) return Response.json({ error: "Pagamento indisponível no momento." }, { status: 503 });
+  let body: { email?: string };
+  try { body = await request.json(); } catch { return Response.json({ error: "Invalid request" }, { status: 400 }); }
+  const email = body.email?.trim();
+  if (!email) return Response.json({ error: "E-mail é obrigatório." }, { status: 400 });
+  const origin = new URL(request.url).origin;
+  const params = new URLSearchParams({
+    mode: "subscription",
+    "line_items[0][price]": env.STRIPE_PRICE_ID,
+    "line_items[0][quantity]": "1",
+    customer_email: email,
+    success_url: `${origin}/signup/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/signup`,
+  });
+  const stripeResponse = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+    method: "POST",
+    headers: { Authorization: `Basic ${btoa(`${env.STRIPE_SECRET_KEY}:`)}`, "Content-Type": "application/x-www-form-urlencoded" },
+    body: params,
+  });
+  const session = (await stripeResponse.json()) as { url?: string; error?: { message: string } };
+  if (!stripeResponse.ok) return Response.json({ error: session.error?.message || "Não foi possível iniciar o pagamento." }, { status: 400 });
+  return Response.json({ url: session.url });
+}
+
+// Stripe signs each webhook payload as HMAC-SHA256("{timestamp}.{rawBody}", webhook_secret) — verifying
+// this (rather than trusting the request outright) is what stops anyone who finds this URL from minting
+// their own "payment succeeded" events and getting a free account.
+async function verifyStripeSignature(payload: string, header: string, secret: string): Promise<boolean> {
+  const parts = Object.fromEntries(header.split(",").map((part) => part.split("=") as [string, string]));
+  const timestamp = parts["t"];
+  const signature = parts["v1"];
+  if (!timestamp || !signature) return false;
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${timestamp}.${payload}`));
+  const expected = [...new Uint8Array(mac)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  if (expected.length !== signature.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+  return diff === 0;
+}
+
+export async function handleBillingWebhook(request: Request, env: WorkerEnv): Promise<Response> {
+  if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: { Allow: "POST" } });
+  if (!env.STRIPE_WEBHOOK_SECRET || !env.SUPABASE_URL || !env.SUPABASE_SECRET_KEY) return new Response("Unavailable", { status: 503 });
+  const signature = request.headers.get("Stripe-Signature");
+  const rawBody = await request.text();
+  if (!signature || !(await verifyStripeSignature(rawBody, signature, env.STRIPE_WEBHOOK_SECRET))) {
+    return new Response("Invalid signature", { status: 400 });
+  }
+  let event: { type: string; data: { object: Record<string, any> } };
+  try { event = JSON.parse(rawBody); } catch { return new Response("Invalid payload", { status: 400 }); }
+
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY);
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    const email: string | undefined = session["customer_details"]?.email || session["customer_email"];
+    const customerId: string | undefined = session["customer"];
+    if (email) {
+      // Creates the account and emails them a "set your password" link in one call — no separate
+      // password-delivery step needed, Supabase's own transactional email handles it.
+      const { data: invited, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email);
+      if (invited?.user) {
+        await supabase.from("profiles").update({ stripe_customer_id: customerId, subscription_status: "active" }).eq("id", invited.user.id);
+      } else if (inviteError?.message?.includes("already been registered")) {
+        // Existing account paying again (e.g. resubscribing) — just reactivate it.
+        await supabase.from("profiles").update({ stripe_customer_id: customerId, subscription_status: "active" }).eq("email", email);
+      } else if (inviteError) {
+        console.error("Stripe webhook: inviteUserByEmail failed", inviteError);
+      }
+    }
+  }
+  if (event.type === "customer.subscription.deleted" || event.type === "customer.subscription.updated") {
+    const subscription = event.data.object;
+    const customerId: string | undefined = subscription["customer"];
+    const status = subscription["status"] === "active" ? "active" : subscription["status"] === "past_due" ? "past_due" : "canceled";
+    if (customerId) await supabase.from("profiles").update({ subscription_status: status }).eq("stripe_customer_id", customerId);
+  }
+  return Response.json({ received: true });
+}
+
+// KawaiPay's own docs/payload shape aren't known yet — this verifies the shared token (embedded in the
+// webhook URL itself, since KawaiPay's "Token" field's exact header convention isn't confirmed) and logs
+// the raw payload so the "approved sale" field names can be nailed down from a real event, then activates
+// the account the same way the Stripe webhook does. Field-name guesses below will likely need adjusting
+// once a real payload is seen.
+export async function handleKawaipayWebhook(request: Request, env: WorkerEnv): Promise<Response> {
+  if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: { Allow: "POST" } });
+  if (!env.KAWAIPAY_WEBHOOK_TOKEN || !env.SUPABASE_URL || !env.SUPABASE_SECRET_KEY) return new Response("Unavailable", { status: 503 });
+  const token = new URL(request.url).searchParams.get("token");
+  if (token !== env.KAWAIPAY_WEBHOOK_TOKEN) return new Response("Unauthorized", { status: 401 });
+
+  let payload: Record<string, any>;
+  try { payload = await request.json(); } catch { return new Response("Invalid payload", { status: 400 }); }
+  console.log("KawaiPay webhook received", JSON.stringify(payload));
+
+  const eventLabel = String(payload["event"] ?? payload["type"] ?? payload["status"] ?? "").toLowerCase();
+  const isApproved = /aprovad|approved|paid|completed|compra_aprovada/.test(eventLabel);
+  const email: string | undefined =
+    payload["customer"]?.email ?? payload["buyer"]?.email ?? payload["customer_email"] ?? payload["email"];
+
+  if (isApproved && email) {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY);
+    const { data: invited, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email);
+    if (invited?.user) {
+      await supabase.from("profiles").update({ subscription_status: "active" }).eq("id", invited.user.id);
+    } else if (inviteError?.message?.includes("already been registered")) {
+      await supabase.from("profiles").update({ subscription_status: "active" }).eq("email", email);
+    } else if (inviteError) {
+      console.error("KawaiPay webhook: inviteUserByEmail failed", inviteError);
+    }
+  }
+  return Response.json({ received: true });
+}
+
 export default {
   async fetch(request: Request, env: WorkerEnv, ctx: unknown) {
     try {
@@ -397,6 +523,15 @@ export default {
       }
       if (new URL(request.url).pathname === ADMIN_CLIENTS_PATH) {
         return await handleAdminClients(request, env);
+      }
+      if (new URL(request.url).pathname === BILLING_CHECKOUT_PATH) {
+        return await handleBillingCheckout(request, env);
+      }
+      if (new URL(request.url).pathname === BILLING_WEBHOOK_PATH) {
+        return await handleBillingWebhook(request, env);
+      }
+      if (new URL(request.url).pathname === KAWAIPAY_WEBHOOK_PATH) {
+        return await handleKawaipayWebhook(request, env);
       }
 
       const handler = await getServerEntry();
