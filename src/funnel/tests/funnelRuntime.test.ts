@@ -44,4 +44,15 @@ describe('validateFunnel',()=>{
  it('rejects preview assets in exportable definitions',()=>{const f=makeFunnel();f.assets=[{id:'preview',mediaType:'video',source:'preview',objectUrl:'blob:x',fileName:'x.mp4'}];expect(validateFunnel(f).some(i=>i.code==='preview_asset')).toBe(true);});
  it('finds duplicate ids and invalid action targets',()=>{const f=makeFunnel([{id:'same',block:'notification',trigger:{kind:'MANUAL'},appName:'A',senderName:'S',message:'M',actions:[{type:'GO_TO_SCENE',sceneId:'missing'},{type:'OPEN_EVENT',eventId:'missing-event'}]},{id:'same',block:'notification',trigger:{kind:'MANUAL'},appName:'A',senderName:'S',message:'M',actions:[]}]);const codes=validateFunnel(f).map(i=>i.code);expect(codes).toContain('duplicate_id');expect(codes).toContain('scene_target_missing');expect(codes).toContain('event_target_missing');});
  it('does not fire VIDEO_END from time updates',()=>{const runtime=new FunnelRuntime(makeFunnel([{id:'end',block:'scene_transition',trigger:{kind:'VIDEO_END'},blocking:false,targetSceneId:'b',actions:[{type:'NEXT_SCENE'}]}]));runtime.start();runtime.updateTime(99);expect(runtime.snapshot().sceneId).toBe('a');runtime.mediaEnded();expect(runtime.snapshot().sceneId).toBe('b');});
+ // The guided editors themselves warn "adicione pelo menos duas opções" for both quiz and choice — a
+ // single-option question/choice isn't a real one, so the validator has to reject it too, not just zero.
+ it('rejects a quiz question or choice with exactly one option, not just zero', () => {
+   const f = makeFunnel([
+     { id: 'q', block: 'quiz', trigger: { kind: 'MANUAL' }, title: 'Q', questions: [{ id: 'q1', title: 'Q', options: [{ id: 'a', label: 'A' }] }], actions: [] },
+     { id: 'c', block: 'choice', trigger: { kind: 'MANUAL' }, title: 'C', options: [{ id: 'a', label: 'A' }], actions: [] },
+   ]);
+   const codes = validateFunnel(f).map((i) => i.code);
+   expect(codes).toContain('quiz_options_empty');
+   expect(codes).toContain('choice_empty');
+ });
 });

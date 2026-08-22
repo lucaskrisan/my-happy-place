@@ -69,15 +69,18 @@ export function validateFunnel(funnel: FunnelDefinition): FunnelValidationIssue[
         add("quiz_empty", "Quiz requires questions", `events.${event.id}`);
       if (event.block === "quiz")
         event.questions.forEach((q) => {
-          if (!q.options.length)
+          // The guided editor itself warns "adicione pelo menos duas opções" (a single-option question
+          // isn't really a question) — the validator has to enforce that same rule or a quiz can be
+          // marked "valid" and exported with a meaningless one-option question.
+          if (q.options.length < 2)
             add(
               "quiz_options_empty",
-              "Quiz question requires options",
+              "Quiz question requires at least two options",
               `events.${event.id}.${q.id}`,
             );
         });
-      if (event.block === "choice" && !event.options.length)
-        add("choice_empty", "Choice requires options", `events.${event.id}`);
+      if (event.block === "choice" && event.options.length < 2)
+        add("choice_empty", "Choice requires at least two options", `events.${event.id}`);
       if (event.block === "messaging" && !event.messages.length)
         add("messaging_empty", "Messaging requires messages", `events.${event.id}`);
       if (
