@@ -422,6 +422,10 @@ export function FunnelStudio({
         ui={guidedUi}
         onUi={setMode}
         saveState={saveState}
+        canUndo={!!history.length}
+        canRedo={!!future.length}
+        onUndo={undo}
+        onRedo={redo}
         urls={urls}
         onAttachPreview={attachPreview}
         onAttachPreviewFile={addPreviewFile}

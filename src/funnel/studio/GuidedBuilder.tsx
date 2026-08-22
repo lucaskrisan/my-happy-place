@@ -98,6 +98,10 @@ export function GuidedBuilder({
   ui,
   onUi,
   saveState,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
   urls,
   onAttachPreview,
   onAttachPreviewFile,
@@ -113,6 +117,10 @@ export function GuidedBuilder({
   ui: GuidedUiState;
   onUi: (next: GuidedUiState) => void;
   saveState?: "CARREGANDO" | "SALVANDO..." | "SALVO" | "ERRO AO SALVAR";
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
   urls: Record<string, string>;
   onAttachPreview: (assetId?: string, sceneId?: string) => void;
   onAttachPreviewFile: (file: File, assetId?: string, sceneId?: string) => void;
@@ -137,6 +145,21 @@ export function GuidedBuilder({
     }
     setRenamingSceneId(null);
   };
+  // Undo/redo already tracks every edit in FunnelStudio.tsx (used by the advanced editor for years) — this
+  // just exposes it here too. Ignored while typing in a field so it doesn't fight the browser's own
+  // text-undo inside that input.
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "z") return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      event.preventDefault();
+      if (event.shiftKey) onRedo?.();
+      else onUndo?.();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onUndo, onRedo]);
   const onNew = (_funnel: FunnelDefinition) => undefined;
   // sceneId/step are derived from the `ui` prop (not local state) so that external navigation — e.g.
   // "CORRIGIR" on a review issue calling onUi(...) — actually moves this screen instead of being silently
@@ -211,6 +234,12 @@ export function GuidedBuilder({
           </div>
           <div className="flex items-center gap-4">
             {saveState && <SaveIndicator state={saveState} />}
+            {(onUndo || onRedo) && (
+              <div className="flex items-center gap-1">
+                <button aria-label="Desfazer" title="Desfazer (Ctrl+Z)" disabled={!canUndo} onClick={onUndo} className="rounded-lg p-1.5 text-studio-text-secondary hover:bg-white/[.06] hover:text-studio-text disabled:opacity-30 disabled:hover:bg-transparent transition-colors">↶</button>
+                <button aria-label="Refazer" title="Refazer (Ctrl+Shift+Z)" disabled={!canRedo} onClick={onRedo} className="rounded-lg p-1.5 text-studio-text-secondary hover:bg-white/[.06] hover:text-studio-text disabled:opacity-30 disabled:hover:bg-transparent transition-colors">↷</button>
+              </div>
+            )}
             <Link to="/studio/blueprint" className="text-sm font-medium text-studio-text-secondary hover:text-studio-text transition-colors">Blueprint</Link>
             {/* Discrete on purpose — Guided is the default experience, Advanced is an escape hatch. */}
             <button onClick={onAdvanced} className="text-sm text-studio-text-muted hover:text-studio-text-secondary transition-colors">Editor avançado</button>
