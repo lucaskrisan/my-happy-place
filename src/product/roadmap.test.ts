@@ -59,6 +59,13 @@ describe("roadmap integrity", () => {
     expect(marketing?.scope).toBe("EXTERNAL");
   });
 
+  it("every DONE task has non-empty acceptanceCriteria", () => {
+    for (const t of ROADMAP.tasks) {
+      if (t.status !== "DONE") continue;
+      expect(t.acceptanceCriteria.length, `${t.id} is DONE but has no acceptanceCriteria`).toBeGreaterThan(0);
+    }
+  });
+
   it("no task id is reused across phases", () => {
     const seen = new Map<string, string>();
     for (const t of ROADMAP.tasks) {

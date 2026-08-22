@@ -150,19 +150,38 @@ const TASKS: RoadmapTask[] = [
   task("FOUND-004", "FASE-0", "FunnelDefinition schema", {
     description: "src/funnel/schema — define a forma de um funil (cenas, interações, transições).",
     status: "DONE", priority: "HIGH",
+    acceptanceCriteria: [
+      "src/funnel/schema/v1 define os tipos de FunnelDefinition usados por runtime, validator e Studio",
+      "npm run typecheck passa usando esses tipos em todo o projeto",
+    ],
+    evidence: { typecheck: "npm run typecheck limpo em 2026-08-22" },
   }),
   task("FOUND-005", "FASE-0", "FunnelRuntime", {
     description: "src/funnel/runtime — executa um FunnelDefinition (coberto por funnelRuntime.test.ts).",
     status: "DONE", priority: "HIGH",
+    acceptanceCriteria: [
+      "funnelRuntime.test.ts cobre a execução do FunnelRuntime e passa em npm run test:run",
+      "FunnelRuntime é importado por FunnelStudio.tsx, GuidedPreview.tsx e RuntimeOverlays.tsx (fluxo real do Studio)",
+    ],
     evidence: { tests: "src/funnel/tests/funnelRuntime.test.ts passa no gate atual" },
   }),
   task("FOUND-006", "FASE-0", "Validador de funil", {
     description: "src/funnel/validator — valida um FunnelDefinition antes de permitir publicar/salvar.",
     status: "DONE", priority: "HIGH",
+    acceptanceCriteria: [
+      "validateFunnel é exercitado por funnelRuntime.test.ts, marinaOfficialFunnel.test.ts e studioState.test.ts, todos passando",
+      "validateFunnel é usado em código real do Studio (studioState.ts, GuidedBuilder.tsx, StudioInspector.tsx)",
+    ],
+    evidence: { tests: "validateFunnel coberto indiretamente por funnelRuntime.test.ts, marinaOfficialFunnel.test.ts e studioState.test.ts — todos passando em 2026-08-22" },
   }),
   task("FOUND-007", "FASE-0", "Guided Builder", {
     description: "src/funnel/studio/GuidedBuilder.tsx — fluxo guiado de criação de funil.",
     status: "DONE", priority: "HIGH",
+    acceptanceCriteria: [
+      "GuidedBuilder.tsx é o componente renderido pelo fluxo real de criação de funil em /studio (via ProductStudio → FunnelStudio)",
+      "guidedState.test.ts e guidedReview.test.ts cobrem a lógica do fluxo guiado e passam",
+    ],
+    evidence: { tests: "src/funnel/tests/guidedState.test.ts e src/funnel/tests/guidedReview.test.ts passam" },
   }),
   task("FOUND-008", "FASE-0", "Editor avançado (modo livre, fora do fluxo guiado)", {
     description: "Reaudicao (2026-08-22): existe, sim, um modo avançado real dentro de FunnelStudio.tsx — Timeline de cenas, StudioInspector (edição direta de cena/evento), reordenar cenas, exportar/importar FunnelDefinition como JSON. O Guided Builder expõe um botão 'Editor avançado' (src/funnel/studio/GuidedBuilder.tsx:239 e :747) que chama onAdvanced() e troca guidedUi.mode para 'advanced', revelando essa superfície. Isso é alcançável a partir do fluxo real do produto: /studio (ProductStudio) → FunnelStudio (com forceGuided=true, que só define o modo INICIAL — não impede trocar para 'advanced' depois) → botão 'Editor avançado'.",
@@ -174,63 +193,112 @@ const TASKS: RoadmapTask[] = [
   task("FOUND-009", "FASE-0", "Asset Manager", {
     description: "src/funnel/studio/AssetManager.tsx — gestão de mídia dentro do Studio.",
     status: "DONE", priority: "MEDIUM",
+    acceptanceCriteria: [
+      "AssetManager.tsx é usado por FunnelStudio.tsx e InlineMediaPicker.tsx, alcançável a partir de /studio",
+      "assetManagerState.test.ts cobre a lógica de estado do gerenciador de assets e passa",
+    ],
+    evidence: { tests: "src/funnel/tests/assetManagerState.test.ts passa" },
   }),
   task("FOUND-010", "FASE-0", "Upload permanente para R2", {
     description: "permanentUpload.ts + R2UploadProof.tsx (coberto por permanentUpload.test.ts).",
     status: "DONE", priority: "MEDIUM",
+    acceptanceCriteria: [
+      "permanentUpload.test.ts cobre o fluxo de upload permanente para R2 e passa",
+      "R2UploadProof.tsx existe como demonstração do fluxo real de upload",
+    ],
+    evidence: { tests: "src/funnel/tests/permanentUpload.test.ts passa" },
   }),
   task("FOUND-011", "FASE-0", "InlineMediaPicker", {
     description: "Seleção de mídia inline dentro do fluxo de edição.",
     status: "DONE", priority: "LOW",
+    acceptanceCriteria: [
+      "InlineMediaPicker.tsx é importado e usado por GuidedBuilder.tsx, GuidedComplexInteractions.tsx e GuidedEssentialInteractions.tsx (fluxo real do Studio)",
+    ],
+    evidence: { notes: "Sem teste automatizado dedicado; alcançabilidade confirmada por leitura de código (grep de imports) em 2026-08-22." },
   }),
   task("FOUND-012", "FASE-0", "Versionamento seguro de assets", {
     description: "AssetVersionInspector.tsx mantém previousVersions e expõe exclusão remota — hoje intencionalmente desativada até validação completa.",
     status: "DONE", priority: "MEDIUM",
+    acceptanceCriteria: [
+      "AssetVersionInspector.tsx é renderizado dentro de AssetManager.tsx, alcançável a partir de /studio",
+      "mantém histórico de previousVersions por asset; exclusão remota fica desativada por decisão deliberada, não por bug pendente",
+    ],
+    evidence: { notes: "Import de AssetVersionInspector.tsx por AssetManager.tsx confirmado por leitura de código em 2026-08-22." },
     internalNotes: "Botão 'EXCLUIR VERSÃO' está com disabled + tooltip explicando que a exclusão remota está pausada para validação. Reavaliar antes de reativar.",
   }),
   task("FOUND-013", "FASE-0", "Funil oficial Marina", {
     description: "marinaOfficialFunnel.ts + marinaProofs.ts, coberto por marinaOfficialFunnel.test.ts.",
     status: "DONE", priority: "MEDIUM",
+    acceptanceCriteria: ["marinaOfficialFunnel.test.ts cobre a definição do funil oficial da Marina e passa"],
+    evidence: { tests: "src/funnel/tests/marinaOfficialFunnel.test.ts passa" },
   }),
   task("FOUND-014", "FASE-0", "Blueprint (fonte da narrativa)", {
     description: "/studio/blueprint + blueprintData.ts — onde a história da Marina é acompanhada (cenas, takes, assets). Continua sendo a fonte de verdade NARRATIVA; este roadmap não a substitui, cuida do produto/negócio.",
     status: "DONE", priority: "MEDIUM",
+    acceptanceCriteria: [
+      "blueprintData.test.ts cobre a lógica de dados do Blueprint e passa",
+      "src/routes/studio/blueprint.tsx é uma rota real do produto que importa blueprintData.ts",
+    ],
+    evidence: { tests: "src/funnel/tests/blueprintData.test.ts passa" },
   }),
   task("FOUND-015", "FASE-0", "Sistema de design do Studio (ui.tsx)", {
     description: "Primitivos visuais compartilhados (Card, Badge, botões, Stepper, StudioSelect) usados em /studio, /studio/admin, /signup.",
     status: "DONE", priority: "MEDIUM",
+    acceptanceCriteria: [
+      "ui.tsx exporta os primitivos (Card, Badge, botões, Stepper, StudioSelect) importados por /studio/admin, /studio/roadmap e /signup",
+      "npm run typecheck e npm run build passam usando esses componentes",
+    ],
+    evidence: { typecheck: "npm run typecheck limpo em 2026-08-22", build: "npm run build ok em 2026-08-22" },
     internalNotes: "O sistema de primitivos existe e está em uso real e funcional. O 'redesign Canva-like' completo do produto (visão maior) não é um marco fechado — tratar telas ainda fora deste padrão como trabalho contínuo, não como regressão desta task.",
   }),
   task("FOUND-016", "FASE-0", "StudioSelect (dropdown customizado)", {
     description: "Substitui <select> nativo por Radix para consistência visual entre navegadores/SOs.",
     status: "DONE", priority: "LOW",
+    acceptanceCriteria: [
+      "StudioSelect é usado em AssetManager.tsx, GuidedBuilder.tsx, GuidedComplexInteractions.tsx e GuidedEssentialInteractions.tsx (fluxo real do Studio)",
+    ],
+    evidence: { notes: "Alcançabilidade confirmada por leitura de código (grep de imports) em 2026-08-22." },
   }),
   task("FOUND-017", "FASE-0", "Suite de testes automatizados", {
-    description: "10 arquivos de teste, 108 testes, via vitest.",
+    description: "Arquivos de teste via vitest, incluindo os do roadmap operacional (src/product).",
     status: "DONE", priority: "HIGH",
-    evidence: { tests: "108 passed (10 files) — npm run test:run, verificado em 2026-08-22" },
-    internalNotes: "Número cresce; reconferir sempre via `npm run test:run` em vez de confiar neste valor congelado.",
+    acceptanceCriteria: ["npm run test:run executa e todos os testes passam"],
+    evidence: { tests: "npm run test:run — todos os testes passando, verificado em 2026-08-22 (ver contagem atual no relatório de execução, não congelar o número aqui)" },
+    internalNotes: "Número de testes cresce; reconferir sempre via `npm run test:run` em vez de confiar em um valor congelado nesta task.",
   }),
   task("FOUND-018", "FASE-0", "Autenticação + sincronização em nuvem (Supabase)", {
     description: "Login obrigatório para /studio; produtos e funis sincronizados no Supabase (cross-device).",
     status: "DONE", priority: "HIGH",
+    acceptanceCriteria: [
+      "/studio redireciona um usuário deslogado para /login (guard real no código de produção)",
+      "FunnelStudio.tsx chama pushFunnelToSupabase ao salvar, sincronizando o funil na nuvem",
+    ],
     evidence: { commit: "3b3b615, bea1a5d" },
   }),
   task("FOUND-019", "FASE-0", "Painel de admin (contas + produtos)", {
     description: "Versão inicial de /studio/admin — CRUD de contas de cliente e listagem de todos os produtos.",
     status: "DONE", priority: "HIGH",
+    acceptanceCriteria: [
+      "/studio/admin permite criar e excluir contas de cliente via POST/DELETE /api/admin/clients",
+      "acesso restrito a role admin, via guard client-side + requireAdmin() no server",
+    ],
     evidence: { commit: "f0f1dc9" },
     internalNotes: "Esta é a base que a FASE-9 (CEO Control Center) expande — não é o cockpit completo pedido pelo usuário.",
   }),
   task("FOUND-020", "FASE-0", "Billing do nosso SaaS (Stripe + KawaiPay)", {
     description: "Checkout embutido (Stripe Elements) em /signup, webhook Stripe e webhook KawaiPay ativando conta automaticamente após pagamento aprovado.",
     status: "DONE", priority: "HIGH",
-    evidence: { commit: "8e049cc, 52131c3" },
+    acceptanceCriteria: [
+      "POST /api/billing/subscribe retorna um clientSecret válido do Stripe",
+      "handleBillingWebhook e handleKawaipayWebhook ativam a conta do cliente via inviteUserByEmail ao receber evento de pagamento aprovado",
+    ],
+    evidence: { commit: "8e049cc, 52131c3", notes: "Testado ao vivo em produção em 2026-08-22: POST https://my-happy-place.kawai-zzindigital.workers.dev/api/billing/subscribe retornou clientSecret válido." },
     internalNotes: "Isso cobra pelo ACESSO AO STUDIO. Não confundir com o checkout do funil do cliente final (ver FASE-5/CTA externo e item 36 do pedido original — são coisas deliberadamente separadas).",
   }),
   task("FOUND-021", "FASE-0", "Menu de conta (avatar, e-mail, cargo, sair)", {
     description: "UserMenu.tsx no header do Studio/Admin.",
     status: "DONE", priority: "LOW",
+    acceptanceCriteria: ["UserMenu.tsx é renderizado no header de /studio, /studio/admin e /studio/roadmap, mostrando e-mail, badge de role e botão Sair"],
     evidence: { commit: "6aee652" },
   }),
 
@@ -269,14 +337,24 @@ const TASKS: RoadmapTask[] = [
   }),
   task("ROADMAP-006", "FASE-1", "Testes de integridade do roadmap", {
     description: "IDs únicos, phaseId válido, dependencies existentes, status válido, DONE com acceptanceCriteria, scope EXTERNAL fora do progresso CORE.",
-    status: "IN_PROGRESS", priority: "HIGH",
+    status: "DONE", priority: "HIGH",
     dependencies: ["ROADMAP-001"],
-    evidence: { tests: "src/product/roadmap.test.ts — 6 testes passando (IDs únicos de task, IDs únicos de fase, phaseId válido, dependencies existentes, status válido, DONE não depende de TODO/BLOCKED, EXTERNAL fora do CORE)." },
-    internalNotes: "Gap real encontrado na reauditoria de 2026-08-22: NÃO existe teste que force 'toda task DONE possui acceptanceCriteria não-vazio' (item da especificação original). Auditoria direta nos dados mostrou 19 tasks hoje DONE com acceptanceCriteria vazio (FOUND-004,005,006,007,009,010,011,012,013,014,015,016,017,018,019,020,021, ADMIN-001, ADMIN-003) — a maioria da Fase 0, que descreve fundação auditada por leitura de código, não por um critério formalmente redigido. Não corrigido nesta execução (proibido implementar/alterar nova regra); permanece IN_PROGRESS até essa regra existir como teste E os dados serem conformes a ela.",
+    acceptanceCriteria: [
+      "IDs de task e de fase são únicos",
+      "toda task referencia uma fase e dependencies reais",
+      "todo status é um dos valores válidos",
+      "nenhuma task DONE depende de uma task ainda TODO/BLOCKED",
+      "toda task DONE possui acceptanceCriteria não-vazio",
+      "tasks EXTERNAL ficam fora da contagem de progresso CORE",
+      "npm run test:run passa",
+    ],
+    evidence: { tests: "src/product/roadmap.test.ts — 7 testes passando (IDs únicos de task, IDs únicos de fase, phaseId válido, dependencies existentes, status válido, DONE não depende de TODO/BLOCKED, DONE possui acceptanceCriteria não-vazio, EXTERNAL fora do CORE), verificado em 2026-08-22." },
+    internalNotes: "Fechado nesta execução (2026-08-22): a regra 'toda task DONE possui acceptanceCriteria' agora é um teste real (roadmap.test.ts), e as 19 tasks que estavam DONE com acceptanceCriteria vazio (FOUND-004,005,006,007,009,010,011,012,013,014,015,016,017,018,019,020,021, ADMIN-001, ADMIN-003) receberam critérios mínimos baseados em evidência já auditada (testes existentes, reachability confirmada por leitura de código, ou typecheck/build). Nenhuma foi rebaixada — todas tinham evidência suficiente para sustentar DONE.",
   }),
   task("ROADMAP-007", "FASE-1", "Protocolo para futuros agentes/contribuidores", {
     description: "docs/ROADMAP_PROTOCOL.md — como toda feature nova deve nascer de uma task e atualizar este arquivo.",
     status: "DONE", priority: "HIGH",
+    acceptanceCriteria: ["docs/ROADMAP_PROTOCOL.md existe e documenta o processo (localizar/criar task, transição de status, regra de DONE, sanitização pública)"],
     evidence: { commit: "38b38ed", notes: "docs/ROADMAP_PROTOCOL.md existe, cobre: como localizar/criar task, transição de status, regra de DONE, sanitização pública, escopo CORE vs EXTERNAL, e a arquitetura macro de plataforma decidida." },
   }),
 
@@ -405,9 +483,18 @@ const TASKS: RoadmapTask[] = [
   }),
 
   // ---- FASE 9 — CEO Control Center ------------------------------------------------------------------
-  task("ADMIN-001", "FASE-9", "Shell do admin", { status: "DONE", priority: "HIGH", evidence: { commit: "f0f1dc9" } }),
+  task("ADMIN-001", "FASE-9", "Shell do admin", {
+    status: "DONE", priority: "HIGH",
+    acceptanceCriteria: ["/studio/admin existe como rota real, protegida por guard de admin, com header, Breadcrumb e UserMenu"],
+    evidence: { commit: "f0f1dc9" },
+  }),
   task("ADMIN-002", "FASE-9", "KPIs de visão geral"),
-  task("ADMIN-003", "FASE-9", "Usuários", { status: "DONE", evidence: { commit: "f0f1dc9" }, description: "CRUD básico já existe em /studio/admin (criar/excluir conta de cliente)." }),
+  task("ADMIN-003", "FASE-9", "Usuários", {
+    status: "DONE",
+    description: "CRUD básico já existe em /studio/admin (criar/excluir conta de cliente).",
+    acceptanceCriteria: ["POST e DELETE /api/admin/clients permitem criar e excluir contas de cliente a partir de /studio/admin, protegidos por requireAdmin()"],
+    evidence: { commit: "f0f1dc9" },
+  }),
   task("ADMIN-004", "FASE-9", "Ativar/reativar conta", { dependencies: ["ADMIN-003"] }),
   task("ADMIN-005", "FASE-9", "Reset de senha seguro", { dependencies: ["ADMIN-003"] }),
   task("ADMIN-006", "FASE-9", "Overrides de acesso", { dependencies: ["PLAN-010"] }),
