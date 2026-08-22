@@ -23,6 +23,7 @@ import { GuidedPreview, formatTime } from "./GuidedPreview";
 import { GuidedEssentialInteractions } from "./GuidedEssentialInteractions";
 import { GuidedComplexInteractions } from "./GuidedComplexInteractions";
 import { InlineMediaPicker } from "./InlineMediaPicker";
+import { UserMenu } from "./UserMenu";
 import { exportGuidedProject, goToIssue, globalNextStep, reviewSummary } from "./guidedReview";
 import {
   PageTitle,
@@ -236,6 +237,7 @@ export function GuidedBuilder({
             <Link to="/studio/blueprint" className="text-sm font-medium text-studio-text-secondary hover:text-studio-text transition-colors">Blueprint</Link>
             {/* Discrete on purpose — Guided is the default experience, Advanced is an escape hatch. */}
             <button onClick={onAdvanced} className="text-sm text-studio-text-muted hover:text-studio-text-secondary transition-colors">Editor avançado</button>
+            <UserMenu />
           </div>
         </div>
         <div className="mx-auto mt-3 max-w-6xl"><ProgressBar percent={progress.percent} /></div>

@@ -9,6 +9,7 @@ import { loadGuidedUi } from "./guidedState";
 import { PageTitle, SectionTitle, Eyebrow, HelpText, Card, Badge, ProgressBar, Breadcrumb, PrimaryButton, SecondaryButton, GhostButton, EmptyState } from "./ui";
 import { useSupabaseSession } from "@/lib/supabase/useSession";
 import { useProfile } from "@/lib/supabase/useProfile";
+import { UserMenu } from "./UserMenu";
 import { deleteProductFromSupabase, pullFromSupabase, pushAllLocalToSupabase, pushFunnelToSupabase, pushProductsToSupabase } from "@/lib/supabase/sync";
 
 export type View = {
@@ -161,6 +162,7 @@ export function ProductStudio() {
           <div className="flex items-center gap-2">
             {isAdmin && <Link to="/studio/admin" className="rounded-lg border border-studio-border px-3.5 py-1.5 text-xs font-semibold text-studio-text-secondary hover:border-studio-primary/40 hover:text-studio-text transition-colors">Administração</Link>}
             {product && <Link to="/studio/blueprint" className="rounded-lg border border-studio-border px-3.5 py-1.5 text-xs font-semibold text-studio-text-secondary hover:border-studio-primary/40 hover:text-studio-text transition-colors">Blueprint</Link>}
+            <UserMenu />
           </div>
         </div>
       </header>

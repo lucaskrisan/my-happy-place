@@ -4,6 +4,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useSupabaseSession } from "@/lib/supabase/useSession";
 import { useProfile, type Profile } from "@/lib/supabase/useProfile";
 import { PageTitle, SectionTitle, Eyebrow, HelpText, Card, Breadcrumb, PrimaryButton, SecondaryButton, GhostButton, Badge } from "@/funnel/studio/ui";
+import { UserMenu } from "@/funnel/studio/UserMenu";
 
 export const Route = createFileRoute("/studio/admin")({ component: AdminPage });
 
@@ -103,7 +104,10 @@ function AdminPage() {
       <header className="sticky top-0 z-20 border-b border-studio-border bg-studio-bg/90 backdrop-blur px-6 py-4">
         <div className="mx-auto flex max-w-5xl items-center justify-between">
           <Breadcrumb items={[{ label: "Meus produtos", onClick: () => void navigate({ to: "/studio" }) }, "Administração"]} />
-          <Link to="/studio" className="text-sm font-medium text-studio-text-secondary hover:text-studio-text transition-colors">Voltar</Link>
+          <div className="flex items-center gap-3">
+            <Link to="/studio" className="text-sm font-medium text-studio-text-secondary hover:text-studio-text transition-colors">Voltar</Link>
+            <UserMenu />
+          </div>
         </div>
       </header>
 
