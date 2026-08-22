@@ -2,13 +2,17 @@ import { describe, expect, it } from "vitest";
 import { emptyFunnel } from "../studio/studioState";
 import {
   actionFromGuided,
+  addGuidedScene,
   createGuidedFunnel,
   createGuidedInteraction,
   deleteGuidedInteraction,
+  deleteGuidedScene,
   duplicateGuidedInteraction,
+  duplicateGuidedScene,
   guidedEvent,
   guidedInteractionReferences,
   guidedProgress,
+  guidedSceneReferences,
   invalidateStructuralTests,
   issueBelongsToScene,
   markSceneTested,
@@ -183,5 +187,46 @@ describe("Guided Builder mappings", () => {
     funnel.scenes[0]!.guided = { ...funnel.scenes[0]!.guided, script: { happens: "algo" } };
     funnel = markSceneTested(funnel, funnel.entrySceneId);
     expect(guidedProgress(funnel).ready).toBe(1);
+  });
+  it("duplicates a scene right after itself with fresh event ids and no chain link", () => {
+    let funnel = emptyFunnel();
+    const sceneId = funnel.entrySceneId;
+    funnel = createGuidedInteraction(funnel, sceneId, "quiz");
+    const originalEventId = funnel.scenes[0]!.events[0]!.id;
+    const copied = duplicateGuidedScene(funnel, sceneId);
+    expect(copied.scenes).toHaveLength(2);
+    expect(copied.scenes[1]!.title).toBe(`${funnel.scenes[0]!.title} (cópia)`);
+    expect(copied.scenes[1]!.nextSceneId).toBeUndefined();
+    expect(copied.scenes[1]!.events[0]!.id).not.toBe(originalEventId);
+  });
+  it("finds every reference to a scene before deleting it, and fixes them all on delete", () => {
+    let funnel = addGuidedScene(addGuidedScene(emptyFunnel()));
+    const [sceneA, sceneB, sceneC] = funnel.scenes;
+    // sceneB has a scene_transition into sceneC, and a GO_TO_SCENE action also pointing at sceneC.
+    funnel = createGuidedInteraction(funnel, sceneB!.id, "scene_transition");
+    const transition = funnel.scenes[1]!.events[0] as any;
+    funnel = updateGuidedInteraction(funnel, sceneB!.id, { ...transition, targetSceneId: sceneC!.id });
+    funnel = createGuidedInteraction(funnel, sceneB!.id, "notification");
+    const notification = funnel.scenes[1]!.events[1] as any;
+    funnel = updateGuidedInteraction(funnel, sceneB!.id, { ...notification, onTap: [{ type: "GO_TO_SCENE", sceneId: sceneC!.id }] });
+    const refs = guidedSceneReferences(funnel, sceneC!.id);
+    expect(refs.length).toBeGreaterThanOrEqual(2);
+    const deleted = deleteGuidedScene(funnel, sceneC!.id);
+    expect(deleted.scenes).toHaveLength(2);
+    const remainingB = deleted.scenes.find((scene) => scene.id === sceneB!.id)!;
+    expect(remainingB.events.some((event) => event.block === "scene_transition")).toBe(false);
+    const remainingNotification = remainingB.events.find((event) => event.block === "notification") as any;
+    expect(remainingNotification.onTap).toEqual([]);
+    expect(deleted.entrySceneId).toBe(sceneA!.id);
+  });
+  it("reassigns entrySceneId when the entry scene itself is deleted, and refuses to delete the last scene", () => {
+    let funnel = addGuidedScene(emptyFunnel());
+    const [sceneA, sceneB] = funnel.scenes;
+    expect(funnel.entrySceneId).toBe(sceneA!.id);
+    const deleted = deleteGuidedScene(funnel, sceneA!.id);
+    expect(deleted.scenes).toHaveLength(1);
+    expect(deleted.entrySceneId).toBe(sceneB!.id);
+    const single = { ...emptyFunnel() };
+    expect(deleteGuidedScene(single, single.entrySceneId)).toBe(single);
   });
 });

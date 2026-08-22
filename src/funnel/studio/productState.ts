@@ -1,5 +1,5 @@
 import type { FunnelDefinition } from "../schema/v1";
-import { loadProjects, uid, type StudioStorage } from "./studioState";
+import { deleteFunnelData, loadProjects, uid, type StudioStorage } from "./studioState";
 import { marinaProofFunnel } from "../definitions/marinaProofs";
 
 export const PRODUCT_INDEX_KEY = "funnel-studio:v1:product-catalog";
@@ -101,4 +101,28 @@ export function attachFunnel(storage: StudioStorage, productId: string, funnel: 
 
 export function productFunnelCount(product: StudioProduct) {
   return product.funnelIds.length;
+}
+
+export function renameProduct(storage: StudioStorage, productId: string, name: string, description?: string) {
+  const products = ensureProducts(storage).map((product) =>
+    product.id !== productId
+      ? product
+      : { ...product, name: name.trim() || product.name, ...(description?.trim() ? { description: description.trim() } : {}), updatedAt: Date.now() },
+  );
+  saveProducts(storage, products);
+  return products.find((product) => product.id === productId);
+}
+
+/** Deletes a product and, for any funnel that was only attached to this product, its underlying data too
+ * (a funnel attached to more than one product is left alone so the other product keeps working). */
+export function deleteProduct(storage: StudioStorage, productId: string) {
+  const products = ensureProducts(storage);
+  const target = products.find((product) => product.id === productId);
+  const remaining = products.filter((product) => product.id !== productId);
+  saveProducts(storage, remaining);
+  if (target) {
+    const stillReferenced = new Set(remaining.flatMap((product) => product.funnelIds));
+    for (const funnelId of target.funnelIds) if (!stillReferenced.has(funnelId)) deleteFunnelData(storage, funnelId);
+  }
+  return remaining;
 }

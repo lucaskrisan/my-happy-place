@@ -137,6 +137,10 @@ export function saveFunnel(storage: StudioStorage, funnel: FunnelDefinition) {
 export function loadProjects(storage: StudioStorage) {
   return JSON.parse(storage.getItem(STUDIO_INDEX_KEY) || "[]") as StudioProject[];
 }
+export function deleteFunnelData(storage: StudioStorage, funnelId: string) {
+  storage.removeItem(funnelKey(funnelId));
+  storage.setItem(STUDIO_INDEX_KEY, JSON.stringify(loadProjects(storage).filter((project) => project.id !== funnelId)));
+}
 export function loadFunnel(storage: StudioStorage, id: string) {
   const raw = storage.getItem(funnelKey(id));
   return raw ? funnelSchema.parse(JSON.parse(raw)) : null;

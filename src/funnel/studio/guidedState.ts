@@ -212,6 +212,82 @@ export function addGuidedScene(funnel: FunnelDefinition, title = "Nova cena"): F
     ],
   };
 }
+// Every event can reference another scene through more than one action list depending on its block
+// (base actions, plus onAccept/onDecline/onEnd for calls, onClose for messaging, onTap/onDismiss for
+// notifications) — this touches all of them so a deleted scene never leaves a dangling GO_TO_SCENE.
+function stripSceneFromEvent(event: SceneEventDefinition, sceneId: string): SceneEventDefinition {
+  const clear = (actions: ActionDefinition[]) =>
+    actions.filter((action) => action.type !== "GO_TO_SCENE" || action.sceneId !== sceneId);
+  const next = { ...event, actions: clear(event.actions) };
+  if (next.block === "incoming_call") {
+    next.onAccept = clear(next.onAccept);
+    next.onDecline = clear(next.onDecline);
+    next.onEnd = clear(next.onEnd);
+  }
+  if (next.block === "messaging") next.onClose = clear(next.onClose);
+  if (next.block === "notification") {
+    next.onTap = clear(next.onTap);
+    next.onDismiss = clear(next.onDismiss);
+  }
+  return next;
+}
+export function guidedSceneReferences(funnel: FunnelDefinition, sceneId: string): string[] {
+  const refs: string[] = [];
+  if (funnel.entrySceneId === sceneId) refs.push("É a cena inicial do funil");
+  for (const scene of funnel.scenes) {
+    if (scene.id === sceneId) continue;
+    if (scene.nextSceneId === sceneId) refs.push(`${scene.title}: cena seguinte`);
+    for (const event of scene.events) {
+      const arrays: [string, ActionDefinition[]][] = [
+        ["ação", event.actions],
+        ...(event.block === "incoming_call" ? ([["ligação aceita", event.onAccept], ["ligação recusada", event.onDecline], ["ligação encerrada", event.onEnd]] as [string, ActionDefinition[]][]) : []),
+        ...(event.block === "messaging" ? ([["mensagem fechada", event.onClose]] as [string, ActionDefinition[]][]) : []),
+        ...(event.block === "notification" ? ([["notificação tocada", event.onTap], ["notificação dispensada", event.onDismiss]] as [string, ActionDefinition[]][]) : []),
+      ];
+      if (event.block === "scene_transition" && event.targetSceneId === sceneId) refs.push(`${scene.title}: vai para outra cena`);
+      for (const [label, actions] of arrays)
+        if (actions.some((action) => action.type === "GO_TO_SCENE" && action.sceneId === sceneId)) refs.push(`${scene.title}: ${label} vai para esta cena`);
+    }
+  }
+  return refs;
+}
+export function deleteGuidedScene(funnel: FunnelDefinition, sceneId: string): FunnelDefinition {
+  const rest = funnel.scenes.filter((scene) => scene.id !== sceneId);
+  if (!rest.length) return funnel;
+  return {
+    ...funnel,
+    entrySceneId: funnel.entrySceneId === sceneId ? rest[0]!.id : funnel.entrySceneId,
+    scenes: rest
+      .map((scene) => ({ ...scene, nextSceneId: scene.nextSceneId === sceneId ? undefined : scene.nextSceneId }))
+      .map((scene) => ({
+        ...scene,
+        events: scene.events
+          .filter((event) => event.block !== "scene_transition" || event.targetSceneId !== sceneId)
+          .map((event) => stripSceneFromEvent(event, sceneId)),
+      })),
+  };
+}
+export function duplicateGuidedScene(funnel: FunnelDefinition, sceneId: string): FunnelDefinition {
+  const index = funnel.scenes.findIndex((scene) => scene.id === sceneId);
+  const source = funnel.scenes[index];
+  if (!source) return funnel;
+  const copy: SceneDefinition = {
+    ...structuredClone(source),
+    id: uid("scene"),
+    title: `${source.title} (cópia)`,
+    nextSceneId: undefined,
+    events: source.events.map((event) => {
+      const cloned = { ...structuredClone(event), id: uid("event") } as SceneEventDefinition;
+      if (cloned.block === "messaging") cloned.messages = cloned.messages.map((message) => ({ ...message, id: uid("message") }));
+      if (cloned.block === "choice") cloned.options = cloned.options.map((option) => ({ ...option, id: uid("option") }));
+      if (cloned.block === "quiz") cloned.questions = cloned.questions.map((question) => ({ ...question, id: uid("question"), options: question.options.map((option) => ({ ...option, id: uid("option") })) }));
+      return cloned;
+    }),
+  };
+  const scenes = [...funnel.scenes];
+  scenes.splice(index + 1, 0, copy);
+  return { ...funnel, scenes };
+}
 export function createGuidedFunnel(
   type: "story" | "vsl" | "quiz" | "gamified" | "training" | "blank",
   title: string,

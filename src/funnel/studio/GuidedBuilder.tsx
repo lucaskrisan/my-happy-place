@@ -5,8 +5,11 @@ import {
   addGuidedScene,
   actionFromGuided,
   createGuidedFunnel,
+  deleteGuidedScene,
+  duplicateGuidedScene,
   guidedEvent,
   guidedProgress,
+  guidedSceneReferences,
   issueBelongsToScene,
   markSceneTested,
   nextGuidedStep,
@@ -110,6 +113,15 @@ export function GuidedBuilder({
     [title, setTitle] = useState(""),
     [description, setDescription] = useState(""),
     [structure, setStructure] = useState<any>("one");
+  const [sceneMenuOpen, setSceneMenuOpen] = useState<string | null>(null);
+  const [renamingSceneId, setRenamingSceneId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const commitRename = () => {
+    if (renamingSceneId && renameDraft.trim()) {
+      onChange({ ...funnel, scenes: funnel.scenes.map((item) => (item.id === renamingSceneId ? { ...item, title: renameDraft.trim() } : item)) });
+    }
+    setRenamingSceneId(null);
+  };
   const onNew = (_funnel: FunnelDefinition) => undefined;
   // sceneId/step are derived from the `ui` prop (not local state) so that external navigation — e.g.
   // "CORRIGIR" on a review issue calling onUi(...) — actually moves this screen instead of being silently
@@ -233,27 +245,73 @@ export function GuidedBuilder({
               const done = itemStatus.video === "PRONTO" && itemStatus.test === "PRONTO";
               const started = itemStatus.script !== "NÃO INICIADO" || itemStatus.video === "PRONTO";
               const isActive = item.id === scene.id;
+              const isRenaming = renamingSceneId === item.id;
               return (
-                <li key={item.id}>
+                <li key={item.id} className="relative">
                   <div
                     role="button"
                     tabIndex={0}
-                    onClick={() => persist("script", item.id)}
+                    onClick={() => !isRenaming && persist("script", item.id)}
                     className={`group flex w-full items-start gap-3 rounded-xl border-l-2 px-3 py-2.5 text-left transition-colors cursor-pointer ${isActive ? "border-studio-primary bg-studio-primary-soft" : "border-transparent hover:bg-white/[.035]"}`}
                   >
                     <span className="mt-0.5 font-mono text-xs text-studio-text-muted">{String(index + 1).padStart(2, "0")}</span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
                         {done ? <span className="text-studio-success text-xs">✓</span> : started ? <Dot tone="primary" /> : <Dot />}
-                        <p className={`truncate text-sm ${isActive ? "font-semibold text-studio-text" : "text-studio-text-secondary"}`}>{item.title}</p>
+                        {isRenaming ? (
+                          <input
+                            autoFocus
+                            value={renameDraft}
+                            onClick={(event) => event.stopPropagation()}
+                            onChange={(event) => setRenameDraft(event.target.value)}
+                            onBlur={commitRename}
+                            onKeyDown={(event) => { if (event.key === "Enter") commitRename(); if (event.key === "Escape") setRenamingSceneId(null); }}
+                            className="w-full min-w-0 rounded border border-studio-primary/50 bg-white/[.06] px-1.5 py-0.5 text-sm text-studio-text focus:outline-none"
+                          />
+                        ) : (
+                          <p className={`truncate text-sm ${isActive ? "font-semibold text-studio-text" : "text-studio-text-secondary"}`}>{item.title}</p>
+                        )}
                       </div>
                       <p className="mt-0.5 text-xs text-studio-text-muted">{done ? "Pronta" : started ? "Em andamento" : "Não iniciada"}</p>
                     </div>
-                    <span className="hidden shrink-0 flex-col gap-0.5 group-hover:flex">
-                      <button aria-label="Mover cena para cima" disabled={index === 0} className="text-studio-text-muted hover:text-studio-text disabled:opacity-30" onClick={(event) => { event.stopPropagation(); onChange(reorderScenes(funnel, index, index - 1)); }}>↑</button>
-                      <button aria-label="Mover cena para baixo" disabled={index === funnel.scenes.length - 1} className="text-studio-text-muted hover:text-studio-text disabled:opacity-30" onClick={(event) => { event.stopPropagation(); onChange(reorderScenes(funnel, index, index + 1)); }}>↓</button>
+                    <span className="hidden shrink-0 items-start gap-0.5 group-hover:flex">
+                      <span className="flex flex-col gap-0.5">
+                        <button aria-label="Mover cena para cima" disabled={index === 0} className="text-studio-text-muted hover:text-studio-text disabled:opacity-30" onClick={(event) => { event.stopPropagation(); onChange(reorderScenes(funnel, index, index - 1)); }}>↑</button>
+                        <button aria-label="Mover cena para baixo" disabled={index === funnel.scenes.length - 1} className="text-studio-text-muted hover:text-studio-text disabled:opacity-30" onClick={(event) => { event.stopPropagation(); onChange(reorderScenes(funnel, index, index + 1)); }}>↓</button>
+                      </span>
+                      <button aria-label="Mais opções desta cena" className="rounded px-1 py-0.5 text-studio-text-muted hover:bg-white/[.08] hover:text-studio-text" onClick={(event) => { event.stopPropagation(); setSceneMenuOpen(sceneMenuOpen === item.id ? null : item.id); }}>•••</button>
                     </span>
                   </div>
+                  {sceneMenuOpen === item.id && (
+                    <div className="absolute right-2 top-2 z-10 w-36 rounded-lg border border-studio-border bg-studio-surface-2 py-1 shadow-xl">
+                      <button
+                        onClick={(event) => { event.stopPropagation(); setRenamingSceneId(item.id); setRenameDraft(item.title); setSceneMenuOpen(null); }}
+                        className="block w-full px-3 py-1.5 text-left text-xs text-studio-text-secondary hover:bg-white/[.06]"
+                      >
+                        Renomear
+                      </button>
+                      <button
+                        onClick={(event) => { event.stopPropagation(); onChange(duplicateGuidedScene(funnel, item.id)); setSceneMenuOpen(null); }}
+                        className="block w-full px-3 py-1.5 text-left text-xs text-studio-text-secondary hover:bg-white/[.06]"
+                      >
+                        Duplicar
+                      </button>
+                      <button
+                        disabled={funnel.scenes.length <= 1}
+                        title={funnel.scenes.length <= 1 ? "Um funil precisa de ao menos uma cena" : undefined}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          const refs = guidedSceneReferences(funnel, item.id);
+                          if (refs.length && !confirm(`Esta cena é usada em ${refs.length} lugar(es):\n${refs.join("\n")}\n\nExcluir mesmo assim?`)) return;
+                          onChange(deleteGuidedScene(funnel, item.id));
+                          setSceneMenuOpen(null);
+                        }}
+                        className="block w-full px-3 py-1.5 text-left text-xs text-studio-error hover:bg-white/[.06] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  )}
                 </li>
               );
             })}

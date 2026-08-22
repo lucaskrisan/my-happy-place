@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import type { FunnelDefinition } from "../schema/v1";
 import { createGuidedFunnel, guidedProgress } from "./guidedState";
-import { attachFunnel, createProduct, ensureProducts, pinFunnelFirst, type StudioProduct } from "./productState";
+import { attachFunnel, createProduct, deleteProduct, ensureProducts, pinFunnelFirst, renameProduct, type StudioProduct } from "./productState";
 import { FunnelStudio } from "./FunnelStudio";
 import { loadFunnel, saveFunnel, seedOfficialFunnel } from "./studioState";
 import { loadGuidedUi } from "./guidedState";
@@ -38,6 +38,10 @@ export function ProductStudio() {
   const [newFunnel, setNewFunnel] = useState(false);
   const [funnelName, setFunnelName] = useState("");
   const [funnelType, setFunnelType] = useState<(typeof typeOptions)[number][0]>("story");
+  const [productMenuOpen, setProductMenuOpen] = useState<string | null>(null);
+  const [renamingProduct, setRenamingProduct] = useState<StudioProduct | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
   // Persisted so a browser refresh on a product/funnel view does not silently drop back to "Meus produtos".
   const setView = (next: View) => {
     setViewState(next);
@@ -96,6 +100,24 @@ export function ProductStudio() {
     reload(); setNewFunnel(false); setFunnelName("");
     setView({ kind: "funnel", productId: product.id, funnelId: funnel.id });
   };
+  const openRename = (item: StudioProduct) => {
+    setRenamingProduct(item);
+    setEditName(item.name);
+    setEditDescription(item.description || "");
+    setProductMenuOpen(null);
+  };
+  const saveRename = () => {
+    if (!renamingProduct || !editName.trim()) return;
+    renameProduct(localStorage, renamingProduct.id, editName, editDescription);
+    reload();
+    setRenamingProduct(null);
+  };
+  const handleDeleteProduct = (item: StudioProduct) => {
+    if (!confirm(`Excluir "${item.name}" e todo o conteúdo dele (funis, cenas, arquivos)? Essa ação não pode ser desfeita.`)) return;
+    deleteProduct(localStorage, item.id);
+    reload();
+    setProductMenuOpen(null);
+  };
 
   return (
     <main className="min-h-screen bg-studio-bg text-studio-text selection:bg-studio-primary/30">
@@ -139,11 +161,20 @@ export function ProductStudio() {
               const progress = productFunnels.length ? Math.round(productFunnels.reduce((sum, funnel) => sum + guidedProgress(funnel).percent, 0) / productFunnels.length) : 0;
               const primary = productFunnels[0];
               return (
-                <Card key={item.id} className="p-6 transition-colors hover:border-studio-primary/40">
+                <Card key={item.id} className="relative p-6 transition-colors hover:border-studio-primary/40">
                   <div className="flex items-start justify-between">
                     <div className="grid h-10 w-10 place-items-center rounded-xl bg-studio-primary-soft font-semibold text-studio-primary-strong">{item.name.slice(0, 1)}</div>
-                    <span className="text-xs text-studio-text-muted">Editado {fmt(item.updatedAt)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-studio-text-muted">Editado {fmt(item.updatedAt)}</span>
+                      <button aria-label="Mais opções deste produto" onClick={() => setProductMenuOpen(productMenuOpen === item.id ? null : item.id)} className="rounded px-1.5 py-0.5 text-studio-text-muted hover:bg-white/[.08] hover:text-studio-text">•••</button>
+                    </div>
                   </div>
+                  {productMenuOpen === item.id && (
+                    <div className="absolute right-4 top-14 z-10 w-36 rounded-lg border border-studio-border bg-studio-surface-2 py-1 shadow-xl">
+                      <button onClick={() => openRename(item)} className="block w-full px-3 py-1.5 text-left text-xs text-studio-text-secondary hover:bg-white/[.06]">Renomear</button>
+                      <button onClick={() => handleDeleteProduct(item)} className="block w-full px-3 py-1.5 text-left text-xs text-studio-error hover:bg-white/[.06]">Excluir</button>
+                    </div>
+                  )}
                   <SectionTitle className="mt-6 text-xl">{item.name}</SectionTitle>
                   <HelpText className="mt-1.5 min-h-10">{primary ? primary.title : item.description || "Organize a experiência e os seus funis."}</HelpText>
                   <div className="mt-4 flex items-center gap-4 text-sm text-studio-text-muted">
@@ -267,6 +298,13 @@ export function ProductStudio() {
           </div>
           <label className="mt-3">Qual é o nome deste funil?<input autoFocus value={funnelName} onChange={(event) => setFunnelName(event.target.value)} placeholder="Ex.: Funil principal" /></label>
           <PrimaryButton disabled={!funnelName.trim()} onClick={createFunnel} className="mt-2 w-full">Criar funil</PrimaryButton>
+        </Modal>
+      )}
+      {renamingProduct && (
+        <Modal title="Renomear produto" onClose={() => setRenamingProduct(null)}>
+          <label>Nome do produto<input autoFocus value={editName} onChange={(event) => setEditName(event.target.value)} placeholder="Ex.: Desafio 14 Dias" /></label>
+          <label>Descrição opcional<textarea value={editDescription} onChange={(event) => setEditDescription(event.target.value)} /></label>
+          <PrimaryButton disabled={!editName.trim()} onClick={saveRename} className="mt-2 w-full">Salvar</PrimaryButton>
         </Modal>
       )}
     </main>
