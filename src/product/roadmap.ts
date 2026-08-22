@@ -360,7 +360,7 @@ const TASKS: RoadmapTask[] = [
   }),
 
   // ---- FASE 2 — Planos / Entitlements -------------------------------------------------------------
-  task("PLAN-001", "FASE-2", "Modelo de plano", { priority: "HIGH" }),
+  task("PLAN-001", "FASE-2", "Modelo de plano", { status: "NEXT", priority: "HIGH" }),
   task("PLAN-002", "FASE-2", "Entitlements por plano", { dependencies: ["PLAN-001"] }),
   task("PLAN-003", "FASE-2", "Quotas de uso", { dependencies: ["PLAN-001"] }),
   task("PLAN-004", "FASE-2", "Modelo de preço mensal", {
@@ -506,7 +506,12 @@ const TASKS: RoadmapTask[] = [
   task("ADMIN-011", "FASE-9", "Assinaturas KawaiPay (visão admin)", { dependencies: ["FOUND-020"] }),
   task("ADMIN-012", "FASE-9", "MRR por provedor/moeda", { dependencies: ["ADMIN-010", "ADMIN-011"] }),
   task("ADMIN-013", "FASE-9", "Log de auditoria do admin"),
-  task("ADMIN-014", "FASE-9", "Uso do produto", { description: "Contagem de produtos/funis — versão atual de /studio/admin já mostra lista de produtos.", status: "IN_PROGRESS", evidence: { commit: "f0f1dc9" } }),
+  task("ADMIN-014", "FASE-9", "Uso do produto", {
+    description: "Contagem de produtos/funis — versão atual de /studio/admin já mostra lista de produtos.",
+    status: "TODO",
+    evidence: { commit: "f0f1dc9" },
+    internalNotes: "Correção de estado (2026-08-22): existe uma fundação parcial no admin antigo (lista de produtos em /studio/admin), mas a task completa desta fase (métricas de uso agregadas no CEO Control Center) ainda não está em execução — a Fase 9 só entra depois de Planos/Academy/Publicação/CTA. Estava erroneamente IN_PROGRESS e sequestrando 'fase atual' em /roadmap.",
+  }),
   task("ADMIN-015", "FASE-9", "Planos (visão admin)", { dependencies: ["PLAN-001"] }),
   task("ADMIN-016", "FASE-9", "Entitlements (visão admin)", { dependencies: ["PLAN-002"] }),
   task("ADMIN-017", "FASE-9", "Quotas (visão admin)", { dependencies: ["PLAN-003"] }),
