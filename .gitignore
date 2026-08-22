@@ -22,6 +22,10 @@ dist-ssr
 .dev.vars
 worker-configuration.d.ts
 
+# Env files (secrets) — .env.local for Vite dev vars, never commit real keys
+.env
+.env.local
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

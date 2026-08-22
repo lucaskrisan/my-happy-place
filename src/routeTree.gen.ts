@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DevRouteImport } from './routes/dev'
 import { Route as IntroRouteImport } from './routes/intro'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as NotasRouteImport } from './routes/notas'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as DevIndexRouteImport } from './routes/dev/index'
@@ -55,6 +56,11 @@ const DevRoute = DevRouteImport.update({
 const IntroRoute = IntroRouteImport.update({
   id: '/intro',
   path: '/intro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotasRoute = NotasRouteImport.update({
@@ -207,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dev': typeof DevRouteWithChildren
   '/intro': typeof IntroRoute
+  '/login': typeof LoginRoute
   '/notas': typeof NotasRoute
   '/studio': typeof StudioRouteWithChildren
   '/dev/14-days': typeof Dev14DaysRoute
@@ -240,6 +247,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/intro': typeof IntroRoute
+  '/login': typeof LoginRoute
   '/notas': typeof NotasRoute
   '/dev/14-days': typeof Dev14DaysRoute
   '/dev/audio': typeof DevAudioRoute
@@ -274,6 +282,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dev': typeof DevRouteWithChildren
   '/intro': typeof IntroRoute
+  '/login': typeof LoginRoute
   '/notas': typeof NotasRoute
   '/studio': typeof StudioRouteWithChildren
   '/dev/14-days': typeof Dev14DaysRoute
@@ -310,6 +319,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dev'
     | '/intro'
+    | '/login'
     | '/notas'
     | '/studio'
     | '/dev/14-days'
@@ -343,6 +353,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/intro'
+    | '/login'
     | '/notas'
     | '/dev/14-days'
     | '/dev/audio'
@@ -376,6 +387,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dev'
     | '/intro'
+    | '/login'
     | '/notas'
     | '/studio'
     | '/dev/14-days'
@@ -411,6 +423,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DevRoute: typeof DevRouteWithChildren
   IntroRoute: typeof IntroRoute
+  LoginRoute: typeof LoginRoute
   NotasRoute: typeof NotasRoute
   StudioRoute: typeof StudioRouteWithChildren
 }
@@ -436,6 +449,13 @@ declare module '@tanstack/react-router' {
       path: '/intro'
       fullPath: '/intro'
       preLoaderRoute: typeof IntroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notas': {
@@ -719,6 +739,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DevRoute: DevRouteWithChildren,
   IntroRoute: IntroRoute,
+  LoginRoute: LoginRoute,
   NotasRoute: NotasRoute,
   StudioRoute: StudioRouteWithChildren,
 }

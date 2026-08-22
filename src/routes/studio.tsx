@@ -1,9 +1,20 @@
-import { Outlet, createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { Outlet, createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ErrorComponentProps } from "@tanstack/react-router";
+import { useSupabaseSession } from "@/lib/supabase/useSession";
 
 export const Route = createFileRoute("/studio")({ component: StudioLayout, errorComponent: StudioError });
 
 function StudioLayout() {
+  const session = useSupabaseSession();
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  useEffect(() => {
+    if (session.status === "signed-out") void navigate({ to: "/login", search: { redirect: pathname } });
+  }, [session.status, pathname, navigate]);
+  if (session.status !== "signed-in") {
+    return <main className="grid min-h-screen place-items-center bg-studio-bg text-studio-text-muted">Carregando…</main>;
+  }
   return <Outlet />;
 }
 
