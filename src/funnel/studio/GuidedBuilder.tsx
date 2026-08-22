@@ -668,7 +668,7 @@ function ReviewStep({ funnel, urls, onUi, onChange }: { funnel: FunnelDefinition
           <SectionTitle>Testar experiência completa</SectionTitle>
           <SecondaryButton onClick={() => setTesting(false)}>Sair do teste</SecondaryButton>
         </header>
-        <GuidedPreview funnel={funnel} scene={funnel.scenes.find((scene) => scene.id === funnel.entrySceneId) || funnel.scenes[0]!} urls={urls} />
+        <GuidedPreview funnel={funnel} scene={funnel.scenes.find((scene) => scene.id === funnel.entrySceneId) || funnel.scenes[0]!} urls={urls} fullExperience />
       </section>
     );
   return (
