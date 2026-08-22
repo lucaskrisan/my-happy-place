@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ActionDefinition, FunnelDefinition, SceneEventDefinition, SceneDefinition, TriggerDefinition } from "../schema/v1";
 import { actionFromGuided, createGuidedInteraction, deleteGuidedInteraction, duplicateGuidedInteraction, guidedInteractionReferences, triggerFromGuided, updateGuidedInteraction } from "./guidedState";
+import { assetName } from "./assetManagerState";
 import { GuidedPreview, formatTime } from "./GuidedPreview";
 import { uid } from "./studioState";
 import { InlineMediaPicker } from "./InlineMediaPicker";
@@ -247,7 +248,7 @@ function AssetSelect({ label, value, assets, onChange, onAdd, onAttach }: { labe
         placeholder="Selecionar arquivo do projeto"
         value={value}
         onChange={onChange}
-        options={assets.map((asset) => ({ value: asset.id, label: `${asset.id}${asset.source === "preview" ? " (local)" : ""}` }))}
+        options={assets.map((asset) => ({ value: asset.id, label: `${assetName(asset)}${asset.source === "preview" ? " (local)" : ""}` }))}
       />
       <div className="mt-1.5 flex gap-1.5">
         <GhostButton onClick={onAdd} className="px-2 py-1 text-xs">+ URL permanente</GhostButton>

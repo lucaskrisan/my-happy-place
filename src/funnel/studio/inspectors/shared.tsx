@@ -6,6 +6,7 @@ import type {
   TriggerDefinition,
 } from "../../schema/v1";
 import { funnelBlockRegistry } from "../../registry/blockRegistry";
+import { assetName } from "../assetManagerState";
 
 export const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <label className="grid gap-1 text-xs text-zinc-400">
@@ -31,7 +32,7 @@ export function AssetSelect({
         .filter((asset) => !mediaType || asset.mediaType === mediaType)
         .map((asset) => (
           <option value={asset.id} key={asset.id}>
-            {asset.id} {asset.source === "preview" && !asset.objectUrl ? "(reanexar)" : ""}
+            {assetName(asset)} {asset.source === "preview" && !asset.objectUrl ? "(reanexar)" : ""}
           </option>
         ))}
     </select>

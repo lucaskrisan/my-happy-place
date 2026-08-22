@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ActionDefinition, FunnelDefinition, SceneDefinition, SceneEventDefinition, TriggerDefinition } from "../schema/v1";
 import { createGuidedInteraction, deleteGuidedInteraction, duplicateGuidedInteraction, guidedInteractionReferences, triggerFromGuided, updateGuidedInteraction } from "./guidedState";
+import { assetName } from "./assetManagerState";
 import { GuidedPreview, formatTime } from "./GuidedPreview";
 import { uid } from "./studioState";
 import { InlineMediaPicker } from "./InlineMediaPicker";
@@ -280,7 +281,7 @@ function Picker({ label, value, assets, onChange, addUrl, attach }: { label: str
         placeholder="Selecionar arquivo do projeto"
         value={value}
         onChange={onChange}
-        options={assets.map((asset) => ({ value: asset.id, label: asset.id }))}
+        options={assets.map((asset) => ({ value: asset.id, label: assetName(asset) }))}
       />
       <div className="mt-1.5 flex gap-1.5">
         <GhostButton onClick={addUrl} className="px-2 py-1 text-xs">+ URL permanente</GhostButton>

@@ -24,6 +24,9 @@ export class PermanentUploadError extends Error {
     message: string,
   ) {
     super(message);
+    // Without this, `error.name` stays the inherited "Error" — callers checking
+    // `error.name === "PermanentUploadError"` (e.g. to detect a cancelled upload) always miss.
+    this.name = "PermanentUploadError";
   }
 }
 

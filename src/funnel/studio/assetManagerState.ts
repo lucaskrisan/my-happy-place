@@ -9,6 +9,11 @@ export type AssetStatus = "permanent" | "local" | "unresolved";
 export const assetStatus = (asset: AssetRef, urls: Record<string, string>): AssetStatus =>
   asset.source === "permanent" ? "permanent" : urls[asset.id] ? "local" : "unresolved";
 
+// The only place a person should ever see an asset's opaque internal id is nowhere — every picker across
+// the studio should show this instead, never `asset.id` directly.
+export const assetName = (asset: AssetRef) =>
+  asset.source === "preview" ? asset.fileName : asset.fileName || asset.url.split("/").at(-1) || "Arquivo";
+
 export function filterAssets(
   assets: AssetRef[],
   urls: Record<string, string>,
@@ -19,8 +24,7 @@ export function filterAssets(
   return assets.filter((asset) => {
     const status = assetStatus(asset, urls);
     const matchesFilter = filter === "all" || filter === asset.mediaType || filter === status || (filter === "problem" && status === "unresolved");
-    const name = asset.source === "preview" ? asset.fileName : asset.fileName || asset.url;
-    return matchesFilter && (!needle || `${name} ${asset.mediaType}`.toLowerCase().includes(needle));
+    return matchesFilter && (!needle || `${assetName(asset)} ${asset.mediaType}`.toLowerCase().includes(needle));
   });
 }
 

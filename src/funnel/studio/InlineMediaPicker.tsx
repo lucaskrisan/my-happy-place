@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import type { AssetRef, FunnelDefinition } from "../schema/v1";
 import { ASSET_UPLOAD_SESSION_KEY } from "./AssetManager";
-import { addPermanentUrl, assetStatus, promoteAssetInFunnel } from "./assetManagerState";
+import { addPermanentUrl, assetName, assetStatus, promoteAssetInFunnel } from "./assetManagerState";
 import { isStudioMediaType, studioMediaTypeForMime, uploadPermanentAsset, type UploadStatus } from "./permanentUpload";
 import { uid } from "./studioState";
 import { HelpText, PrimaryButton, SecondaryButton, GhostButton, Badge } from "./ui";
 
 type Props = { label: string; mediaType: AssetRef["mediaType"]; funnel: FunnelDefinition; urls: Record<string, string>; value?: string | undefined; onSelect: (assetId?: string) => void; onChange: (funnel: FunnelDefinition) => void; onAttachPreview?: (file: File, assetId?: string) => void };
 const accepts: Record<AssetRef["mediaType"], string> = { video: "video/mp4,video/webm", audio: "audio/mpeg,audio/mp4,audio/wav,audio/ogg", image: "image/jpeg,image/png,image/webp" };
-const assetName = (asset: AssetRef) => asset.source === "preview" ? asset.fileName : asset.fileName || asset.url.split("/").at(-1) || "Arquivo";
 const mediaWord = (mediaType: AssetRef["mediaType"]) => (mediaType === "video" ? "vídeo" : mediaType === "audio" ? "áudio" : "imagem");
 const fieldClass = "w-full rounded-lg border border-studio-border bg-white/[.04] p-2.5 text-sm text-studio-text placeholder:text-studio-text-muted focus:border-studio-primary/50 focus:outline-none transition-colors";
 

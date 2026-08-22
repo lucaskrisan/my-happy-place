@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { AssetRef, FunnelDefinition } from "../schema/v1";
 import { isStudioMediaType, studioMediaTypeForMime, uploadPermanentAsset, type UploadStatus } from "./permanentUpload";
 import { findAssetUsages, uid } from "./studioState";
-import { addPermanentUrl, assetStatus, assetSummary, filterAssets, promoteAssetInFunnel, removeUnusedAsset, renameAsset, replacePermanentAsset, type AssetFilter } from "./assetManagerState";
+import { addPermanentUrl, assetName, assetStatus, assetSummary, filterAssets, promoteAssetInFunnel, removeUnusedAsset, renameAsset, replacePermanentAsset, type AssetFilter } from "./assetManagerState";
 import { AssetCleanupPanel } from "./AssetCleanupPanel";
 import { AssetVersionInspector } from "./AssetVersionInspector";
 import { PageTitle, HelpText, Card, Badge, PrimaryButton, SecondaryButton, GhostButton, EmptyState, StudioSelect } from "./ui";
@@ -13,7 +13,6 @@ type QueueMode = "promote" | "direct" | "replace";
 type QueueItem = { id: string; assetId: string; file: File; mode: QueueMode; status: UploadStatus; progress: number; error?: string };
 type PickMode = "local" | "direct" | "replace" | "reattach-promote";
 type Props = { funnel: FunnelDefinition; urls: Record<string, string>; onChange: (next: FunnelDefinition) => void; onAttachPreview: (file: File, assetId?: string) => void; onRevoke: (assetId: string) => void; onClose: () => void; onOpenUsage: (path: string) => void };
-const fileName = (asset: AssetRef) => asset.source === "preview" ? asset.fileName : asset.fileName || asset.url.split("/").at(-1) || "Arquivo";
 const statusTone = (asset: AssetRef, urls: Record<string, string>) => asset.source === "permanent" ? "success" as const : assetStatus(asset, urls) === "unresolved" ? "warning" as const : "neutral" as const;
 const statusLabel = (asset: AssetRef, urls: Record<string, string>) => asset.source === "permanent" ? "Permanente" : assetStatus(asset, urls) === "unresolved" ? "Precisa ser reanexado" : "Local — preview";
 const typeLabel = (type: AssetRef["mediaType"]) => type === "video" ? "Vídeo" : type === "audio" ? "Áudio" : "Imagem";
@@ -94,7 +93,7 @@ export function AssetManager({ funnel, urls, onChange, onAttachPreview, onRevoke
                 {assets.map((asset) => (
                   <button key={asset.id} onClick={() => setSelectedId(asset.id)} className={`rounded-xl border p-2.5 text-left transition-colors ${selected?.id === asset.id ? "border-studio-primary bg-studio-primary-soft" : "border-studio-border bg-white/[.02] hover:border-studio-border-strong"}`}>
                     <div className="grid h-20 place-items-center rounded-lg bg-white/[.04] text-2xl">{typeIcon(asset.mediaType)}</div>
-                    <p className="mt-2 truncate text-sm font-medium text-studio-text">{fileName(asset)}</p>
+                    <p className="mt-2 truncate text-sm font-medium text-studio-text">{assetName(asset)}</p>
                     <div className="mt-1"><Badge tone={statusTone(asset, urls)}>{statusLabel(asset, urls)}</Badge></div>
                     <p className="mt-1 text-[11px] text-studio-text-muted">{asset.source === "permanent" && asset.size ? `${Math.round(asset.size / 1024 / 1024 * 10) / 10} MiB` : "tamanho desconhecido"} · usado em {findAssetUsages(funnel, asset.id).length} lugares</p>
                   </button>
@@ -109,18 +108,18 @@ export function AssetManager({ funnel, urls, onChange, onAttachPreview, onRevoke
             {selected ? (
               <div className="space-y-3">
                 <div>
-                  <p className="font-medium text-studio-text">{fileName(selected)}</p>
+                  <p className="font-medium text-studio-text">{assetName(selected)}</p>
                   <p className="mt-0.5 text-xs text-studio-text-muted">{typeLabel(selected.mediaType)} · {statusLabel(selected, urls)}</p>
                 </div>
                 {preview && selected.mediaType === "video" && <video controls src={preview} className="w-full rounded-lg" />}
                 {preview && selected.mediaType === "audio" && <audio controls src={preview} className="w-full" />}
-                {preview && selected.mediaType === "image" && <img src={preview} alt={fileName(selected)} className="w-full rounded-lg" />}
+                {preview && selected.mediaType === "image" && <img src={preview} alt={assetName(selected)} className="w-full rounded-lg" />}
                 {selected.source === "preview" && !urls[selected.id] && <SecondaryButton className="w-full text-xs" onClick={() => pick(token ? "reattach-promote" : "local", selected.id)}>{token ? "Reanexar e tornar permanente" : "Reanexar"}</SecondaryButton>}
                 {selected.source === "preview" && urls[selected.id] && <SecondaryButton className="w-full text-xs" onClick={() => { const file = files.current.get(selected.id); if (file) enqueue(selected.id, file, "promote"); else pick("local", selected.id); }}>Tornar permanente</SecondaryButton>}
                 {selected.source === "permanent" && <SecondaryButton className="w-full text-xs" onClick={() => pick("replace", selected.id)}>Substituir arquivo</SecondaryButton>}
                 <label className="block">
                   <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-studio-text-muted">Nome</span>
-                  <input value={fileName(selected)} onChange={(event) => onChange(renameAsset(funnel, selected.id, event.target.value))} className={fieldClass} />
+                  <input value={assetName(selected)} onChange={(event) => onChange(renameAsset(funnel, selected.id, event.target.value))} className={fieldClass} />
                 </label>
                 <div>
                   <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-studio-text-muted">Usado em {usage.length} lugares</span>
