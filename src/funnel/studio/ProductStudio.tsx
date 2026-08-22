@@ -8,6 +8,7 @@ import { loadFunnel, saveFunnel, seedOfficialFunnel } from "./studioState";
 import { loadGuidedUi } from "./guidedState";
 import { PageTitle, SectionTitle, Eyebrow, HelpText, Card, Badge, ProgressBar, Breadcrumb, PrimaryButton, SecondaryButton, GhostButton, EmptyState } from "./ui";
 import { useSupabaseSession } from "@/lib/supabase/useSession";
+import { useProfile } from "@/lib/supabase/useProfile";
 import { deleteProductFromSupabase, pullFromSupabase, pushAllLocalToSupabase, pushFunnelToSupabase, pushProductsToSupabase } from "@/lib/supabase/sync";
 
 export type View = {
@@ -34,6 +35,8 @@ const fmt = (timestamp?: number) => timestamp ? new Intl.DateTimeFormat("pt-BR",
 export function ProductStudio() {
   const session = useSupabaseSession();
   const userId = session.status === "signed-in" ? session.session.user.id : undefined;
+  const profileState = useProfile(userId);
+  const isAdmin = profileState.status === "ready" && profileState.profile?.role === "admin";
   const [products, setProducts] = useState<StudioProduct[]>([]);
   const [view, setViewState] = useState<View>({ kind: "home" });
   const [newProduct, setNewProduct] = useState(false);
@@ -155,7 +158,10 @@ export function ProductStudio() {
           ) : (
             <span className="text-sm font-semibold tracking-tight">FUNNEL <span className="text-studio-primary">STUDIO</span></span>
           )}
-          {product && <Link to="/studio/blueprint" className="rounded-lg border border-studio-border px-3.5 py-1.5 text-xs font-semibold text-studio-text-secondary hover:border-studio-primary/40 hover:text-studio-text transition-colors">Blueprint</Link>}
+          <div className="flex items-center gap-2">
+            {isAdmin && <Link to="/studio/admin" className="rounded-lg border border-studio-border px-3.5 py-1.5 text-xs font-semibold text-studio-text-secondary hover:border-studio-primary/40 hover:text-studio-text transition-colors">Administração</Link>}
+            {product && <Link to="/studio/blueprint" className="rounded-lg border border-studio-border px-3.5 py-1.5 text-xs font-semibold text-studio-text-secondary hover:border-studio-primary/40 hover:text-studio-text transition-colors">Blueprint</Link>}
+          </div>
         </div>
       </header>
 

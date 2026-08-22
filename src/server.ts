@@ -44,6 +44,8 @@ type FunnelMediaBucket = {
 export type WorkerEnv = {
   FUNNEL_MEDIA?: FunnelMediaBucket;
   STUDIO_UPLOAD_TOKEN?: string;
+  SUPABASE_URL?: string;
+  SUPABASE_SECRET_KEY?: string;
 };
 
 export const STUDIO_UPLOAD_PATH = "/api/studio/assets/upload";
@@ -51,6 +53,7 @@ export const STUDIO_ASSET_DELETE_PATH = "/api/studio/assets/object";
 export const STUDIO_ASSET_INVENTORY_PATH = "/api/studio/assets/inventory";
 export const STUDIO_UPLOAD_LIMIT_BYTES = 90 * 1024 * 1024;
 export const STUDIO_UPLOAD_MIME_TYPES = STUDIO_MEDIA_TYPES;
+export const ADMIN_CLIENTS_PATH = "/api/admin/clients";
 
 type StudioUploadResponse = {
   assetId: string;
@@ -332,6 +335,48 @@ async function handleMediaRequest(request: Request, bucket: FunnelMediaBucket): 
   return new Response(object.body, { status: range ? 206 : 200, headers });
 }
 
+// Creating/removing a login is a privileged operation (Supabase's admin.* auth API, which requires the
+// secret/service_role key) — it can only run here, server-side, never in the browser. The caller's own
+// Supabase access token proves who they are; we then check their profile role ourselves before doing
+// anything, so this endpoint can't be used by a non-admin even if they know the URL shape.
+async function requireAdmin(request: Request, env: WorkerEnv) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SECRET_KEY) return { error: new Response("Admin API unavailable", { status: 503 }) } as const;
+  const token = request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
+  if (!token) return { error: new Response("Unauthorized", { status: 401 }) } as const;
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY);
+  const { data: userData, error: userError } = await supabase.auth.getUser(token);
+  if (userError || !userData.user) return { error: new Response("Unauthorized", { status: 401 }) } as const;
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", userData.user.id).maybeSingle();
+  if (profile?.role !== "admin") return { error: new Response("Forbidden", { status: 403 }) } as const;
+  return { supabase } as const;
+}
+
+export async function handleAdminClients(request: Request, env: WorkerEnv): Promise<Response> {
+  if (request.method !== "POST" && request.method !== "DELETE")
+    return new Response("Method not allowed", { status: 405, headers: { Allow: "POST, DELETE" } });
+  const auth = await requireAdmin(request, env);
+  if ("error" in auth) return auth.error;
+
+  if (request.method === "POST") {
+    let body: { email?: string; password?: string };
+    try { body = await request.json(); } catch { return Response.json({ error: "Invalid request" }, { status: 400 }); }
+    if (!body.email?.trim() || !body.password || body.password.length < 8)
+      return Response.json({ error: "E-mail e senha (mínimo 8 caracteres) são obrigatórios." }, { status: 400 });
+    const { data, error } = await auth.supabase.auth.admin.createUser({ email: body.email.trim(), password: body.password, email_confirm: true });
+    if (error) return Response.json({ error: error.message }, { status: 400 });
+    return Response.json({ id: data.user.id, email: data.user.email }, { status: 201 });
+  }
+
+  // DELETE
+  const url = new URL(request.url);
+  const id = url.searchParams.get("id");
+  if (!id) return Response.json({ error: "Missing id" }, { status: 400 });
+  const { error } = await auth.supabase.auth.admin.deleteUser(id);
+  if (error) return Response.json({ error: error.message }, { status: 400 });
+  return Response.json({ deleted: true });
+}
+
 export default {
   async fetch(request: Request, env: WorkerEnv, ctx: unknown) {
     try {
@@ -349,6 +394,9 @@ export default {
       }
       if (new URL(request.url).pathname === STUDIO_ASSET_INVENTORY_PATH) {
         return await handleStudioAssetInventory(request, env);
+      }
+      if (new URL(request.url).pathname === ADMIN_CLIENTS_PATH) {
+        return await handleAdminClients(request, env);
       }
 
       const handler = await getServerEntry();

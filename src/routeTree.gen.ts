@@ -41,6 +41,7 @@ import { Route as DevVideoStageRouteImport } from './routes/dev/video-stage'
 import { Route as DevVoiceOnceRouteImport } from './routes/dev/voice-once'
 import { Route as DevWhatsappRouteImport } from './routes/dev/whatsapp'
 import { Route as StudioIndexRouteImport } from './routes/studio/index'
+import { Route as StudioAdminRouteImport } from './routes/studio/admin'
 import { Route as StudioBlueprintRouteImport } from './routes/studio/blueprint'
 
 const IndexRoute = IndexRouteImport.update({
@@ -203,6 +204,11 @@ const StudioIndexRoute = StudioIndexRouteImport.update({
   path: '/',
   getParentRoute: () => StudioRoute,
 } as any)
+const StudioAdminRoute = StudioAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => StudioRoute,
+} as any)
 const StudioBlueprintRoute = StudioBlueprintRouteImport.update({
   id: '/blueprint',
   path: '/blueprint',
@@ -240,6 +246,7 @@ export interface FileRoutesByFullPath {
   '/dev/video-stage': typeof DevVideoStageRoute
   '/dev/voice-once': typeof DevVoiceOnceRoute
   '/dev/whatsapp': typeof DevWhatsappRoute
+  '/studio/admin': typeof StudioAdminRoute
   '/studio/blueprint': typeof StudioBlueprintRoute
   '/dev/': typeof DevIndexRoute
   '/studio/': typeof StudioIndexRoute
@@ -273,6 +280,7 @@ export interface FileRoutesByTo {
   '/dev/video-stage': typeof DevVideoStageRoute
   '/dev/voice-once': typeof DevVoiceOnceRoute
   '/dev/whatsapp': typeof DevWhatsappRoute
+  '/studio/admin': typeof StudioAdminRoute
   '/studio/blueprint': typeof StudioBlueprintRoute
   '/dev': typeof DevIndexRoute
   '/studio': typeof StudioIndexRoute
@@ -309,6 +317,7 @@ export interface FileRoutesById {
   '/dev/video-stage': typeof DevVideoStageRoute
   '/dev/voice-once': typeof DevVoiceOnceRoute
   '/dev/whatsapp': typeof DevWhatsappRoute
+  '/studio/admin': typeof StudioAdminRoute
   '/studio/blueprint': typeof StudioBlueprintRoute
   '/dev/': typeof DevIndexRoute
   '/studio/': typeof StudioIndexRoute
@@ -346,6 +355,7 @@ export interface FileRouteTypes {
     | '/dev/video-stage'
     | '/dev/voice-once'
     | '/dev/whatsapp'
+    | '/studio/admin'
     | '/studio/blueprint'
     | '/dev/'
     | '/studio/'
@@ -379,6 +389,7 @@ export interface FileRouteTypes {
     | '/dev/video-stage'
     | '/dev/voice-once'
     | '/dev/whatsapp'
+    | '/studio/admin'
     | '/studio/blueprint'
     | '/dev'
     | '/studio'
@@ -414,6 +425,7 @@ export interface FileRouteTypes {
     | '/dev/video-stage'
     | '/dev/voice-once'
     | '/dev/whatsapp'
+    | '/studio/admin'
     | '/studio/blueprint'
     | '/dev/'
     | '/studio/'
@@ -654,6 +666,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioIndexRouteImport
       parentRoute: typeof StudioRoute
     }
+    '/studio/admin': {
+      id: '/studio/admin'
+      path: '/admin'
+      fullPath: '/studio/admin'
+      preLoaderRoute: typeof StudioAdminRouteImport
+      parentRoute: typeof StudioRoute
+    }
     '/studio/blueprint': {
       id: '/studio/blueprint'
       path: '/blueprint'
@@ -723,11 +742,13 @@ const DevRouteChildren: DevRouteChildren = {
 const DevRouteWithChildren = DevRoute._addFileChildren(DevRouteChildren)
 
 interface StudioRouteChildren {
+  StudioAdminRoute: typeof StudioAdminRoute
   StudioBlueprintRoute: typeof StudioBlueprintRoute
   StudioIndexRoute: typeof StudioIndexRoute
 }
 
 const StudioRouteChildren: StudioRouteChildren = {
+  StudioAdminRoute: StudioAdminRoute,
   StudioBlueprintRoute: StudioBlueprintRoute,
   StudioIndexRoute: StudioIndexRoute,
 }
