@@ -415,6 +415,7 @@ export function FunnelStudio({
     );
   if (guidedUi.mode === "guided")
     return (
+      <>
       <GuidedBuilder
         funnel={funnel}
         onChange={change}
@@ -443,6 +444,27 @@ export function FunnelStudio({
           download(`${funnel.id}-valid.json`, result.json);
         }}
       />
+      {/* The guided flow's "Arquivos" tab sets this same assetsOpen state (onAssets above), but this
+          early return used to end here — so the modal it opens only ever mounted in the advanced editor's
+          own render tree below, and clicking "Arquivos" in the guided flow silently did nothing. */}
+      {assetsOpen && (
+        <AssetManager
+          funnel={funnel}
+          urls={urls}
+          onChange={change}
+          onAttachPreview={addPreviewFile}
+          onRevoke={revokePreviewUrl}
+          onClose={() => setAssetsOpen(false)}
+          onOpenUsage={(path) => {
+            const targetScene = funnel.scenes.find((item) => path.includes(item.id));
+            if (targetScene) setSelectedSceneId(targetScene.id);
+            const targetEvent = funnel.scenes.flatMap((item) => item.events).find((item) => path.includes(item.id));
+            if (targetEvent) setSelectedEventId(targetEvent.id);
+            setAssetsOpen(false);
+          }}
+        />
+      )}
+      </>
     );
   const scene = (funnel.scenes.find((s) => s.id === selectedSceneId) || funnel.scenes[0])!;
   const event = scene.events.find((e) => e.id === selectedEventId),
