@@ -14,6 +14,7 @@ import {
   markSceneTested,
   nextGuidedStep,
   sceneStatus,
+  testStepDestination,
   triggerFromGuided,
   type GuidedUiState,
 } from "./guidedState";
@@ -220,6 +221,15 @@ export function GuidedBuilder({
     const value = { script: status.script, video: status.video, interactivity: status.interactivity, test: status.test }[key];
     return value === "PRONTO" ? "done" : "pending";
   };
+  // The last per-scene tab ("test")'s "Continuar" used to just clamp in place — a no-op the user couldn't
+  // tell apart from a bug. It now says exactly where it's headed: fix a blocking issue, move to the next
+  // scene in authoring order, or go review the whole experience once this is the last scene.
+  const testDestination = testStepDestination(funnel, scene, sceneIssues);
+  const testStepContinue = {
+    label: testDestination.label,
+    onClick: () =>
+      testDestination.kind === "fix" ? persist("interactivity") : testDestination.kind === "next-scene" ? persist("script", testDestination.sceneId) : persist("review"),
+  };
   return (
     <main className="min-h-screen bg-studio-bg text-studio-text">
       <header className="border-b border-studio-border px-5 py-4 md:px-8">
@@ -395,7 +405,9 @@ export function GuidedBuilder({
               {step !== "review" && (
                 <footer className="flex justify-between border-t border-studio-border pt-5">
                   <SecondaryButton onClick={() => persist(steps[Math.max(0, steps.indexOf(step as (typeof steps)[number]) - 1)]!)}>Voltar</SecondaryButton>
-                  <PrimaryButton onClick={() => persist(steps[Math.min(steps.length - 1, steps.indexOf(step as (typeof steps)[number]) + 1)]!)}>Continuar</PrimaryButton>
+                  <PrimaryButton onClick={step === "test" ? testStepContinue.onClick : () => persist(steps[Math.min(steps.length - 1, steps.indexOf(step as (typeof steps)[number]) + 1)]!)}>
+                    {step === "test" ? testStepContinue.label : "Continuar"}
+                  </PrimaryButton>
                 </footer>
               )}
             </div>

@@ -10,10 +10,18 @@ export function GuidedPreview({ funnel, scene, urls, onTested, onMoment, testEve
   const [snapshot, setSnapshot] = useState<RuntimeSnapshot | null>(null);
   const [time, setTime] = useState(0);
   const [running, setRunning] = useState(false);
-  const src = assetUrl(funnel, urls, scene.videoAssetId) || "";
+  // `scene` is the prop this component mounted with (the scene the caller wants to test, or the entry
+  // scene for a full-funnel run) — it never changes on its own. Once the runtime advances past it via a
+  // NEXT_SCENE/GO_TO_SCENE action, snapshot.sceneId is the only thing that reflects reality; without
+  // re-deriving the working scene from it, the video and overlays kept showing the ORIGINAL scene's data
+  // forever after a transition (confirmed: this is exactly why a multi-scene "Prévia completa" run played
+  // the first scene's video/interactions on every subsequent scene). /dev/funnel-runtime-proof.tsx already
+  // does this correctly — this brings GuidedPreview in line with it.
+  const currentScene = (snapshot?.sceneId && funnel.scenes.find((item) => item.id === snapshot.sceneId)) || scene;
+  const src = assetUrl(funnel, urls, currentScene.videoAssetId) || "";
   const activeEvent = snapshot?.activeInteraction
-    ? scene.events.find((event) => event.id === snapshot.activeInteraction?.sourceEventId)
-    : testEventId ? scene.events.find((event) => event.id === testEventId) : undefined;
+    ? currentScene.events.find((event) => event.id === snapshot.activeInteraction?.sourceEventId)
+    : testEventId ? currentScene.events.find((event) => event.id === testEventId) : undefined;
   const run = () => {
     const definition = testEventId ? { ...funnel, entrySceneId: scene.id, scenes: funnel.scenes.map((item) => item.id === scene.id ? { ...item, events: item.events.map((event) => event.id === testEventId ? { ...event, trigger: { kind: "MANUAL" as const } } : event) } : item) } : { ...funnel, entrySceneId: scene.id };
     const runtime = new FunnelRuntime(definition);

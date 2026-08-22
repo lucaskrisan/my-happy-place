@@ -185,6 +185,24 @@ export function nextGuidedStep(scene: SceneDefinition, funnel: FunnelDefinition)
   if (!scene.guided?.tested) return "Teste esta cena.";
   return "Esta cena está pronta. Continue para a próxima cena.";
 }
+export type TestStepDestination =
+  | { kind: "fix"; label: string }
+  | { kind: "next-scene"; label: string; sceneId: string }
+  | { kind: "review"; label: string };
+
+/**
+ * What the "test" tab's primary button should do and say — extracted as a pure function so it's testable
+ * without rendering GuidedBuilder (this repo has no React component test harness). Previously the button
+ * just paginated through the fixed per-scene tab list, so on "test" (the last tab) it silently did
+ * nothing — a no-op indistinguishable from a bug.
+ */
+export function testStepDestination(funnel: FunnelDefinition, scene: SceneDefinition, sceneIssues: unknown[]): TestStepDestination {
+  if (sceneIssues.length) return { kind: "fix", label: "Corrigir antes de continuar" };
+  const nextScene = funnel.scenes[funnel.scenes.findIndex((item) => item.id === scene.id) + 1];
+  if (nextScene) return { kind: "next-scene", label: "Ir para próxima cena →", sceneId: nextScene.id };
+  return { kind: "review", label: "Revisar experiência" };
+}
+
 export function guidedProgress(funnel: FunnelDefinition) {
   // A scene only counts as ready once every guided step that matters is actually done: it needs a
   // script, not just a video that happens to be attached and a stale "tested" flag.
