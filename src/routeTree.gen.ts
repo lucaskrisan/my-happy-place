@@ -14,6 +14,7 @@ import { Route as DevRouteImport } from './routes/dev'
 import { Route as IntroRouteImport } from './routes/intro'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as NotasRouteImport } from './routes/notas'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as DevIndexRouteImport } from './routes/dev/index'
 import { Route as Dev14DaysRouteImport } from './routes/dev/14-days'
@@ -40,6 +41,8 @@ import { Route as DevTransitionsRouteImport } from './routes/dev/transitions'
 import { Route as DevVideoStageRouteImport } from './routes/dev/video-stage'
 import { Route as DevVoiceOnceRouteImport } from './routes/dev/voice-once'
 import { Route as DevWhatsappRouteImport } from './routes/dev/whatsapp'
+import { Route as SignupIndexRouteImport } from './routes/signup/index'
+import { Route as SignupSuccessRouteImport } from './routes/signup/success'
 import { Route as StudioIndexRouteImport } from './routes/studio/index'
 import { Route as StudioAdminRouteImport } from './routes/studio/admin'
 import { Route as StudioBlueprintRouteImport } from './routes/studio/blueprint'
@@ -67,6 +70,11 @@ const LoginRoute = LoginRouteImport.update({
 const NotasRoute = NotasRouteImport.update({
   id: '/notas',
   path: '/notas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StudioRoute = StudioRouteImport.update({
@@ -199,6 +207,16 @@ const DevWhatsappRoute = DevWhatsappRouteImport.update({
   path: '/whatsapp',
   getParentRoute: () => DevRoute,
 } as any)
+const SignupIndexRoute = SignupIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SignupRoute,
+} as any)
+const SignupSuccessRoute = SignupSuccessRouteImport.update({
+  id: '/success',
+  path: '/success',
+  getParentRoute: () => SignupRoute,
+} as any)
 const StudioIndexRoute = StudioIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -221,6 +239,7 @@ export interface FileRoutesByFullPath {
   '/intro': typeof IntroRoute
   '/login': typeof LoginRoute
   '/notas': typeof NotasRoute
+  '/signup': typeof SignupRouteWithChildren
   '/studio': typeof StudioRouteWithChildren
   '/dev/14-days': typeof Dev14DaysRoute
   '/dev/audio': typeof DevAudioRoute
@@ -246,9 +265,11 @@ export interface FileRoutesByFullPath {
   '/dev/video-stage': typeof DevVideoStageRoute
   '/dev/voice-once': typeof DevVoiceOnceRoute
   '/dev/whatsapp': typeof DevWhatsappRoute
+  '/signup/success': typeof SignupSuccessRoute
   '/studio/admin': typeof StudioAdminRoute
   '/studio/blueprint': typeof StudioBlueprintRoute
   '/dev/': typeof DevIndexRoute
+  '/signup/': typeof SignupIndexRoute
   '/studio/': typeof StudioIndexRoute
 }
 export interface FileRoutesByTo {
@@ -280,9 +301,11 @@ export interface FileRoutesByTo {
   '/dev/video-stage': typeof DevVideoStageRoute
   '/dev/voice-once': typeof DevVoiceOnceRoute
   '/dev/whatsapp': typeof DevWhatsappRoute
+  '/signup/success': typeof SignupSuccessRoute
   '/studio/admin': typeof StudioAdminRoute
   '/studio/blueprint': typeof StudioBlueprintRoute
   '/dev': typeof DevIndexRoute
+  '/signup': typeof SignupIndexRoute
   '/studio': typeof StudioIndexRoute
 }
 export interface FileRoutesById {
@@ -292,6 +315,7 @@ export interface FileRoutesById {
   '/intro': typeof IntroRoute
   '/login': typeof LoginRoute
   '/notas': typeof NotasRoute
+  '/signup': typeof SignupRouteWithChildren
   '/studio': typeof StudioRouteWithChildren
   '/dev/14-days': typeof Dev14DaysRoute
   '/dev/audio': typeof DevAudioRoute
@@ -317,9 +341,11 @@ export interface FileRoutesById {
   '/dev/video-stage': typeof DevVideoStageRoute
   '/dev/voice-once': typeof DevVoiceOnceRoute
   '/dev/whatsapp': typeof DevWhatsappRoute
+  '/signup/success': typeof SignupSuccessRoute
   '/studio/admin': typeof StudioAdminRoute
   '/studio/blueprint': typeof StudioBlueprintRoute
   '/dev/': typeof DevIndexRoute
+  '/signup/': typeof SignupIndexRoute
   '/studio/': typeof StudioIndexRoute
 }
 export interface FileRouteTypes {
@@ -330,6 +356,7 @@ export interface FileRouteTypes {
     | '/intro'
     | '/login'
     | '/notas'
+    | '/signup'
     | '/studio'
     | '/dev/14-days'
     | '/dev/audio'
@@ -355,9 +382,11 @@ export interface FileRouteTypes {
     | '/dev/video-stage'
     | '/dev/voice-once'
     | '/dev/whatsapp'
+    | '/signup/success'
     | '/studio/admin'
     | '/studio/blueprint'
     | '/dev/'
+    | '/signup/'
     | '/studio/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -389,9 +418,11 @@ export interface FileRouteTypes {
     | '/dev/video-stage'
     | '/dev/voice-once'
     | '/dev/whatsapp'
+    | '/signup/success'
     | '/studio/admin'
     | '/studio/blueprint'
     | '/dev'
+    | '/signup'
     | '/studio'
   id:
     | '__root__'
@@ -400,6 +431,7 @@ export interface FileRouteTypes {
     | '/intro'
     | '/login'
     | '/notas'
+    | '/signup'
     | '/studio'
     | '/dev/14-days'
     | '/dev/audio'
@@ -425,9 +457,11 @@ export interface FileRouteTypes {
     | '/dev/video-stage'
     | '/dev/voice-once'
     | '/dev/whatsapp'
+    | '/signup/success'
     | '/studio/admin'
     | '/studio/blueprint'
     | '/dev/'
+    | '/signup/'
     | '/studio/'
   fileRoutesById: FileRoutesById
 }
@@ -437,6 +471,7 @@ export interface RootRouteChildren {
   IntroRoute: typeof IntroRoute
   LoginRoute: typeof LoginRoute
   NotasRoute: typeof NotasRoute
+  SignupRoute: typeof SignupRouteWithChildren
   StudioRoute: typeof StudioRouteWithChildren
 }
 
@@ -475,6 +510,13 @@ declare module '@tanstack/react-router' {
       path: '/notas'
       fullPath: '/notas'
       preLoaderRoute: typeof NotasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/studio': {
@@ -659,6 +701,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevWhatsappRouteImport
       parentRoute: typeof DevRoute
     }
+    '/signup/': {
+      id: '/signup/'
+      path: '/'
+      fullPath: '/signup/'
+      preLoaderRoute: typeof SignupIndexRouteImport
+      parentRoute: typeof SignupRoute
+    }
+    '/signup/success': {
+      id: '/signup/success'
+      path: '/success'
+      fullPath: '/signup/success'
+      preLoaderRoute: typeof SignupSuccessRouteImport
+      parentRoute: typeof SignupRoute
+    }
     '/studio/': {
       id: '/studio/'
       path: '/'
@@ -741,6 +797,19 @@ const DevRouteChildren: DevRouteChildren = {
 
 const DevRouteWithChildren = DevRoute._addFileChildren(DevRouteChildren)
 
+interface SignupRouteChildren {
+  SignupSuccessRoute: typeof SignupSuccessRoute
+  SignupIndexRoute: typeof SignupIndexRoute
+}
+
+const SignupRouteChildren: SignupRouteChildren = {
+  SignupSuccessRoute: SignupSuccessRoute,
+  SignupIndexRoute: SignupIndexRoute,
+}
+
+const SignupRouteWithChildren =
+  SignupRoute._addFileChildren(SignupRouteChildren)
+
 interface StudioRouteChildren {
   StudioAdminRoute: typeof StudioAdminRoute
   StudioBlueprintRoute: typeof StudioBlueprintRoute
@@ -762,6 +831,7 @@ const rootRouteChildren: RootRouteChildren = {
   IntroRoute: IntroRoute,
   LoginRoute: LoginRoute,
   NotasRoute: NotasRoute,
+  SignupRoute: SignupRouteWithChildren,
   StudioRoute: StudioRouteWithChildren,
 }
 export const routeTree = rootRouteImport

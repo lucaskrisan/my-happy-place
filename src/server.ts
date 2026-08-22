@@ -59,6 +59,7 @@ export const STUDIO_UPLOAD_LIMIT_BYTES = 90 * 1024 * 1024;
 export const STUDIO_UPLOAD_MIME_TYPES = STUDIO_MEDIA_TYPES;
 export const ADMIN_CLIENTS_PATH = "/api/admin/clients";
 export const BILLING_CHECKOUT_PATH = "/api/billing/checkout-session";
+export const BILLING_SUBSCRIBE_PATH = "/api/billing/subscribe";
 export const BILLING_WEBHOOK_PATH = "/api/billing/webhook";
 export const KAWAIPAY_WEBHOOK_PATH = "/api/billing/kawaipay-webhook";
 
@@ -384,6 +385,65 @@ export async function handleAdminClients(request: Request, env: WorkerEnv): Prom
   return Response.json({ deleted: true });
 }
 
+async function stripeRequest(env: WorkerEnv, method: string, path: string, params?: URLSearchParams) {
+  const response = await fetch(`https://api.stripe.com/v1/${path}`, {
+    method,
+    headers: {
+      Authorization: `Basic ${btoa(`${env.STRIPE_SECRET_KEY}:`)}`,
+      ...(params ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
+    },
+    ...(params ? { body: params } : {}),
+  });
+  const data = (await response.json()) as Record<string, any>;
+  return { ok: response.ok, data };
+}
+
+// Embedded checkout (Stripe Elements, card fields live inside the page) needs a subscription's client
+// secret up front, not a redirect URL — this creates the customer (reusing one if this email already has
+// a Stripe customer, so retries don't pile up duplicate customer records) and an incomplete subscription
+// whose first invoice's PaymentIntent the client confirms directly.
+export async function handleBillingSubscribe(request: Request, env: WorkerEnv): Promise<Response> {
+  if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: { Allow: "POST" } });
+  if (!env.STRIPE_SECRET_KEY || !env.STRIPE_PRICE_ID) return Response.json({ error: "Pagamento indisponível no momento." }, { status: 503 });
+  let body: { email?: string; name?: string; phone?: string };
+  try { body = await request.json(); } catch { return Response.json({ error: "Invalid request" }, { status: 400 }); }
+  const email = body.email?.trim();
+  if (!email) return Response.json({ error: "E-mail é obrigatório." }, { status: 400 });
+
+  const existing = await stripeRequest(env, "GET", `customers?email=${encodeURIComponent(email)}&limit=1`);
+  if (!existing.ok) return Response.json({ error: existing.data["error"]?.message || "Não foi possível iniciar o pagamento." }, { status: 400 });
+  let customerId: string | undefined = existing.data["data"]?.[0]?.id;
+
+  if (!customerId) {
+    const customerParams = new URLSearchParams({ email });
+    if (body.name?.trim()) customerParams.set("name", body.name.trim());
+    if (body.phone?.trim()) customerParams.set("phone", body.phone.trim());
+    const created = await stripeRequest(env, "POST", "customers", customerParams);
+    if (!created.ok) return Response.json({ error: created.data["error"]?.message || "Não foi possível iniciar o pagamento." }, { status: 400 });
+    customerId = created.data["id"];
+  }
+
+  const subscriptionParams = new URLSearchParams({
+    customer: customerId!,
+    "items[0][price]": env.STRIPE_PRICE_ID,
+    payment_behavior: "default_incomplete",
+    "payment_settings[save_default_payment_method]": "on_subscription",
+    "expand[0]": "latest_invoice.payments",
+  });
+  const subscription = await stripeRequest(env, "POST", "subscriptions", subscriptionParams);
+  if (!subscription.ok) return Response.json({ error: subscription.data["error"]?.message || "Não foi possível iniciar o pagamento." }, { status: 400 });
+
+  // Newer Stripe API versions no longer populate latest_invoice.payment_intent even when expanded —
+  // the PaymentIntent id now lives under latest_invoice.payments.data[0].payment.payment_intent.
+  const paymentIntentId = subscription.data["latest_invoice"]?.payments?.data?.[0]?.payment?.payment_intent;
+  if (!paymentIntentId) return Response.json({ error: "Não foi possível iniciar o pagamento." }, { status: 400 });
+
+  const paymentIntent = await stripeRequest(env, "GET", `payment_intents/${paymentIntentId}`);
+  const clientSecret = paymentIntent.data["client_secret"];
+  if (!paymentIntent.ok || !clientSecret) return Response.json({ error: "Não foi possível iniciar o pagamento." }, { status: 400 });
+  return Response.json({ clientSecret, subscriptionId: subscription.data["id"] });
+}
+
 export async function handleBillingCheckout(request: Request, env: WorkerEnv): Promise<Response> {
   if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: { Allow: "POST" } });
   if (!env.STRIPE_SECRET_KEY || !env.STRIPE_PRICE_ID) return Response.json({ error: "Pagamento indisponível no momento." }, { status: 503 });
@@ -441,23 +501,32 @@ export async function handleBillingWebhook(request: Request, env: WorkerEnv): Pr
   const { createClient } = await import("@supabase/supabase-js");
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY);
 
+  // Creates the account and emails them a "set your password" link in one call — no separate
+  // password-delivery step needed, Supabase's own transactional email handles it. Shared by both the
+  // hosted-Checkout flow (checkout.session.completed) and the embedded-Elements flow
+  // (invoice.payment_succeeded), which surface the paying email under different field names.
+  const activateAccount = async (email: string | undefined, customerId: string | undefined) => {
+    if (!email) return;
+    const { data: invited, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email);
+    if (invited?.user) {
+      await supabase.from("profiles").update({ stripe_customer_id: customerId, subscription_status: "active" }).eq("id", invited.user.id);
+    } else if (inviteError?.message?.includes("already been registered")) {
+      // Existing account paying again (e.g. resubscribing) — just reactivate it.
+      await supabase.from("profiles").update({ stripe_customer_id: customerId, subscription_status: "active" }).eq("email", email);
+    } else if (inviteError) {
+      console.error("Stripe webhook: inviteUserByEmail failed", inviteError);
+    }
+  };
+
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
-    const email: string | undefined = session["customer_details"]?.email || session["customer_email"];
-    const customerId: string | undefined = session["customer"];
-    if (email) {
-      // Creates the account and emails them a "set your password" link in one call — no separate
-      // password-delivery step needed, Supabase's own transactional email handles it.
-      const { data: invited, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email);
-      if (invited?.user) {
-        await supabase.from("profiles").update({ stripe_customer_id: customerId, subscription_status: "active" }).eq("id", invited.user.id);
-      } else if (inviteError?.message?.includes("already been registered")) {
-        // Existing account paying again (e.g. resubscribing) — just reactivate it.
-        await supabase.from("profiles").update({ stripe_customer_id: customerId, subscription_status: "active" }).eq("email", email);
-      } else if (inviteError) {
-        console.error("Stripe webhook: inviteUserByEmail failed", inviteError);
-      }
-    }
+    await activateAccount(session["customer_details"]?.email || session["customer_email"], session["customer"]);
+  }
+  if (event.type === "invoice.payment_succeeded") {
+    const invoice = event.data.object;
+    // Only the subscription's first invoice should create the account — later renewals hit this same
+    // event but the account (and inviteUserByEmail's "already been registered" branch) already exists.
+    await activateAccount(invoice["customer_email"], invoice["customer"]);
   }
   if (event.type === "customer.subscription.deleted" || event.type === "customer.subscription.updated") {
     const subscription = event.data.object;
@@ -526,6 +595,9 @@ export default {
       }
       if (new URL(request.url).pathname === BILLING_CHECKOUT_PATH) {
         return await handleBillingCheckout(request, env);
+      }
+      if (new URL(request.url).pathname === BILLING_SUBSCRIBE_PATH) {
+        return await handleBillingSubscribe(request, env);
       }
       if (new URL(request.url).pathname === BILLING_WEBHOOK_PATH) {
         return await handleBillingWebhook(request, env);
