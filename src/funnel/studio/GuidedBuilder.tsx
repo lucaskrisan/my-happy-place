@@ -78,12 +78,26 @@ function sceneOrderMismatch(funnel: FunnelDefinition): boolean {
   const arrayOrder = funnel.scenes.map((scene) => scene.id);
   return graphOrder.length === arrayOrder.length && graphOrder.some((id, index) => id !== arrayOrder[index]);
 }
+// The autosave itself already runs everywhere in FunnelStudio — this only makes it visible. It used to
+// render only in the legacy Editor avançado header, so the default Guided flow gave zero confirmation
+// that anything was actually being saved.
+function SaveIndicator({ state }: { state: "CARREGANDO" | "SALVANDO..." | "SALVO" | "ERRO AO SALVAR" }) {
+  const tone = state === "SALVO" ? "success" : state === "ERRO AO SALVAR" ? "error" : "neutral";
+  const label = state === "CARREGANDO" ? "Carregando…" : state === "SALVANDO..." ? "Salvando…" : state === "SALVO" ? "Salvo" : "Erro ao salvar";
+  return (
+    <span className={`flex items-center gap-1.5 text-sm ${state === "ERRO AO SALVAR" ? "font-medium text-studio-error" : "text-studio-text-muted"}`} aria-live="polite">
+      <Dot tone={tone} />
+      {label}
+    </span>
+  );
+}
 export function GuidedBuilder({
   funnel,
   onChange,
   onAdvanced,
   ui,
   onUi,
+  saveState,
   urls,
   onAttachPreview,
   onAttachPreviewFile,
@@ -98,6 +112,7 @@ export function GuidedBuilder({
   onAdvanced: () => void;
   ui: GuidedUiState;
   onUi: (next: GuidedUiState) => void;
+  saveState?: "CARREGANDO" | "SALVANDO..." | "SALVO" | "ERRO AO SALVAR";
   urls: Record<string, string>;
   onAttachPreview: (assetId?: string, sceneId?: string) => void;
   onAttachPreviewFile: (file: File, assetId?: string, sceneId?: string) => void;
@@ -195,6 +210,7 @@ export function GuidedBuilder({
             </div>
           </div>
           <div className="flex items-center gap-4">
+            {saveState && <SaveIndicator state={saveState} />}
             <Link to="/studio/blueprint" className="text-sm font-medium text-studio-text-secondary hover:text-studio-text transition-colors">Blueprint</Link>
             {/* Discrete on purpose — Guided is the default experience, Advanced is an escape hatch. */}
             <button onClick={onAdvanced} className="text-sm text-studio-text-muted hover:text-studio-text-secondary transition-colors">Editor avançado</button>

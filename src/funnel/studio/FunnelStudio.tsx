@@ -273,7 +273,7 @@ export function FunnelStudio({
     [selectedSceneId, setSelectedSceneId] = useState(""),
     [selectedEventId, setSelectedEventId] = useState<string | null>(null),
     [playhead, setPlayhead] = useState(0),
-    [saveState, setSaveState] = useState("CARREGANDO"),
+    [saveState, setSaveState] = useState<"CARREGANDO" | "SALVANDO..." | "SALVO" | "ERRO AO SALVAR">("CARREGANDO"),
     [history, setHistory] = useState<FunnelDefinition[]>([]),
     [future, setFuture] = useState<FunnelDefinition[]>([]),
     [urls, setUrls] = useState<PreviewUrls>({}),
@@ -421,6 +421,7 @@ export function FunnelStudio({
         onAdvanced={() => setMode({ mode: "advanced", funnelId: funnel.id })}
         ui={guidedUi}
         onUi={setMode}
+        saveState={saveState}
         urls={urls}
         onAttachPreview={attachPreview}
         onAttachPreviewFile={addPreviewFile}
