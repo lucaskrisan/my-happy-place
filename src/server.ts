@@ -43,7 +43,6 @@ type FunnelMediaBucket = {
 
 export type WorkerEnv = {
   FUNNEL_MEDIA?: FunnelMediaBucket;
-  STUDIO_UPLOAD_TOKEN?: string;
   SUPABASE_URL?: string;
   SUPABASE_SECRET_KEY?: string;
   STRIPE_SECRET_KEY?: string;
@@ -198,15 +197,25 @@ function studioAssetPrefix(funnelId: string, assetId?: string) {
   return `funnels/${funnel}/assets/${assetId ? `${sanitizeStudioSegment(assetId, "asset")}/` : ""}`;
 }
 
-function studioAuthorized(request: Request, env: WorkerEnv) {
-  const secret = env.STUDIO_UPLOAD_TOKEN;
-  return !!secret && request.headers.get("Authorization") === `Bearer ${secret}`;
+// Any signed-in Studio user may upload/manage their own permanent media — this is not an admin-only
+// action. The caller's Supabase access token (the same one already used for /studio, /studio/admin, and
+// billing) proves who they are; we verify it server-side against Supabase before touching R2. No shared
+// static secret, no token pasted into the UI, and nothing beyond a pass/fail ever reaches the browser.
+async function requireStudioUser(request: Request, env: WorkerEnv): Promise<{ userId: string } | { error: Response }> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SECRET_KEY) return { error: studioUploadError(503, "Upload unavailable") };
+  const token = request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
+  if (!token) return { error: studioUploadError(401, "Unauthorized") };
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY);
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user) return { error: studioUploadError(401, "Unauthorized") };
+  return { userId: data.user.id };
 }
 
 export async function handleStudioAssetDelete(request: Request, env: WorkerEnv): Promise<Response> {
   if (request.method !== "DELETE") return new Response("Method not allowed", { status: 405, headers: { Allow: "DELETE" } });
-  if (!env.STUDIO_UPLOAD_TOKEN) return studioUploadError(503, "Remote management unavailable");
-  if (!studioAuthorized(request, env)) return studioUploadError(401, "Unauthorized");
+  const auth = await requireStudioUser(request, env);
+  if ("error" in auth) return auth.error;
   if (!env.FUNNEL_MEDIA?.delete) return studioUploadError(503, "Remote management unavailable");
   let body: { funnelId?: string; assetId?: string; r2Key?: string };
   try { body = await request.json(); } catch { return studioUploadError(400, "Invalid delete request"); }
@@ -217,8 +226,8 @@ export async function handleStudioAssetDelete(request: Request, env: WorkerEnv):
 
 export async function handleStudioAssetInventory(request: Request, env: WorkerEnv): Promise<Response> {
   if (request.method !== "GET") return new Response("Method not allowed", { status: 405, headers: { Allow: "GET" } });
-  if (!env.STUDIO_UPLOAD_TOKEN) return studioUploadError(503, "Remote management unavailable");
-  if (!studioAuthorized(request, env)) return studioUploadError(401, "Unauthorized");
+  const auth = await requireStudioUser(request, env);
+  if ("error" in auth) return auth.error;
   if (!env.FUNNEL_MEDIA?.list) return studioUploadError(503, "Remote management unavailable");
   const url = new URL(request.url), funnelId = url.searchParams.get("funnelId");
   if (!funnelId) return studioUploadError(400, "Invalid inventory request");
@@ -243,9 +252,8 @@ export async function handleStudioAssetUpload(
   if (request.method !== "PUT")
     return new Response("Method not allowed", { status: 405, headers: { Allow: "PUT" } });
 
-  const secret = env.STUDIO_UPLOAD_TOKEN;
-  const authorized = secret && request.headers.get("Authorization") === `Bearer ${secret}`;
-  if (!authorized) return studioUploadError(secret ? 401 : 503, secret ? "Upload unauthorized" : "Upload unavailable");
+  const auth = await requireStudioUser(request, env);
+  if ("error" in auth) return auth.error;
   if (!env.FUNNEL_MEDIA) return studioUploadError(503, "Upload unavailable");
 
   const funnelId = request.headers.get("X-Studio-Funnel-Id")?.trim();

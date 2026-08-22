@@ -208,6 +208,18 @@ const TASKS: RoadmapTask[] = [
     ],
     evidence: { tests: "src/funnel/tests/permanentUpload.test.ts passa" },
   }),
+  task("HOTFIX-001", "FASE-0", "Remover token manual do upload permanente do Studio", {
+    description: "Upload permanente (FOUND-010) dependia de um token estático compartilhado (STUDIO_UPLOAD_TOKEN) colado manualmente na UI — em produção esse token não estava configurado, então o Studio mostrava 'Upload permanente desativado — informe o token de autoria'. Correção: autorização passa a usar a própria sessão Supabase do usuário autenticado (mesmo padrão de requireAdmin), validada server-side; nenhum token manual, nenhum secret exposto ao browser.",
+    status: "IN_PROGRESS", priority: "NOW",
+    dependencies: ["FOUND-010"],
+    acceptanceCriteria: [
+      "usuário autenticado no /studio consegue iniciar upload permanente sem colar nenhum token",
+      "usuário não autenticado (sessão ausente/expirada) recebe 401, nunca consegue subir arquivo",
+      "nenhum secret (chave de serviço Supabase ou outro) é retornado ao browser em qualquer resposta",
+      "asset permanente continua sendo criado corretamente no R2 e aparece em Meus arquivos",
+      "smoke real: /studio → cena → vídeo → enviar novo → MP4 → upload permanente → asset selecionável → anexado à cena",
+    ],
+  }),
   task("FOUND-011", "FASE-0", "InlineMediaPicker", {
     description: "Seleção de mídia inline dentro do fluxo de edição.",
     status: "DONE", priority: "LOW",

@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { AssetRef, FunnelDefinition } from "../schema/v1";
 import { isStudioMediaType, studioMediaTypeForMime, uploadPermanentAsset, type UploadStatus } from "./permanentUpload";
 import { findAssetUsages, uid } from "./studioState";
 import { addPermanentUrl, assetName, assetStatus, assetSummary, filterAssets, promoteAssetInFunnel, removeUnusedAsset, renameAsset, replacePermanentAsset, type AssetFilter } from "./assetManagerState";
 import { AssetCleanupPanel } from "./AssetCleanupPanel";
 import { AssetVersionInspector } from "./AssetVersionInspector";
-import { PageTitle, HelpText, Card, Badge, PrimaryButton, SecondaryButton, GhostButton, EmptyState, StudioSelect } from "./ui";
+import { useStudioUploadToken } from "./useStudioUploadToken";
+import { PageTitle, HelpText, Card, Badge, SecondaryButton, GhostButton, EmptyState, StudioSelect } from "./ui";
 
-export const ASSET_UPLOAD_SESSION_KEY = "funnel-studio:upload-token";
 const ACCEPT = "video/mp4,video/webm,audio/mpeg,audio/mp4,audio/wav,audio/ogg,image/jpeg,image/png,image/webp";
 type QueueMode = "promote" | "direct" | "replace";
 type QueueItem = { id: string; assetId: string; file: File; mode: QueueMode; status: UploadStatus; progress: number; error?: string };
@@ -25,19 +25,17 @@ const FILTERS: { id: AssetFilter; label: string }[] = [
 const fieldClass = "w-full rounded-lg border border-studio-border bg-white/[.04] p-2.5 text-sm text-studio-text placeholder:text-studio-text-muted focus:border-studio-primary/50 focus:outline-none transition-colors";
 
 export function AssetManager({ funnel, urls, onChange, onAttachPreview, onRevoke, onClose, onOpenUsage }: Props) {
-  const [filter, setFilter] = useState<AssetFilter>("all"); const [query, setQuery] = useState(""); const [selectedId, setSelectedId] = useState<string>(); const [token, setToken] = useState(""); const [tokenDraft, setTokenDraft] = useState(""); const [showToken, setShowToken] = useState(false); const [queue, setQueue] = useState<QueueItem[]>([]); const [permanentUrl, setPermanentUrl] = useState(""); const [permanentName, setPermanentName] = useState(""); const [permanentType, setPermanentType] = useState<AssetRef["mediaType"]>("video");
+  const [filter, setFilter] = useState<AssetFilter>("all"); const [query, setQuery] = useState(""); const [selectedId, setSelectedId] = useState<string>(); const [queue, setQueue] = useState<QueueItem[]>([]); const [permanentUrl, setPermanentUrl] = useState(""); const [permanentName, setPermanentName] = useState(""); const [permanentType, setPermanentType] = useState<AssetRef["mediaType"]>("video");
   const input = useRef<HTMLInputElement>(null); const controllers = useRef(new Map<string, AbortController>()); const files = useRef(new Map<string, File>());
-  useEffect(() => { setToken(sessionStorage.getItem(ASSET_UPLOAD_SESSION_KEY) || ""); }, []);
+  const uploadTokenState = useStudioUploadToken(); const token = uploadTokenState.token;
   const assets = useMemo(() => filterAssets(funnel.assets, urls, filter, query), [filter, funnel.assets, query, urls]);
   const selected = funnel.assets.find((asset) => asset.id === selectedId) || assets[0]; const summary = assetSummary(funnel, urls);
   const patchQueue = (id: string, patch: Partial<QueueItem>) => setQueue((items) => items.map((item) => item.id === id ? { ...item, ...patch } : item));
   const valid = (file: File) => isStudioMediaType(file.type) && !!studioMediaTypeForMime(file.type);
   const attachLocal = (file: File, assetId?: string) => { if (!valid(file)) return alert("Este tipo de arquivo não é aceito."); const id = assetId || uid(studioMediaTypeForMime(file.type)!); files.current.set(id, file); onAttachPreview(file, id); setSelectedId(id); };
   const pick = (mode: PickMode, assetId?: string) => { if (!input.current) return; input.current.dataset["mode"] = mode; input.current.dataset["assetId"] = assetId || ""; input.current.click(); };
-  const saveToken = () => { if (!tokenDraft.trim()) return; sessionStorage.setItem(ASSET_UPLOAD_SESSION_KEY, tokenDraft.trim()); setToken(tokenDraft.trim()); setTokenDraft(""); setShowToken(false); };
-  const clearToken = () => { sessionStorage.removeItem(ASSET_UPLOAD_SESSION_KEY); setToken(""); };
   const execute = async (item: QueueItem) => { const controller = new AbortController(); controllers.current.set(item.id, controller); try { const result = await uploadPermanentAsset({ funnelId: funnel.id, assetId: item.assetId, file: item.file, token, signal: controller.signal, onProgress: (progress, status) => patchQueue(item.id, { progress, status }) }); const next = item.mode === "promote" ? promoteAssetInFunnel(funnel, item.assetId, result) : item.mode === "replace" ? replacePermanentAsset(funnel, item.assetId, result) : { ...funnel, assets: [...funnel.assets, { id: item.assetId, mediaType: studioMediaTypeForMime(item.file.type)!, source: "permanent" as const, url: result.src, fileName: result.filename, contentType: result.contentType, size: result.size, uploadedAt: result.uploadedAt, r2Key: result.key, etag: result.etag }] }; onChange(next); if (item.mode === "promote") onRevoke(item.assetId); patchQueue(item.id, { status: "completed", progress: 100 }); setSelectedId(item.assetId); } catch (error) { const cancelled = error instanceof Error && error.name === "PermanentUploadError" && (error as { code?: string }).code === "cancelled"; patchQueue(item.id, { status: cancelled ? "cancelled" : "error", error: humanUploadError(error instanceof Error ? error.message : "Não foi possível salvar este arquivo.") }); } finally { controllers.current.delete(item.id); } };
-  const enqueue = (assetId: string, file: File, mode: QueueMode) => { if (!token) { setShowToken(true); return; } const item: QueueItem = { id: uid("upload"), assetId, file, mode, status: "waiting", progress: 0 }; setQueue((items) => [...items, item]); void execute(item); };
+  const enqueue = (assetId: string, file: File, mode: QueueMode) => { if (!token) return; const item: QueueItem = { id: uid("upload"), assetId, file, mode, status: "waiting", progress: 0 }; setQueue((items) => [...items, item]); void execute(item); };
   const handleFile = (file: File, mode: PickMode, assetId?: string) => { if (mode === "local") return attachLocal(file, assetId); if (mode === "direct") { if (!valid(file)) return alert("Este tipo de arquivo não é aceito."); return enqueue(uid(studioMediaTypeForMime(file.type)!), file, "direct"); } const asset = funnel.assets.find((item) => item.id === assetId); if (!asset) return; if (mode === "replace") return enqueue(asset.id, file, "replace"); attachLocal(file, asset.id); enqueue(asset.id, file, "promote"); };
   const preview = selected?.source === "permanent" ? selected.url : selected ? urls[selected.id] : undefined; const usage = selected ? findAssetUsages(funnel, selected.id) : [];
   return (
@@ -63,21 +61,11 @@ export function AssetManager({ funnel, urls, onChange, onAttachPreview, onRevoke
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <SecondaryButton onClick={() => pick("local")} className="text-xs">+ Adicionar arquivo</SecondaryButton>
             <GhostButton disabled={!token} onClick={() => pick("direct")} className="text-xs">Enviar direto</GhostButton>
-            {token ? (
-              <>
-                <Badge tone="success">Upload permanente ativado</Badge>
-                <GhostButton onClick={clearToken} className="text-xs">Remover autorização</GhostButton>
-              </>
-            ) : (
-              <GhostButton onClick={() => setShowToken(true)} className="text-xs">Configurar upload</GhostButton>
-            )}
+            {token && <Badge tone="success">Upload permanente ativado</Badge>}
           </div>
         </div>
-        {showToken && (
-          <div className="flex gap-2">
-            <input type="password" autoComplete="off" placeholder="Token de autoria" value={tokenDraft} onChange={(event) => setTokenDraft(event.target.value)} className={fieldClass} />
-            <PrimaryButton onClick={saveToken} className="shrink-0 text-xs">Ativar upload</PrimaryButton>
-          </div>
+        {uploadTokenState.status === "signed-out" && (
+          <HelpText className="text-studio-error">Sua sessão expirou. Entre novamente para enviar arquivos.</HelpText>
         )}
         <input ref={input} className="hidden" type="file" accept={ACCEPT} onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) handleFile(file, (event.currentTarget.dataset["mode"] || "local") as PickMode, event.currentTarget.dataset["assetId"] || undefined); event.currentTarget.value = ""; }} />
 

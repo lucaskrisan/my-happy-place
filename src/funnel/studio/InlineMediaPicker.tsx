@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { AssetRef, FunnelDefinition } from "../schema/v1";
-import { ASSET_UPLOAD_SESSION_KEY } from "./AssetManager";
 import { addPermanentUrl, assetName, assetStatus, promoteAssetInFunnel } from "./assetManagerState";
 import { isStudioMediaType, studioMediaTypeForMime, uploadPermanentAsset, type UploadStatus } from "./permanentUpload";
 import { uid } from "./studioState";
+import { useStudioUploadToken } from "./useStudioUploadToken";
 import { HelpText, PrimaryButton, SecondaryButton, GhostButton, Badge } from "./ui";
 
 type Props = { label: string; mediaType: AssetRef["mediaType"]; funnel: FunnelDefinition; urls: Record<string, string>; value?: string | undefined; onSelect: (assetId?: string) => void; onChange: (funnel: FunnelDefinition) => void; onAttachPreview?: (file: File, assetId?: string) => void };
@@ -12,9 +12,9 @@ const mediaWord = (mediaType: AssetRef["mediaType"]) => (mediaType === "video" ?
 const fieldClass = "w-full rounded-lg border border-studio-border bg-white/[.04] p-2.5 text-sm text-studio-text placeholder:text-studio-text-muted focus:border-studio-primary/50 focus:outline-none transition-colors";
 
 export function InlineMediaPicker({ label, mediaType, funnel, urls, value, onSelect, onChange, onAttachPreview }: Props) {
-  const [open, setOpen] = useState(false), [token, setToken] = useState(""), [tokenDraft, setTokenDraft] = useState(""), [url, setUrl] = useState(""), [status, setStatus] = useState<UploadStatus | null>(null), [progress, setProgress] = useState(0), [error, setError] = useState("");
+  const [open, setOpen] = useState(false), [url, setUrl] = useState(""), [status, setStatus] = useState<UploadStatus | null>(null), [progress, setProgress] = useState(0), [error, setError] = useState("");
   const input = useRef<HTMLInputElement>(null), controller = useRef<AbortController | undefined>(undefined);
-  useEffect(() => setToken(sessionStorage.getItem(ASSET_UPLOAD_SESSION_KEY) || ""), []);
+  const uploadTokenState = useStudioUploadToken(), token = uploadTokenState.token;
   const assets = funnel.assets.filter((asset) => asset.mediaType === mediaType), current = assets.find((asset) => asset.id === value);
   const invalid = (file: File) => !isStudioMediaType(file.type) || studioMediaTypeForMime(file.type) !== mediaType;
   const attach = (file: File, assetId: string) => { if (!onAttachPreview) return setError("O preview local não está disponível neste campo."); onAttachPreview(file, assetId); onSelect(assetId); setOpen(false); };
@@ -86,12 +86,10 @@ export function InlineMediaPicker({ label, mediaType, funnel, urls, value, onSel
               </div>
             ) : (
               <div className="space-y-2">
-                <HelpText className="text-xs">Upload permanente desativado — informe o token de autoria para enviar arquivos definitivos.</HelpText>
-                <input type="password" placeholder="Token de autoria" value={tokenDraft} onChange={(event) => setTokenDraft(event.target.value)} className={fieldClass} />
-                <div className="flex flex-wrap gap-2">
-                  <SecondaryButton type="button" onClick={() => { if (!tokenDraft.trim()) return; sessionStorage.setItem(ASSET_UPLOAD_SESSION_KEY, tokenDraft.trim()); setToken(tokenDraft.trim()); setTokenDraft(""); }} className="text-xs">Configurar upload</SecondaryButton>
-                  <GhostButton type="button" onClick={() => choose(true)} className="text-xs">Usar só para preview</GhostButton>
-                </div>
+                <HelpText className="text-xs">
+                  {uploadTokenState.status === "signed-out" ? "Sua sessão expirou. Entre novamente para enviar arquivos." : "Carregando sua sessão…"}
+                </HelpText>
+                <GhostButton type="button" onClick={() => choose(true)} className="text-xs">Usar só para preview</GhostButton>
               </div>
             )}
           </div>

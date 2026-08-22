@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   STUDIO_UPLOAD_LIMIT_BYTES,
   buildStudioAssetKey,
@@ -14,8 +14,24 @@ import {
   type UploadXmlHttpRequest,
 } from "../studio/permanentUpload";
 
+// Upload authorization now runs entirely on the caller's Supabase session (no shared static upload
+// token) — this fakes the Supabase Admin API's auth.getUser(token) so tests can exercise "signed in with
+// a valid session" vs "no session / expired session" without hitting a real Supabase project.
+const VALID_TOKEN = "valid-session-token";
+const FAKE_SUPABASE_SECRET = "test-fixture-service-role-key";
+vi.mock("@supabase/supabase-js", () => ({
+  createClient: () => ({
+    auth: {
+      getUser: async (token: string) =>
+        token === VALID_TOKEN
+          ? { data: { user: { id: "user-1" } }, error: null }
+          : { data: { user: null }, error: new Error("invalid or expired session") },
+    },
+  }),
+}));
+
 const headers = (extra: Record<string, string> = {}) => ({
-  Authorization: "Bearer secret",
+  Authorization: `Bearer ${VALID_TOKEN}`,
   "X-Studio-Funnel-Id": "funnel/a",
   "X-Studio-Asset-Id": "asset/../one",
   "X-Studio-Filename": encodeURIComponent("../Vídeo final.mp4"),
@@ -33,23 +49,24 @@ function request(extra: Record<string, string> = {}) {
 }
 
 function environment(put?: NonNullable<WorkerEnv["FUNNEL_MEDIA"]>): WorkerEnv {
-  return put ? { STUDIO_UPLOAD_TOKEN: "secret", FUNNEL_MEDIA: put } : { STUDIO_UPLOAD_TOKEN: "secret" };
+  const base: WorkerEnv = { SUPABASE_URL: "https://example.test", SUPABASE_SECRET_KEY: FAKE_SUPABASE_SECRET };
+  return put ? { ...base, FUNNEL_MEDIA: put } : base;
 }
 
 describe("studio upload endpoint", () => {
-  it("rejects missing or invalid upload credentials", async () => {
+  it("rejects a signed-out (missing) or invalid/expired session — no manual token accepted or required", async () => {
     const env = environment({ put: async () => null, get: async () => null, head: async () => null });
     expect((await handleStudioAssetUpload(new Request("https://x/api", { method: "PUT" }), env)).status).toBe(401);
-    expect((await handleStudioAssetUpload(request({ Authorization: "Bearer wrong" }), env)).status).toBe(401);
+    expect((await handleStudioAssetUpload(request({ Authorization: "Bearer expired-or-wrong" }), env)).status).toBe(401);
   });
 
-  it("disables uploads when the server secret is absent", async () => {
+  it("disables uploads when Supabase isn't configured server-side (not when a client token is missing)", async () => {
     const env = environment({ put: async () => null, get: async () => null, head: async () => null });
-    delete env.STUDIO_UPLOAD_TOKEN;
+    delete env.SUPABASE_URL;
     expect((await handleStudioAssetUpload(request(), env)).status).toBe(503);
   });
 
-  it("enforces MIME and content length limits before R2", async () => {
+  it("enforces MIME and content length limits before R2, for an authenticated user", async () => {
     const bucket = { put: async () => null, get: async () => null, head: async () => null };
     expect((await handleStudioAssetUpload(request({ "Content-Type": "text/html" }), environment(bucket))).status).toBe(415);
     expect((await handleStudioAssetUpload(request({ "Content-Length": "" }), environment(bucket))).status).toBe(411);
@@ -58,7 +75,7 @@ describe("studio upload endpoint", () => {
     expect((await handleStudioAssetUpload(request({ "Content-Length": String(STUDIO_UPLOAD_LIMIT_BYTES + 1) }), environment(bucket))).status).toBe(413);
   });
 
-  it("sanitizes object keys and streams the request body to R2 with metadata", async () => {
+  it("sanitizes object keys and streams the request body to R2 with metadata for a valid session", async () => {
     let received: { key?: string; body?: ReadableStream; metadata?: unknown } = {};
     const bucket = {
       put: async (key: string, body: ReadableStream, metadata: unknown) => {
@@ -69,7 +86,8 @@ describe("studio upload endpoint", () => {
       head: async () => null,
     };
     const response = await handleStudioAssetUpload(request(), environment(bucket));
-    const json = (await response.json()) as { src: string; assetId: string; filename: string };
+    const raw = await response.text();
+    const json = JSON.parse(raw) as { src: string; assetId: string; filename: string };
     expect(response.status).toBe(201);
     expect(received.key).toMatch(/^funnels\/funnel-a\/assets\/asset-..-one\//);
     expect(received.key).not.toContain("../");
@@ -78,6 +96,9 @@ describe("studio upload endpoint", () => {
     expect(json.src).toMatch(/^\/media\/funnels\//);
     expect(json.assetId).toBe("asset/../one");
     expect(json.filename).toBe("Video-final.mp4");
+    // No secret (Supabase service key, or anything else server-side) is ever echoed back to the browser.
+    expect(raw).not.toContain(FAKE_SUPABASE_SECRET);
+    expect(raw).not.toMatch(/token|secret/i);
   });
 
   it("returns a safe server error when R2 fails", async () => {
@@ -94,20 +115,20 @@ describe("studio upload endpoint", () => {
 });
 
 describe("studio asset cleanup endpoint", () => {
-  const remove = (body: unknown, token = "secret") => new Request("https://example.test/api/studio/assets/object", { method: "DELETE", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  it("rejects missing secrets, invalid tokens, traversal, other funnels and legacy media", async () => {
+  const remove = (body: unknown, token = VALID_TOKEN) => new Request("https://example.test/api/studio/assets/object", { method: "DELETE", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  it("rejects unconfigured Supabase, invalid/expired sessions, traversal, other funnels and legacy media", async () => {
     const bucket = { put: async () => null, get: async () => null, head: async () => null, delete: async () => undefined, list: async () => ({ objects: [], truncated: false }) };
     expect((await handleStudioAssetDelete(remove({ funnelId: "f", assetId: "a", r2Key: "funnels/f/assets/a/v.mp4" }), {})).status).toBe(503);
-    expect((await handleStudioAssetDelete(remove({ funnelId: "f", assetId: "a", r2Key: "funnels/f/assets/a/v.mp4" }, "wrong"), environment(bucket))).status).toBe(401);
+    expect((await handleStudioAssetDelete(remove({ funnelId: "f", assetId: "a", r2Key: "funnels/f/assets/a/v.mp4" }, "expired-or-wrong"), environment(bucket))).status).toBe(401);
     for (const key of ["funnels/f/assets/a/../x", "funnels/other/assets/a/v", "scene-02/video/scene.mp4"]) expect((await handleStudioAssetDelete(remove({ funnelId: "f", assetId: "a", r2Key: key }), environment(bucket))).status).toBe(400);
   });
-  it("deletes only a valid studio key and inventories only its funnel prefix", async () => {
+  it("deletes only a valid studio key and inventories only its funnel prefix, for a signed-in user", async () => {
     let deleted = "", prefix = "";
     const bucket = { put: async () => null, get: async () => null, head: async () => null, delete: async (key: string | string[]) => { deleted = Array.isArray(key) ? key[0]! : key; }, list: async ({ prefix: value }: { prefix: string }) => { prefix = value; return { objects: [], truncated: false }; } };
     const key = "funnels/f/assets/a/v.mp4";
     expect((await handleStudioAssetDelete(remove({ funnelId: "f", assetId: "a", r2Key: key }), environment(bucket))).status).toBe(200);
     expect(deleted).toBe(key);
-    expect((await handleStudioAssetInventory(new Request("https://x/api/studio/assets/inventory?funnelId=f", { headers: { Authorization: "Bearer secret" } }), environment(bucket))).status).toBe(200);
+    expect((await handleStudioAssetInventory(new Request("https://x/api/studio/assets/inventory?funnelId=f", { headers: { Authorization: `Bearer ${VALID_TOKEN}` } }), environment(bucket))).status).toBe(200);
     expect(prefix).toBe("funnels/f/assets/");
   });
 });
@@ -131,11 +152,14 @@ class FakeXhr implements UploadXmlHttpRequest {
 }
 
 describe("studio upload client", () => {
+  // The client-side uploader takes whatever bearer token it's handed — it doesn't know or care whether
+  // that's a Supabase access token or (as before) a manually pasted secret. What changed is *where the
+  // token comes from* on the React side (the live Supabase session, not sessionStorage), covered above.
   const input = (xhr: FakeXhr, overrides: Partial<Parameters<typeof uploadPermanentAsset>[0]> = {}) => ({
     funnelId: "funnel",
     assetId: "preview",
     file: new File(["test"], "file.mp4", { type: "video/mp4" }),
-    token: "secret",
+    token: VALID_TOKEN,
     xhrFactory: () => xhr,
     ...overrides,
   });
@@ -147,7 +171,7 @@ describe("studio upload client", () => {
     expect(progress).toContain(50);
     expect(progress.at(-1)).toBe(100);
     expect(result.src).toMatch(/^\/media\//);
-    expect(xhr.headers.get("Authorization")).toBe("Bearer secret");
+    expect(xhr.headers.get("Authorization")).toBe(`Bearer ${VALID_TOKEN}`);
   });
 
   it("maps unauthorized errors and cancellation", async () => {
