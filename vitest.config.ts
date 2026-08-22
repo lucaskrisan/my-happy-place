@@ -5,6 +5,6 @@ export default defineConfig({
   plugins: [tsconfigPaths()],
   test: {
     environment: 'jsdom',
-    include: ['src/funnel/**/*.test.ts'],
+    include: ['src/funnel/**/*.test.ts', 'src/product/**/*.test.ts'],
   },
 });
