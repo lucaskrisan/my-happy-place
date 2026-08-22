@@ -7,6 +7,8 @@ import { FunnelStudio } from "./FunnelStudio";
 import { loadFunnel, saveFunnel, seedOfficialFunnel } from "./studioState";
 import { loadGuidedUi } from "./guidedState";
 import { PageTitle, SectionTitle, Eyebrow, HelpText, Card, Badge, ProgressBar, Breadcrumb, PrimaryButton, SecondaryButton, GhostButton, EmptyState } from "./ui";
+import { useSupabaseSession } from "@/lib/supabase/useSession";
+import { deleteProductFromSupabase, pullFromSupabase, pushAllLocalToSupabase, pushFunnelToSupabase, pushProductsToSupabase } from "@/lib/supabase/sync";
 
 export type View = {
   kind: "home" | "product" | "funnel";
@@ -30,6 +32,8 @@ const typeOptions = [
 const fmt = (timestamp?: number) => timestamp ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" }).format(timestamp) : "agora";
 
 export function ProductStudio() {
+  const session = useSupabaseSession();
+  const userId = session.status === "signed-in" ? session.session.user.id : undefined;
   const [products, setProducts] = useState<StudioProduct[]>([]);
   const [view, setViewState] = useState<View>({ kind: "home" });
   const [newProduct, setNewProduct] = useState(false);
@@ -58,10 +62,28 @@ export function ProductStudio() {
     }
     setProducts(ensureProducts(localStorage));
   };
+  // Fire-and-forget: pushes localStorage's current product list to Supabase after every local write, so
+  // the cloud copy (and, eventually, the super admin panel) stays in step without the UI waiting on it.
+  const syncProductsToCloud = () => {
+    if (userId) void pushProductsToSupabase(userId, ensureProducts(localStorage));
+  };
   useEffect(() => {
     reload();
     setViewState(loadView());
   }, []);
+  // Once per login: pull whatever this account already has in the cloud into localStorage (so switching
+  // devices/browsers picks up existing work), then push back up anything that was only local until now
+  // (e.g. this account's first login, before Supabase was wired in).
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    void pullFromSupabase(userId).then(() => {
+      if (cancelled) return;
+      reload();
+      void pushAllLocalToSupabase(userId);
+    });
+    return () => { cancelled = true; };
+  }, [userId]);
   const product = view.kind === "home" ? undefined : products.find((item) => item.id === view.productId);
   const funnels = useMemo(() => (product?.funnelIds.map((id) => loadFunnel(localStorage, id)).filter(Boolean) as FunnelDefinition[] || []) as FunnelDefinition[] & { 0: FunnelDefinition }, [product, products]);
   const aggregate = useMemo(() => {
@@ -90,6 +112,7 @@ export function ProductStudio() {
     if (!name.trim()) return;
     const created = createProduct(localStorage, name, description);
     reload(); setNewProduct(false); setName(""); setDescription("");
+    syncProductsToCloud();
     setView({ kind: "product", productId: created.id, tab: "overview" });
   };
   const createFunnel = () => {
@@ -98,6 +121,8 @@ export function ProductStudio() {
     saveFunnel(localStorage, funnel);
     attachFunnel(localStorage, product.id, funnel);
     reload(); setNewFunnel(false); setFunnelName("");
+    if (userId) void pushFunnelToSupabase(userId, funnel);
+    syncProductsToCloud();
     setView({ kind: "funnel", productId: product.id, funnelId: funnel.id });
   };
   const openRename = (item: StudioProduct) => {
@@ -110,12 +135,14 @@ export function ProductStudio() {
     if (!renamingProduct || !editName.trim()) return;
     renameProduct(localStorage, renamingProduct.id, editName, editDescription);
     reload();
+    syncProductsToCloud();
     setRenamingProduct(null);
   };
   const handleDeleteProduct = (item: StudioProduct) => {
     if (!confirm(`Excluir "${item.name}" e todo o conteúdo dele (funis, cenas, arquivos)? Essa ação não pode ser desfeita.`)) return;
     deleteProduct(localStorage, item.id);
     reload();
+    void deleteProductFromSupabase(item.id);
     setProductMenuOpen(null);
   };
 

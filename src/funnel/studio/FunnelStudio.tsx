@@ -26,6 +26,8 @@ import { StudioInspector } from "./inspectors/StudioInspector";
 import { FunnelStudioHome, GuidedBuilder } from "./GuidedBuilder";
 import { invalidateStructuralTests, loadGuidedUi, saveGuidedUi, type GuidedUiState } from "./guidedState";
 import { AssetManager } from "./AssetManager";
+import { useSupabaseSession } from "@/lib/supabase/useSession";
+import { pushFunnelToSupabase } from "@/lib/supabase/sync";
 const RuntimeQuiz = QuizOverlay as any,
   RuntimeChoice = ChoiceOverlay as any,
   RuntimeMessaging = MessagingOverlay as any,
@@ -268,6 +270,8 @@ export function FunnelStudio({
   forceGuided?: boolean;
   onBackToProduct?: () => void;
 } = {}) {
+  const session = useSupabaseSession();
+  const userId = session.status === "signed-in" ? session.session.user.id : undefined;
   const [projects, setProjects] = useState<StudioProject[]>([]),
     [funnel, setFunnel] = useState<FunnelDefinition | null>(null),
     [selectedSceneId, setSelectedSceneId] = useState(""),
@@ -308,12 +312,13 @@ export function FunnelStudio({
         saveFunnel(localStorage, funnel);
         setProjects(loadProjects(localStorage));
         setSaveState("SALVO");
+        if (userId) void pushFunnelToSupabase(userId, funnel);
       } catch {
         setSaveState("ERRO AO SALVAR");
       }
     }, 350);
     return () => clearTimeout(t);
-  }, [funnel]);
+  }, [funnel, userId]);
   const setMode = (next: GuidedUiState) => {
     setGuidedUi(next);
     saveGuidedUi(next);
