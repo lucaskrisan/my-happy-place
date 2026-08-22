@@ -311,10 +311,11 @@ const TASKS: RoadmapTask[] = [
   }),
   task("ROADMAP-002", "FASE-1", "Rota interna /studio/roadmap", {
     description: "Visão completa (admin-only) com dependências, acceptance criteria, notas internas, evidência.",
-    status: "IN_PROGRESS", priority: "NOW",
+    status: "DONE", priority: "NOW",
     dependencies: ["ROADMAP-001"],
     acceptanceCriteria: ["Protegida pelo mesmo guard de admin já usado em /studio/admin", "Mostra todos os campos, inclusive internos"],
-    internalNotes: "Implementação reaproveita literalmente o guard de useSupabaseSession()+useProfile() de /studio/admin, e o TaskCard expandido renderiza acceptanceCriteria/internalNotes/evidence — ambos os critérios de código estão satisfeitos. Único critério pendente: validação visual autenticada como admin real (eu só confirmei via curl não-autenticado que a rota resolve com HTTP 200 e cai no guard client-side — não vi a tela renderizada logado). Não marcar DONE até essa validação acontecer.",
+    evidence: { notes: "Validado visualmente pelo dono do produto, autenticado como admin, em 2026-08-22: desktop, mobile, bloco AGORA, bloco PRÓXIMO, expansão/recolhimento das fases, leitura das tasks, evidence/commits e legibilidade geral — todos aprovados." },
+    internalNotes: "Implementação reaproveita literalmente o guard de useSupabaseSession()+useProfile() de /studio/admin, e o TaskCard expandido renderiza acceptanceCriteria/internalNotes/evidence.",
   }),
   task("ROADMAP-003", "FASE-1", "Rota pública /roadmap", {
     description: "Read-only, sanitizada, para acompanhamento externo da evolução do produto.",
