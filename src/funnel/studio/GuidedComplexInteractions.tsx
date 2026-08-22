@@ -178,6 +178,7 @@ function CallFields({ event, funnel, scene, onUpdate, onAddUrl, onAttachAsset }:
           />
         </div>
       </details>
+      <ActionPicker label="E se a pessoa aceitar" value={event.onAccept[0]} funnel={funnel} scene={scene} onChange={(action) => onUpdate({ ...event, onAccept: [action] })} />
       <ActionPicker label="Quando a ligação terminar" value={event.onEnd[0]} funnel={funnel} scene={scene} onChange={(action) => onUpdate({ ...event, onEnd: [action] })} />
       <ActionPicker label="E se a pessoa recusar" value={event.onDecline[0]} funnel={funnel} scene={scene} onChange={(action) => onUpdate({ ...event, onDecline: [action] })} />
     </div>
@@ -320,4 +321,4 @@ function ActionPicker({ label, value, funnel, scene, onChange }: { label: string
 }
 function humanTitle(event: SceneEventDefinition) { return event.block === "incoming_call" ? `📞 ${event.callerName}` : event.block === "messaging" ? `💬 ${event.contactName}` : event.block === "choice" ? `👆 ${event.title}` : event.block; }
 function humanTrigger(trigger: TriggerDefinition) { return trigger.kind === "TIME" ? `Em ${formatTime(trigger.seconds)}` : trigger.kind === "VIDEO_END" ? "Quando o vídeo terminar" : trigger.kind === "BEFORE_END" ? `${trigger.seconds.toFixed(2)}s antes do final` : trigger.kind === "SCENE_START" ? "No começo" : "Depois de outra interação"; }
-function humanAfter(event: Extract<SceneEventDefinition, { block: ComplexBlock }>, funnel: FunnelDefinition) { if (event.block === "incoming_call") return `Ao terminar: ${event.onEnd[0]?.type || "continuar"}. Se recusar: ${event.onDecline[0]?.type || "continuar"}`; if (event.block === "messaging") return `${event.messages.length} mensagens. Depois: ${event.actions[0]?.type || "continuar"}`; return `${event.options.length} opções`; }
+function humanAfter(event: Extract<SceneEventDefinition, { block: ComplexBlock }>, funnel: FunnelDefinition) { if (event.block === "incoming_call") return `Se aceitar: ${event.onAccept[0]?.type || "continuar"}. Ao terminar: ${event.onEnd[0]?.type || "continuar"}. Se recusar: ${event.onDecline[0]?.type || "continuar"}`; if (event.block === "messaging") return `${event.messages.length} mensagens. Depois: ${event.actions[0]?.type || "continuar"}`; return `${event.options.length} opções`; }

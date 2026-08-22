@@ -14,6 +14,30 @@ describe('FunnelRuntime', () => {
  it('fires SCENE_START and INTERACTION_COMPLETE',()=>{const runtime=new FunnelRuntime(makeFunnel([{id:'quiz',block:'quiz',trigger:{kind:'SCENE_START'},title:'Q',questions:[{id:'q',title:'Q',options:[{id:'a',label:'A'}]}],actions:[{type:'RESUME_VIDEO'}]},{id:'after',block:'notification',trigger:{kind:'INTERACTION_COMPLETE',interactionId:'quiz'},appName:'A',senderName:'S',message:'M'}]));runtime.start();expect(runtime.snapshot().events['quiz']).toBe('active');runtime.completeInteraction('quiz');expect(runtime.snapshot().events['after']).toBe('completed');});
  it('navigates with validated GO_TO_SCENE',()=>{const runtime=new FunnelRuntime(makeFunnel([{id:'go',block:'notification',trigger:{kind:'SCENE_START'},appName:'A',senderName:'S',message:'M',actions:[{type:'GO_TO_SCENE',sceneId:'b'}]}]));runtime.start();expect(runtime.snapshot().sceneId).toBe('b');});
  it('records media errors',()=>{const runtime=new FunnelRuntime(makeFunnel());runtime.reportMediaError('video','network','video');expect(runtime.snapshot().mediaErrors[0]?.assetId).toBe('video');});
+ // completeInteraction only ever runs an event's base `actions` — outcome-specific lists (onAccept,
+ // onDecline, onEnd, onClose, onTap, onDismiss) must be executed explicitly by the caller, same as the
+ // guided preview (RuntimeOverlays.tsx) and funnel-runtime-proof.tsx (the reference implementation) do.
+ it('accepting a call runs its action list but leaves the interaction active (the overlay must not vanish mid-call)', () => {
+   const runtime = new FunnelRuntime(makeFunnel([{ id: 'call', block: 'incoming_call', trigger: { kind: 'TIME', seconds: 1 }, callerName: 'Mãe', onAccept: [{ type: 'RESUME_VIDEO' }], onDecline: [{ type: 'STOP' }], onEnd: [{ type: 'NEXT_SCENE' }] }]));
+   runtime.start();
+   runtime.updateTime(1);
+   const { runId } = runtime.snapshot();
+   runtime.execute([{ type: 'RESUME_VIDEO' }], 'call', runId); // what onAccept alone does — no completeInteraction call
+   const afterAccept = runtime.snapshot();
+   expect(afterAccept.activeInteraction).toEqual({ id: 'call', sourceEventId: 'call' });
+   expect(afterAccept.mediaState).toBe('playing');
+ });
+ it('ending an accepted call runs onEnd and completes the interaction, navigating via NEXT_SCENE', () => {
+   const runtime = new FunnelRuntime(makeFunnel([{ id: 'call', block: 'incoming_call', trigger: { kind: 'TIME', seconds: 1 }, callerName: 'Mãe', onAccept: [{ type: 'RESUME_VIDEO' }], onDecline: [{ type: 'STOP' }], onEnd: [{ type: 'NEXT_SCENE' }] }]));
+   runtime.start();
+   runtime.updateTime(1);
+   const { runId } = runtime.snapshot();
+   runtime.execute([{ type: 'RESUME_VIDEO' }], 'call', runId); // accept
+   runtime.execute([{ type: 'NEXT_SCENE' }], 'call', runId); // what onEnd runs, exactly as RuntimeOverlays does
+   expect(runtime.completeInteraction('call', runId)).toBe(false); // stale: NEXT_SCENE already bumped runId
+   expect(runtime.snapshot().sceneId).toBe('b');
+   expect(runtime.snapshot().activeInteraction).toBeNull();
+ });
 });
 describe('validateFunnel',()=>{
  it('finds invalid targets, blocking exits, invalid quiz and choice',()=>{const f=makeFunnel([{id:'bad',block:'quiz',trigger:{kind:'TIME',seconds:31},blocking:true,title:'Q',questions:[],actions:[]},{id:'choice',block:'choice',trigger:{kind:'MANUAL'},title:'C',options:[]}]);f.entrySceneId='nope';f.scenes.push({id:'orphan',title:'O',events:[]});const codes=validateFunnel(f).map(i=>i.code);expect(codes).toContain('entry_scene_missing');expect(codes).toContain('quiz_empty');expect(codes).toContain('choice_empty');expect(codes).toContain('blocking_no_exit');expect(codes).toContain('scene_unreachable');});
