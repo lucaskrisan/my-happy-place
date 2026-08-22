@@ -6,9 +6,14 @@ import { sceneStatus } from "./guidedState";
 export type ReviewSeverity = "error" | "warning" | "ready";
 export type HumanIssue = { id: string; title: string; message: string; severity: ReviewSeverity; sceneId?: string; eventId?: string; assetId?: string; suggestedStep?: "video" | "interactivity" | "test" | "review" };
 const findId = (path: string, prefix: "scene" | "event" | "asset") => path.match(new RegExp(`${prefix}s?\\.([^.]*)`))?.[1];
-export function humanizeValidationIssue(issue: FunnelValidationIssue): HumanIssue {
-  const sceneId = findId(issue.path, "scene");
+// Every event-level validator path is "events.<eventId>" (or "events.<eventId>.<questionId>") — it never
+// carries the owning scene's id, so "Corrigir" had nowhere to navigate and silently fell back to the
+// entry scene for almost every real validation error (asset_missing, quiz_empty, blocking_no_exit, ...).
+const sceneIdForEvent = (funnel: FunnelDefinition, eventId: string | undefined) =>
+  eventId ? funnel.scenes.find((scene) => scene.events.some((event) => event.id === eventId))?.id : undefined;
+export function humanizeValidationIssue(issue: FunnelValidationIssue, funnel: FunnelDefinition): HumanIssue {
   const eventId = findId(issue.path, "event");
+  const sceneId = findId(issue.path, "scene") || sceneIdForEvent(funnel, eventId);
   const assetId = findId(issue.path, "asset");
   const map: Record<string, [string, string, HumanIssue["suggestedStep"]]> = {
     entry_scene_missing: ["Cena inicial inválida", "Escolha uma cena inicial existente.", "review"],
@@ -30,7 +35,7 @@ export function humanizeValidationIssue(issue: FunnelValidationIssue): HumanIssu
   return { id: `${issue.code}:${issue.path}`, title, message, severity: "error", ...(sceneId ? { sceneId } : {}), ...(eventId ? { eventId } : {}), ...(assetId ? { assetId } : {}), ...(suggestedStep ? { suggestedStep } : {}) };
 }
 export function finalizationChecklist(funnel: FunnelDefinition): HumanIssue[] {
-  const issues = validateFunnel(funnel).map(humanizeValidationIssue);
+  const issues = validateFunnel(funnel).map((issue) => humanizeValidationIssue(issue, funnel));
   for (const scene of funnel.scenes) {
     if (!scene.videoAssetId) issues.push({ id: `video:${scene.id}`, title: "Vídeo pendente", message: `A cena “${scene.title}” ainda não possui vídeo.`, severity: "error", sceneId: scene.id, suggestedStep: "video" });
     if (sceneStatus(scene, funnel).test !== "PRONTO") issues.push({ id: `test:${scene.id}`, title: "Cena não testada", message: `A cena “${scene.title}” ainda precisa ser testada ou foi alterada depois do último teste.`, severity: "warning", sceneId: scene.id, suggestedStep: "test" });
