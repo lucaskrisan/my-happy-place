@@ -19,6 +19,7 @@ import {
   nextGuidedStep,
   sceneStructuralFingerprint,
   sceneStatus,
+  testStepDestination,
   triggerFromGuided,
   updateGuidedInteraction,
 } from "../studio/guidedState";
@@ -256,5 +257,26 @@ describe("Guided Builder mappings", () => {
     const stale = updateGuidedInteraction(funnel, scene.id, patchedEvent);
     expect(stale.assets).not.toContainEqual(newAsset);
     expect((stale.scenes[0]!.events[0] as any).avatarAssetId).toBe(newAsset.id);
+  });
+});
+
+describe("testStepDestination (the guided flow's final-step button)", () => {
+  it("points at the next scene in authoring order when one exists", () => {
+    const funnel = addGuidedScene(emptyFunnel());
+    const [sceneA] = funnel.scenes;
+    const destination = testStepDestination(funnel, sceneA!, []);
+    expect(destination).toEqual({ kind: "next-scene", label: "Ir para próxima cena →", sceneId: funnel.scenes[1]!.id });
+  });
+
+  it("points at the review step when this is the last scene", () => {
+    const funnel = emptyFunnel();
+    const destination = testStepDestination(funnel, funnel.scenes[0]!, []);
+    expect(destination).toEqual({ kind: "review", label: "Revisar experiência" });
+  });
+
+  it("asks to fix blocking issues before offering to move on, even on the last scene", () => {
+    const funnel = emptyFunnel();
+    const destination = testStepDestination(funnel, funnel.scenes[0]!, [{ code: "video_missing" }]);
+    expect(destination).toEqual({ kind: "fix", label: "Corrigir antes de continuar" });
   });
 });

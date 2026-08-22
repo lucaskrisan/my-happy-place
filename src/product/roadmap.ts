@@ -413,7 +413,50 @@ const TASKS: RoadmapTask[] = [
   }),
 
   // ---- FASE 4 — Publicação core --------------------------------------------------------------------
-  task("PUBLISH-001", "FASE-4", "Modelo de funil publicado", { priority: "HIGH" }),
+  task("E2E-001", "FASE-4", "Auditoria da jornada de produção (E2E)", {
+    description: "Mapeamento real, com evidência de código, de toda a jornada criar → editar → salvar → testar → prévia completa → revisar → publicar. Não é implementação — é a base factual para priorizar PREVIEW-001/UX-001/SYNC-001/PUBLISH-*.",
+    status: "DONE", priority: "NOW",
+    acceptanceCriteria: ["Cada etapa da jornada tem um veredito PASS/FAIL/PARTIAL/NOT IMPLEMENTED com evidência de código citada (arquivo:linha)"],
+    evidence: { notes: "3 auditorias paralelas em 2026-08-22 cobrindo: guided-completion, preview/runtime, save/sync, publish infra existente, interações/review/validador, auth/ownership. Resultado completo registrado na conversa e resumido nos internalNotes de PREVIEW-001/UX-001/SYNC-001/PUBLISH-001." },
+  }),
+  task("UX-001", "FASE-4", "Guided completion — semântica do botão final", {
+    description: "O botão 'Continuar' no último step (TESTE) do Guided Builder era pura paginação de abas — no último step, não fazia nada perceptível. Agora tem destino explícito: 'Corrigir antes de continuar' (se houver problema bloqueador na cena), 'Ir para próxima cena →' (se existir próxima cena em ordem de autoria) ou 'Revisar experiência' (se for a última cena).",
+    status: "DONE", priority: "NOW",
+    dependencies: ["E2E-001"],
+    acceptanceCriteria: [
+      "testStepDestination() é uma função pura testável, sem depender de renderizar o componente",
+      "cobertura de teste: próxima cena existe, é a última cena, existe problema bloqueador",
+      "GuidedBuilder.tsx usa a função pura para decidir label e destino do botão no step 'test'",
+    ],
+    evidence: { tests: "src/funnel/tests/guidedState.test.ts — 3 testes novos para testStepDestination, todos passando", commit: "branch feat/production-readiness-e2e" },
+  }),
+  task("PREVIEW-001", "FASE-4", "Prévia completa do funil usa o runtime real corretamente", {
+    description: "GuidedPreview.tsx usava sempre o `scene` prop fixo (o da montagem do componente) para decidir vídeo/overlays, mesmo depois do FunnelRuntime avançar de cena via NEXT_SCENE/GO_TO_SCENE — então numa prévia multi-cena, o vídeo e as interações continuavam sendo os da PRIMEIRA cena para sempre. Corrigido: agora deriva a cena atual de `snapshot.sceneId` (mesmo padrão já correto em /dev/funnel-runtime-proof.tsx). O núcleo de runtime (FunnelRuntime) já era compartilhado corretamente entre preview e execução — não havia um runtime falso duplicado.",
+    status: "IN_PROGRESS", priority: "NOW",
+    dependencies: ["E2E-001"],
+    acceptanceCriteria: [
+      "GuidedPreview deriva vídeo e overlays de snapshot.sceneId, não do prop `scene` fixo",
+      "typecheck limpo",
+      "validação real em browser com fixture de 3+ cenas confirmando troca de vídeo/eventos na transição — PENDENTE, exige login real que não tenho",
+    ],
+    internalNotes: "Corrigido o bug de estado (código). NÃO validado ao vivo no browser — não tenho credenciais reais da conta do usuário para logar no Studio e rodar 'Testar experiência completa' com uma fixture multi-cena. Fica pendente o mesmo protocolo já usado em ROADMAP-002/HOTFIX-001: o dono faz esse smoke e eu marco DONE com a evidência. Reset/restart do preview (REINICIAR) já auditado e confirmado correto (PASS) — nenhuma mudança necessária ali.",
+  }),
+  task("SYNC-001", "FASE-4", "Sincronização confiável com a nuvem", {
+    description: "Auditoria encontrou 3 gaps reais, NENHUM corrigido nesta execução (fora do escopo seguro para esta passada): (1) o indicador 'Salvo' no header reflete apenas a escrita local (localStorage) — pushFunnelToSupabase roda com `void`, nunca aguardado, então uma falha de rede/Supabase é só um console.error, invisível na UI. (2) Sem AbortController/número de sequência entre pushes — edições rápidas em cenas diferentes podem, em tese, fazer um push mais antigo terminar depois de um mais novo e sobrescrever com dado velho. (3) profiles/funnels têm RLS por owner_id no Postgres, mas os endpoints de asset do Worker (studio upload/delete/inventory) só checam 'está logado', não 'é dono deste funnelId' — qualquer usuário autenticado pode hoje mexer em assets de qualquer funnelId que conseguir adivinhar.",
+    status: "TODO", priority: "HIGH",
+    dependencies: ["E2E-001"],
+    acceptanceCriteria: [
+      "UI distingue Salvando/Sincronizando/Tudo salvo/Erro ao sincronizar de forma real (não apenas local)",
+      "push para Supabase é aguardado e falhas viram estado de erro visível com opção de tentar novamente",
+      "edição mais nova nunca é sobrescrita por um push mais antigo em voo",
+      "endpoints de asset do Worker (upload/delete/inventory) verificam ownership do funnelId, não só sessão válida",
+    ],
+    internalNotes: "Escopo real: mudança de UX (novos estados visuais) + lógica de sequenciamento/retry no cliente + checagem de ownership no server — não é pequeno o suficiente para entrar nesta mesma execução sem risco. Registrado como TODO/HIGH para a próxima passada dedicada.",
+  }),
+  task("PUBLISH-001", "FASE-4", "Modelo de funil publicado", {
+    priority: "HIGH", dependencies: ["E2E-001"],
+    internalNotes: "Auditoria confirmou: NÃO existe nenhuma infraestrutura de publicação hoje — nem tabela, nem rota, nem PublishedFunnelVersion, nem slug. A aba 'Publicar' do ProductStudio é um placeholder ('Publicação simplificada será configurada na próxima fase'). Isso é o próximo grande bloco de trabalho, deliberadamente não iniciado nesta execução por ser grande demais para uma passada segura junto com o resto.",
+  }),
   task("PUBLISH-002", "FASE-4", "Versões publicadas imutáveis", {
     description: "PublishedFunnelVersion: funnelId, version, publishedAt, manifest, referências de asset.",
     dependencies: ["PUBLISH-001"], priority: "HIGH",
