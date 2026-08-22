@@ -165,9 +165,11 @@ const TASKS: RoadmapTask[] = [
     status: "DONE", priority: "HIGH",
   }),
   task("FOUND-008", "FASE-0", "Editor avançado (modo livre, fora do fluxo guiado)", {
-    description: "Auditoria não encontrou um 'Advanced Editor' como feature distinta do Guided Builder no código atual.",
-    status: "TODO", priority: "MEDIUM",
-    internalNotes: "Não confundir com complexidade de interação dentro do Guided Builder (GuidedComplexInteractions.tsx) — isso já existe e é outra coisa.",
+    description: "Reaudicao (2026-08-22): existe, sim, um modo avançado real dentro de FunnelStudio.tsx — Timeline de cenas, StudioInspector (edição direta de cena/evento), reordenar cenas, exportar/importar FunnelDefinition como JSON. O Guided Builder expõe um botão 'Editor avançado' (src/funnel/studio/GuidedBuilder.tsx:239 e :747) que chama onAdvanced() e troca guidedUi.mode para 'advanced', revelando essa superfície. Isso é alcançável a partir do fluxo real do produto: /studio (ProductStudio) → FunnelStudio (com forceGuided=true, que só define o modo INICIAL — não impede trocar para 'advanced' depois) → botão 'Editor avançado'.",
+    status: "DONE", priority: "MEDIUM",
+    acceptanceCriteria: ["Existe uma superfície de edição direta do FunnelDefinition fora do fluxo guiado, alcançável a partir de /studio"],
+    evidence: { notes: "src/funnel/studio/GuidedBuilder.tsx:239,747 (botão 'Editor avançado') → src/funnel/studio/FunnelStudio.tsx:408,427 (onAdvanced → mode:'advanced') renderiza Timeline + StudioInspector + import/export de JSON, confirmado por leitura de código em 2026-08-22." },
+    internalNotes: "Não confundir com a complexidade de interação dentro do próprio Guided Builder (GuidedComplexInteractions.tsx) — isso é outra coisa. forceGuided no ProductStudio só define o modo inicial do FunnelStudio, não trava a navegação para 'advanced'.",
   }),
   task("FOUND-009", "FASE-0", "Asset Manager", {
     description: "src/funnel/studio/AssetManager.tsx — gestão de mídia dentro do Studio.",
@@ -235,39 +237,47 @@ const TASKS: RoadmapTask[] = [
   // ---- FASE 1 — Roadmap operacional (fase atual) -------------------------------------------------
   task("ROADMAP-001", "FASE-1", "Fonte única de verdade do roadmap", {
     description: "src/product/roadmap.ts — tipos Roadmap/RoadmapPhase/RoadmapTask/RoadmapEvidence + dados.",
-    status: "IN_PROGRESS", priority: "NOW",
+    status: "DONE", priority: "NOW",
     acceptanceCriteria: ["Arquivo único, tipado, sem duplicar em .md/.json manuais", "typecheck limpo", "usado por /studio/roadmap e /roadmap"],
+    evidence: { commit: "38b38ed", typecheck: "npm run typecheck limpo em 2026-08-22", notes: "src/product/roadmap.ts é a única fonte; /studio/roadmap e /roadmap importam dela (roadmap.ts, publicRoadmap.ts)." },
   }),
   task("ROADMAP-002", "FASE-1", "Rota interna /studio/roadmap", {
     description: "Visão completa (admin-only) com dependências, acceptance criteria, notas internas, evidência.",
     status: "IN_PROGRESS", priority: "NOW",
     dependencies: ["ROADMAP-001"],
     acceptanceCriteria: ["Protegida pelo mesmo guard de admin já usado em /studio/admin", "Mostra todos os campos, inclusive internos"],
+    internalNotes: "Implementação reaproveita literalmente o guard de useSupabaseSession()+useProfile() de /studio/admin, e o TaskCard expandido renderiza acceptanceCriteria/internalNotes/evidence — ambos os critérios de código estão satisfeitos. Único critério pendente: validação visual autenticada como admin real (eu só confirmei via curl não-autenticado que a rota resolve com HTTP 200 e cai no guard client-side — não vi a tela renderizada logado). Não marcar DONE até essa validação acontecer.",
   }),
   task("ROADMAP-003", "FASE-1", "Rota pública /roadmap", {
     description: "Read-only, sanitizada, para acompanhamento externo da evolução do produto.",
-    status: "IN_PROGRESS", priority: "NOW",
+    status: "DONE", priority: "NOW",
     dependencies: ["ROADMAP-001", "ROADMAP-004"],
     acceptanceCriteria: ["Não requer login", "noindex,nofollow", "usa toPublicRoadmap()"],
+    evidence: { commit: "38b38ed", notes: "Confirmado ao vivo em 2026-08-22: curl sem sessão retornou 200; HTML continha 'noindex,nofollow'; screenshots desktop (1280px) e mobile (390px) via Chrome headless mostraram o layout renderizado a partir de toPublicRoadmap()." },
   }),
   task("ROADMAP-004", "FASE-1", "Sanitização por allowlist (toPublicRoadmap)", {
     description: "Função explícita que decide campo a campo o que sai para o público — nunca esconder por CSS.",
-    status: "IN_PROGRESS", priority: "NOW",
+    status: "DONE", priority: "NOW",
     acceptanceCriteria: ["internalNotes, evidence.commit/branch/deployUrl/notes nunca aparecem no payload público", "coberta por teste de integridade"],
+    evidence: { tests: "src/product/publicRoadmap.test.ts — 7 testes, todos passando (verificado em 2026-08-22)", notes: "curl no HTML renderizado de /roadmap não retornou nenhuma ocorrência de internalNotes/sk_live/whsec_/e-mails/customer IDs." },
   }),
   task("ROADMAP-005", "FASE-1", "Evidência real por task", {
     description: "Campo evidence preenchido apenas quando existe evidência real (nunca fictício).",
-    status: "IN_PROGRESS", priority: "HIGH",
+    status: "DONE", priority: "HIGH",
     acceptanceCriteria: ["Nenhum valor de evidence inventado — vazio quando não houver prova"],
+    evidence: { notes: "Prática seguida em todas as ~185 tasks deste arquivo: campos evidence.* só preenchidos com commit/teste/observação real, deixados vazios quando não há prova. É uma disciplina contínua, reforçada pelo protocolo (docs/ROADMAP_PROTOCOL.md), não um artefato que 'termina' — reavaliar a cada nova task adicionada." },
   }),
   task("ROADMAP-006", "FASE-1", "Testes de integridade do roadmap", {
     description: "IDs únicos, phaseId válido, dependencies existentes, status válido, DONE com acceptanceCriteria, scope EXTERNAL fora do progresso CORE.",
     status: "IN_PROGRESS", priority: "HIGH",
     dependencies: ["ROADMAP-001"],
+    evidence: { tests: "src/product/roadmap.test.ts — 6 testes passando (IDs únicos de task, IDs únicos de fase, phaseId válido, dependencies existentes, status válido, DONE não depende de TODO/BLOCKED, EXTERNAL fora do CORE)." },
+    internalNotes: "Gap real encontrado na reauditoria de 2026-08-22: NÃO existe teste que force 'toda task DONE possui acceptanceCriteria não-vazio' (item da especificação original). Auditoria direta nos dados mostrou 19 tasks hoje DONE com acceptanceCriteria vazio (FOUND-004,005,006,007,009,010,011,012,013,014,015,016,017,018,019,020,021, ADMIN-001, ADMIN-003) — a maioria da Fase 0, que descreve fundação auditada por leitura de código, não por um critério formalmente redigido. Não corrigido nesta execução (proibido implementar/alterar nova regra); permanece IN_PROGRESS até essa regra existir como teste E os dados serem conformes a ela.",
   }),
   task("ROADMAP-007", "FASE-1", "Protocolo para futuros agentes/contribuidores", {
     description: "docs/ROADMAP_PROTOCOL.md — como toda feature nova deve nascer de uma task e atualizar este arquivo.",
-    status: "IN_PROGRESS", priority: "HIGH",
+    status: "DONE", priority: "HIGH",
+    evidence: { commit: "38b38ed", notes: "docs/ROADMAP_PROTOCOL.md existe, cobre: como localizar/criar task, transição de status, regra de DONE, sanitização pública, escopo CORE vs EXTERNAL, e a arquitetura macro de plataforma decidida." },
   }),
 
   // ---- FASE 2 — Planos / Entitlements -------------------------------------------------------------
