@@ -28,7 +28,9 @@ export function GuidedComplexInteractions({ funnel, scene, urls, onChange, onAtt
     setEditing(focusEventId);
     onFocusHandled?.();
   }, [focusEventId, events, onFocusHandled]);
-  const update = (event: SceneEventDefinition) => onChange(updateGuidedInteraction(funnel, scene.id, event));
+  // funnelOverride: see the comment on InlineMediaPicker's Props — needed so a permanent-upload patch
+  // rebases on the funnel that upload just produced instead of the stale `funnel` closed over here.
+  const update = (event: SceneEventDefinition, funnelOverride?: FunnelDefinition) => onChange(updateGuidedInteraction(funnelOverride ?? funnel, scene.id, event));
   const addUrl = (mediaType: "audio" | "image") => { const url = prompt(`URL permanente do ${mediaType === "audio" ? "áudio" : "avatar"}`); if (url) onChange({ ...funnel, assets: [...funnel.assets, { id: uid(mediaType), mediaType, source: "permanent", url }] }); };
   return (
     <section className="space-y-4">
@@ -75,7 +77,7 @@ export function GuidedComplexInteractions({ funnel, scene, urls, onChange, onAtt
   );
 }
 
-function ComplexEditor({ event, funnel, scene, urls, onUpdate, onFunnelChange, onAttachPreviewFile, onAddUrl, onAttachAsset, picking, setPicking }: { event: Extract<SceneEventDefinition, { block: ComplexBlock }>; funnel: FunnelDefinition; scene: SceneDefinition; urls: Record<string, string>; onUpdate: (event: SceneEventDefinition) => void; onFunnelChange: (funnel: FunnelDefinition) => void; onAttachPreviewFile: ((file: File, assetId?: string) => void) | undefined; onAddUrl: (mediaType: "audio" | "image") => void; onAttachAsset: () => void; picking: boolean; setPicking: (value: boolean) => void }) {
+function ComplexEditor({ event, funnel, scene, urls, onUpdate, onFunnelChange, onAttachPreviewFile, onAddUrl, onAttachAsset, picking, setPicking }: { event: Extract<SceneEventDefinition, { block: ComplexBlock }>; funnel: FunnelDefinition; scene: SceneDefinition; urls: Record<string, string>; onUpdate: (event: SceneEventDefinition, funnelOverride?: FunnelDefinition) => void; onFunnelChange: (funnel: FunnelDefinition) => void; onAttachPreviewFile: ((file: File, assetId?: string) => void) | undefined; onAddUrl: (mediaType: "audio" | "image") => void; onAttachAsset: () => void; picking: boolean; setPicking: (value: boolean) => void }) {
   const setTrigger = (trigger: TriggerDefinition) => onUpdate({ ...event, trigger });
   return (
     <div className="mt-3 space-y-4 rounded-xl border border-studio-border bg-white/[.02] p-4">
@@ -87,21 +89,21 @@ function ComplexEditor({ event, funnel, scene, urls, onUpdate, onFunnelChange, o
       {event.block === "choice" && <ChoiceFields event={event} onUpdate={onUpdate} />}
       {onAttachPreviewFile && event.block === "incoming_call" && (
         <>
-          <InlineMediaPicker label="Avatar" mediaType="image" funnel={funnel} urls={urls} value={event.avatarAssetId} onSelect={(assetId) => onUpdate({ ...event, avatarAssetId: assetId })} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} />
-          <InlineMediaPicker label="Áudio da voz" mediaType="audio" funnel={funnel} urls={urls} value={event.voiceAssetId} onSelect={(assetId) => onUpdate({ ...event, voiceAssetId: assetId })} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} />
-          <InlineMediaPicker label="Ringtone" mediaType="audio" funnel={funnel} urls={urls} value={event.ringtoneAssetId} onSelect={(assetId) => onUpdate({ ...event, ringtoneAssetId: assetId })} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} />
+          <InlineMediaPicker label="Avatar" mediaType="image" funnel={funnel} urls={urls} value={event.avatarAssetId} onSelect={(assetId, override) => onUpdate({ ...event, avatarAssetId: assetId }, override)} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} />
+          <InlineMediaPicker label="Áudio da voz" mediaType="audio" funnel={funnel} urls={urls} value={event.voiceAssetId} onSelect={(assetId, override) => onUpdate({ ...event, voiceAssetId: assetId }, override)} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} />
+          <InlineMediaPicker label="Ringtone" mediaType="audio" funnel={funnel} urls={urls} value={event.ringtoneAssetId} onSelect={(assetId, override) => onUpdate({ ...event, ringtoneAssetId: assetId }, override)} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} />
           <div className="space-y-2">
-            <InlineMediaPicker label="Vibration SFX" mediaType="audio" funnel={funnel} urls={urls} value={event.vibrationAssetId} onSelect={(assetId) => onUpdate({ ...event, vibrationAssetId: assetId })} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} />
-            <InlineMediaPicker label="Connect SFX" mediaType="audio" funnel={funnel} urls={urls} value={event.connectSfxAssetId} onSelect={(assetId) => onUpdate({ ...event, connectSfxAssetId: assetId })} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} />
-            <InlineMediaPicker label="End SFX" mediaType="audio" funnel={funnel} urls={urls} value={event.endSfxAssetId} onSelect={(assetId) => onUpdate({ ...event, endSfxAssetId: assetId })} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} />
+            <InlineMediaPicker label="Vibration SFX" mediaType="audio" funnel={funnel} urls={urls} value={event.vibrationAssetId} onSelect={(assetId, override) => onUpdate({ ...event, vibrationAssetId: assetId }, override)} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} />
+            <InlineMediaPicker label="Connect SFX" mediaType="audio" funnel={funnel} urls={urls} value={event.connectSfxAssetId} onSelect={(assetId, override) => onUpdate({ ...event, connectSfxAssetId: assetId }, override)} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} />
+            <InlineMediaPicker label="End SFX" mediaType="audio" funnel={funnel} urls={urls} value={event.endSfxAssetId} onSelect={(assetId, override) => onUpdate({ ...event, endSfxAssetId: assetId }, override)} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} />
           </div>
         </>
       )}
       {onAttachPreviewFile && event.block === "messaging" && (
         <>
-          <InlineMediaPicker label="Avatar do contato" mediaType="image" funnel={funnel} urls={urls} value={event.avatarAssetId} onSelect={(assetId) => onUpdate({ ...event, avatarAssetId: assetId })} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} />
+          <InlineMediaPicker label="Avatar do contato" mediaType="image" funnel={funnel} urls={urls} value={event.avatarAssetId} onSelect={(assetId, override) => onUpdate({ ...event, avatarAssetId: assetId }, override)} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} />
           {event.messages.filter((message) => message.type === "voice" || message.type === "voice_once").map((message) => (
-            <InlineMediaPicker key={message.id} label={message.type === "voice_once" ? "Áudio uma vez" : "Áudio da mensagem"} mediaType="audio" funnel={funnel} urls={urls} value={message.audioAssetId} onSelect={(assetId) => onUpdate({ ...event, messages: event.messages.map((item) => item.id === message.id ? { ...item, audioAssetId: assetId } : item) })} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} />
+            <InlineMediaPicker key={message.id} label={message.type === "voice_once" ? "Áudio uma vez" : "Áudio da mensagem"} mediaType="audio" funnel={funnel} urls={urls} value={message.audioAssetId} onSelect={(assetId, override) => onUpdate({ ...event, messages: event.messages.map((item) => item.id === message.id ? { ...item, audioAssetId: assetId } : item) }, override)} onChange={onFunnelChange} onAttachPreview={onAttachPreviewFile} />
           ))}
         </>
       )}

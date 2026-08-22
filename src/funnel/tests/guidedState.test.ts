@@ -229,4 +229,32 @@ describe("Guided Builder mappings", () => {
     const single = { ...emptyFunnel() };
     expect(deleteGuidedScene(single, single.entrySceneId)).toBe(single);
   });
+
+  // Regression: InlineMediaPicker's upload-success handler used to call onChange(next) (adds the newly
+  // uploaded asset) and onSelect(assetId) (patches the event's *AssetId field) as two independent calls in
+  // the same tick. Both ultimately funneled into the same funnel setter, but the event patch was built by
+  // closing over the pre-upload `funnel` — so it silently discarded the just-added asset. The fix rebases
+  // the event patch on the post-upload funnel (`funnelOverride`); this proves that base choice, not
+  // updateGuidedInteraction itself, is what determines whether the asset survives.
+  it("keeps a newly added asset when the interaction patch is rebased on the funnel that added it", () => {
+    let funnel = createGuidedInteraction(emptyFunnel(), emptyFunnel().entrySceneId, "notification");
+    funnel = createGuidedInteraction(funnel, funnel.entrySceneId, "notification");
+    const scene = funnel.scenes[0]!;
+    const event = scene.events[0]!;
+    const newAsset = { id: "avatar-just-uploaded", mediaType: "image" as const, source: "permanent" as const, url: "/media/avatar.png", fileName: "avatar.png", contentType: "image/png", size: 4, uploadedAt: "2026-01-01T00:00:00.000Z", r2Key: "k", etag: "e" };
+    const postUpload = { ...funnel, assets: [...funnel.assets, newAsset] };
+    const patchedEvent = { ...event, avatarAssetId: newAsset.id } as typeof event;
+
+    // The fix: rebase on postUpload (what InlineMediaPicker now passes as funnelOverride).
+    const fixed = updateGuidedInteraction(postUpload, scene.id, patchedEvent);
+    expect(fixed.assets).toContainEqual(newAsset);
+    expect((fixed.scenes[0]!.events[0] as any).avatarAssetId).toBe(newAsset.id);
+
+    // The bug this replaced: rebasing on the stale pre-upload `funnel` drops the asset even though the
+    // event still points at it — exactly what was observed in production (scene.videoAssetId pointing at
+    // an id absent from funnel.assets).
+    const stale = updateGuidedInteraction(funnel, scene.id, patchedEvent);
+    expect(stale.assets).not.toContainEqual(newAsset);
+    expect((stale.scenes[0]!.events[0] as any).avatarAssetId).toBe(newAsset.id);
+  });
 });

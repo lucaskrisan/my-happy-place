@@ -167,11 +167,16 @@ export function GuidedBuilder({
       onUi({ ...ui, mode: "guided", funnelId: funnel.id, sceneId, step });
     }
   }, [funnel, ui, sceneId, step, onUi]);
-  const update = (patch: any) =>
+  // funnelOverride: see the comment on InlineMediaPicker's Props — a scene patch that lands right after a
+  // permanent upload must rebase on the funnel that upload just produced, not the (by then stale) `funnel`
+  // closed over here, or the newly uploaded asset silently disappears from `assets` again.
+  const update = (patch: any, funnelOverride?: FunnelDefinition) => {
+    const base = funnelOverride ?? funnel;
     onChange({
-      ...funnel,
-      scenes: funnel.scenes.map((item) => (item.id === scene.id ? { ...item, ...patch } : item)),
+      ...base,
+      scenes: base.scenes.map((item) => (item.id === scene.id ? { ...item, ...patch } : item)),
     });
+  };
   const updateEvent = (event: SceneEventDefinition) =>
     onChange({
       ...funnel,
@@ -586,7 +591,7 @@ function VideoStep({
   scene: any;
   asset: any;
   onChange: (f: FunnelDefinition) => void;
-  update: (p: any) => void;
+  update: (p: any, funnelOverride?: FunnelDefinition) => void;
   urls: Record<string, string>;
   onAttachPreview: (assetId?: string, sceneId?: string) => void;
   onAttachPreviewFile: (file: File, assetId?: string, sceneId?: string) => void;
@@ -609,7 +614,7 @@ function VideoStep({
       ) : (
         <EmptyState title="Nenhum vídeo adicionado." description="Envie o arquivo final ou escolha um já existente no funil." />
       )}
-      <InlineMediaPicker label="Vídeo" mediaType="video" funnel={funnel} urls={urls} value={scene.videoAssetId} onSelect={(assetId) => update({ videoAssetId: assetId })} onChange={onChange} onAttachPreview={(file, assetId) => onAttachPreviewFile(file, assetId, scene.id)} />
+      <InlineMediaPicker label="Vídeo" mediaType="video" funnel={funnel} urls={urls} value={scene.videoAssetId} onSelect={(assetId, override) => update({ videoAssetId: assetId }, override)} onChange={onChange} onAttachPreview={(file, assetId) => onAttachPreviewFile(file, assetId, scene.id)} />
     </div>
   );
 }

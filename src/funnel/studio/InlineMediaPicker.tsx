@@ -6,7 +6,13 @@ import { uid } from "./studioState";
 import { useStudioUploadToken } from "./useStudioUploadToken";
 import { HelpText, PrimaryButton, SecondaryButton, GhostButton, Badge } from "./ui";
 
-type Props = { label: string; mediaType: AssetRef["mediaType"]; funnel: FunnelDefinition; urls: Record<string, string>; value?: string | undefined; onSelect: (assetId?: string) => void; onChange: (funnel: FunnelDefinition) => void; onAttachPreview?: (file: File, assetId?: string) => void };
+// `funnelOverride` lets a caller's onSelect handler rebase its own patch on a funnel snapshot newer than
+// the `funnel` prop it closed over — needed when a permanent upload just finished: this component's own
+// onChange(next) and the caller's onSelect(assetId) both ultimately call the same funnel setter from the
+// same synchronous tick, and without a shared, up-to-date base the second call silently discards whatever
+// the first one just added (the newly uploaded asset disappearing from `assets` while the scene still
+// points at it — a real bug this override was added to close, not a hypothetical one).
+type Props = { label: string; mediaType: AssetRef["mediaType"]; funnel: FunnelDefinition; urls: Record<string, string>; value?: string | undefined; onSelect: (assetId?: string, funnelOverride?: FunnelDefinition) => void; onChange: (funnel: FunnelDefinition) => void; onAttachPreview?: (file: File, assetId?: string) => void };
 const accepts: Record<AssetRef["mediaType"], string> = { video: "video/mp4,video/webm", audio: "audio/mpeg,audio/mp4,audio/wav,audio/ogg", image: "image/jpeg,image/png,image/webp" };
 const mediaWord = (mediaType: AssetRef["mediaType"]) => (mediaType === "video" ? "vídeo" : mediaType === "audio" ? "áudio" : "imagem");
 const fieldClass = "w-full rounded-lg border border-studio-border bg-white/[.04] p-2.5 text-sm text-studio-text placeholder:text-studio-text-muted focus:border-studio-primary/50 focus:outline-none transition-colors";
@@ -29,7 +35,9 @@ export function InlineMediaPicker({ label, mediaType, funnel, urls, value, onSel
       const result = await uploadPermanentAsset({ funnelId: funnel.id, assetId, file, token, signal: controller.current.signal, onProgress: (next, phase) => { setProgress(next); setStatus(phase); } });
       const old = funnel.assets.find((asset) => asset.id === assetId);
       const next = old?.source === "preview" ? promoteAssetInFunnel(funnel, assetId, result) : { ...funnel, assets: [...funnel.assets, { id: assetId, mediaType, source: "permanent" as const, url: result.src, fileName: result.filename, contentType: result.contentType, size: result.size, uploadedAt: result.uploadedAt, r2Key: result.key, etag: result.etag }] };
-      onChange(next); onSelect(assetId); setStatus("completed"); setOpen(false);
+      // A single call, not onChange(next) followed by onSelect(assetId): see the Props comment above for
+      // why calling both independently used to drop the asset we just added.
+      onSelect(assetId, next); setStatus("completed"); setOpen(false);
     } catch (reason) { setStatus(reason instanceof Error && (reason as { code?: string }).code === "cancelled" ? "cancelled" : "error"); setError(reason instanceof Error ? reason.message : "Não foi possível salvar este arquivo."); }
   };
   const choose = (previewOnly: boolean, assetId?: string) => { if (!input.current) return; input.current.dataset["previewOnly"] = String(previewOnly); input.current.dataset["assetId"] = assetId || ""; input.current.click(); };
@@ -97,7 +105,7 @@ export function InlineMediaPicker({ label, mediaType, funnel, urls, value, onSel
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-studio-text-muted">Ou cole uma URL</span>
             <div className="flex gap-2">
               <input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://…" className={fieldClass} />
-              <SecondaryButton type="button" onClick={() => { if (!url.trim()) return; const next = addPermanentUrl(funnel, url.trim(), mediaType), asset = next.assets.at(-1)!; onChange(next); onSelect(asset.id); setOpen(false); }} className="shrink-0 text-xs">Adicionar</SecondaryButton>
+              <SecondaryButton type="button" onClick={() => { if (!url.trim()) return; const next = addPermanentUrl(funnel, url.trim(), mediaType), asset = next.assets.at(-1)!; onSelect(asset.id, next); setOpen(false); }} className="shrink-0 text-xs">Adicionar</SecondaryButton>
             </div>
           </div>
           {status && (
