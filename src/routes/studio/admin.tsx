@@ -105,6 +105,7 @@ function AdminPage() {
         <div className="mx-auto flex max-w-5xl items-center justify-between">
           <Breadcrumb items={[{ label: "Meus produtos", onClick: () => void navigate({ to: "/studio" }) }, "Administração"]} />
           <div className="flex items-center gap-3">
+            <Link to="/studio/roadmap" className="text-sm font-medium text-studio-text-secondary hover:text-studio-text transition-colors">Roadmap</Link>
             <Link to="/studio" className="text-sm font-medium text-studio-text-secondary hover:text-studio-text transition-colors">Voltar</Link>
             <UserMenu />
           </div>

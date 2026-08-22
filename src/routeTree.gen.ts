@@ -14,6 +14,7 @@ import { Route as DevRouteImport } from './routes/dev'
 import { Route as IntroRouteImport } from './routes/intro'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as NotasRouteImport } from './routes/notas'
+import { Route as RoadmapRouteImport } from './routes/roadmap'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as DevIndexRouteImport } from './routes/dev/index'
@@ -46,6 +47,7 @@ import { Route as SignupSuccessRouteImport } from './routes/signup/success'
 import { Route as StudioIndexRouteImport } from './routes/studio/index'
 import { Route as StudioAdminRouteImport } from './routes/studio/admin'
 import { Route as StudioBlueprintRouteImport } from './routes/studio/blueprint'
+import { Route as StudioRoadmapRouteImport } from './routes/studio/roadmap'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -70,6 +72,11 @@ const LoginRoute = LoginRouteImport.update({
 const NotasRoute = NotasRouteImport.update({
   id: '/notas',
   path: '/notas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoadmapRoute = RoadmapRouteImport.update({
+  id: '/roadmap',
+  path: '/roadmap',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignupRoute = SignupRouteImport.update({
@@ -232,6 +239,11 @@ const StudioBlueprintRoute = StudioBlueprintRouteImport.update({
   path: '/blueprint',
   getParentRoute: () => StudioRoute,
 } as any)
+const StudioRoadmapRoute = StudioRoadmapRouteImport.update({
+  id: '/roadmap',
+  path: '/roadmap',
+  getParentRoute: () => StudioRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -239,6 +251,7 @@ export interface FileRoutesByFullPath {
   '/intro': typeof IntroRoute
   '/login': typeof LoginRoute
   '/notas': typeof NotasRoute
+  '/roadmap': typeof RoadmapRoute
   '/signup': typeof SignupRouteWithChildren
   '/studio': typeof StudioRouteWithChildren
   '/dev/14-days': typeof Dev14DaysRoute
@@ -268,6 +281,7 @@ export interface FileRoutesByFullPath {
   '/signup/success': typeof SignupSuccessRoute
   '/studio/admin': typeof StudioAdminRoute
   '/studio/blueprint': typeof StudioBlueprintRoute
+  '/studio/roadmap': typeof StudioRoadmapRoute
   '/dev/': typeof DevIndexRoute
   '/signup/': typeof SignupIndexRoute
   '/studio/': typeof StudioIndexRoute
@@ -277,6 +291,7 @@ export interface FileRoutesByTo {
   '/intro': typeof IntroRoute
   '/login': typeof LoginRoute
   '/notas': typeof NotasRoute
+  '/roadmap': typeof RoadmapRoute
   '/dev/14-days': typeof Dev14DaysRoute
   '/dev/audio': typeof DevAudioRoute
   '/dev/choice': typeof DevChoiceRoute
@@ -304,6 +319,7 @@ export interface FileRoutesByTo {
   '/signup/success': typeof SignupSuccessRoute
   '/studio/admin': typeof StudioAdminRoute
   '/studio/blueprint': typeof StudioBlueprintRoute
+  '/studio/roadmap': typeof StudioRoadmapRoute
   '/dev': typeof DevIndexRoute
   '/signup': typeof SignupIndexRoute
   '/studio': typeof StudioIndexRoute
@@ -315,6 +331,7 @@ export interface FileRoutesById {
   '/intro': typeof IntroRoute
   '/login': typeof LoginRoute
   '/notas': typeof NotasRoute
+  '/roadmap': typeof RoadmapRoute
   '/signup': typeof SignupRouteWithChildren
   '/studio': typeof StudioRouteWithChildren
   '/dev/14-days': typeof Dev14DaysRoute
@@ -344,6 +361,7 @@ export interface FileRoutesById {
   '/signup/success': typeof SignupSuccessRoute
   '/studio/admin': typeof StudioAdminRoute
   '/studio/blueprint': typeof StudioBlueprintRoute
+  '/studio/roadmap': typeof StudioRoadmapRoute
   '/dev/': typeof DevIndexRoute
   '/signup/': typeof SignupIndexRoute
   '/studio/': typeof StudioIndexRoute
@@ -356,6 +374,7 @@ export interface FileRouteTypes {
     | '/intro'
     | '/login'
     | '/notas'
+    | '/roadmap'
     | '/signup'
     | '/studio'
     | '/dev/14-days'
@@ -385,6 +404,7 @@ export interface FileRouteTypes {
     | '/signup/success'
     | '/studio/admin'
     | '/studio/blueprint'
+    | '/studio/roadmap'
     | '/dev/'
     | '/signup/'
     | '/studio/'
@@ -394,6 +414,7 @@ export interface FileRouteTypes {
     | '/intro'
     | '/login'
     | '/notas'
+    | '/roadmap'
     | '/dev/14-days'
     | '/dev/audio'
     | '/dev/choice'
@@ -421,6 +442,7 @@ export interface FileRouteTypes {
     | '/signup/success'
     | '/studio/admin'
     | '/studio/blueprint'
+    | '/studio/roadmap'
     | '/dev'
     | '/signup'
     | '/studio'
@@ -431,6 +453,7 @@ export interface FileRouteTypes {
     | '/intro'
     | '/login'
     | '/notas'
+    | '/roadmap'
     | '/signup'
     | '/studio'
     | '/dev/14-days'
@@ -460,6 +483,7 @@ export interface FileRouteTypes {
     | '/signup/success'
     | '/studio/admin'
     | '/studio/blueprint'
+    | '/studio/roadmap'
     | '/dev/'
     | '/signup/'
     | '/studio/'
@@ -471,6 +495,7 @@ export interface RootRouteChildren {
   IntroRoute: typeof IntroRoute
   LoginRoute: typeof LoginRoute
   NotasRoute: typeof NotasRoute
+  RoadmapRoute: typeof RoadmapRoute
   SignupRoute: typeof SignupRouteWithChildren
   StudioRoute: typeof StudioRouteWithChildren
 }
@@ -510,6 +535,13 @@ declare module '@tanstack/react-router' {
       path: '/notas'
       fullPath: '/notas'
       preLoaderRoute: typeof NotasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roadmap': {
+      id: '/roadmap'
+      path: '/roadmap'
+      fullPath: '/roadmap'
+      preLoaderRoute: typeof RoadmapRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signup': {
@@ -736,6 +768,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioBlueprintRouteImport
       parentRoute: typeof StudioRoute
     }
+    '/studio/roadmap': {
+      id: '/studio/roadmap'
+      path: '/roadmap'
+      fullPath: '/studio/roadmap'
+      preLoaderRoute: typeof StudioRoadmapRouteImport
+      parentRoute: typeof StudioRoute
+    }
   }
 }
 
@@ -813,12 +852,14 @@ const SignupRouteWithChildren =
 interface StudioRouteChildren {
   StudioAdminRoute: typeof StudioAdminRoute
   StudioBlueprintRoute: typeof StudioBlueprintRoute
+  StudioRoadmapRoute: typeof StudioRoadmapRoute
   StudioIndexRoute: typeof StudioIndexRoute
 }
 
 const StudioRouteChildren: StudioRouteChildren = {
   StudioAdminRoute: StudioAdminRoute,
   StudioBlueprintRoute: StudioBlueprintRoute,
+  StudioRoadmapRoute: StudioRoadmapRoute,
   StudioIndexRoute: StudioIndexRoute,
 }
 
@@ -831,6 +872,7 @@ const rootRouteChildren: RootRouteChildren = {
   IntroRoute: IntroRoute,
   LoginRoute: LoginRoute,
   NotasRoute: NotasRoute,
+  RoadmapRoute: RoadmapRoute,
   SignupRoute: SignupRouteWithChildren,
   StudioRoute: StudioRouteWithChildren,
 }
